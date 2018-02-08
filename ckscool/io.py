@@ -93,7 +93,9 @@ def load_table_koi(table):
         'kepoi_name':'id_koicand',
         'kepler_name':'id_kepler_name',
     }
+    
     df = df.rename(columns=namemap)
+    df['id_koi'] = df.id_koicand.str.slice(start=1,stop=6).astype(int)
     star = load_table('mathur17',cache=1)
     df = pd.merge(df,star)
     return df 
