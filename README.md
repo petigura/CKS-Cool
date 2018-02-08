@@ -1,2 +1,5 @@
 # CKS-Cool
-CKS-Cool Project
+
+Repo for planning observations and initial catalog selection
+
+ 
