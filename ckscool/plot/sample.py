@@ -27,9 +27,36 @@ letter_text_props = dict(size='large', weight='bold')
 
 import ckscool.cuts
 
+def fig_cuts_kepmag_steff():
+    cuts('m17_kepmag','m17_steff',nrows=1,ncols=4,plot_func=None)
+    fig = gcf() 
+    axL = fig.get_axes()
+    setp(axL,ylim=(3000,7000))
+    setp(axL[0],xlabel='Kp (mag)', ylabel='Teff (K)')
+    
+def fig_cuts_period_prad():
+    cuts('koi_period','koi_prad',nrows=1,ncols=4,plot_func=loglog)
+    fig = gcf() 
+    axL = fig.get_axes()
+    setp(
+        axL[0],xlabel='Orbital Period (days)',
+        ylabel='Planet Size (Earth-radii)'
+    )
+
+def fig_cuts_smass_steff():
+    cuts('m17_smass','m17_steff',nrows=1,ncols=4,plot_func=semilogx)
+    fig = gcf() 
+    axL = fig.get_axes()
+    setp(axL,ylim=(3000,7000))
+    setp(
+        axL[0],xlabel='Stellar Mass (Solar-masses)',
+        ylabel='Teff (K)'
+    )
+
+
 def cuts(xk,yk,nrows=None,ncols=None,plot_func=None):
     sns.set_style('ticks')
-    #df =  cksmet.io.load_table('cks-cuts',cache=1)
+    sns.set_context('paper')
 
     if type(plot_func)!=type(None):
         plot = plot_func
@@ -63,7 +90,7 @@ def cuts(xk,yk,nrows=None,ncols=None,plot_func=None):
         cut = obj(df,table)
         df[key] = cut.cut()
         bpass += df[key].astype(int)
-        plotkw = dict(ms=4)
+        plotkw = dict(ms=4,rasterized=True)
         plot(df[xk], df[yk],'.',color='LightGray',**plotkw)
         dfcut = df[bpass==0]
         
@@ -83,11 +110,8 @@ def cuts(xk,yk,nrows=None,ncols=None,plot_func=None):
     axL = axL.reshape(nrows,ncols)
     #setp(axL[-1,:],xlabel='$R_p\, (R_{\oplus})$')
     #setp(axL[:,0],ylabel='[Fe/H]')
-    #tight_layout()
-
-    fig.subplots_adjust(hspace=0.001,wspace=0.001,left=0.07,right=0.99,top=0.95,bottom=0.12)
-    
-
+    fig.set_tight_layout(True)
+    #fig.subplots_adjust(hspace=0.001,wspace=0.001,left=0.07,right=0.99,top=0.95,bottom=0.12)
 
 def samples():
     ncols = 3
