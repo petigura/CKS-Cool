@@ -57,6 +57,7 @@ class Workflow(object):
         d['cuts-kepmag-steff'] = ckscool.plot.sample.fig_cuts_kepmag_steff
         d['cuts-period-prad'] = ckscool.plot.sample.fig_cuts_period_prad
         d['cuts-smass-steff'] = ckscool.plot.sample.fig_cuts_smass_steff
+        d['compare-with-cks1'] = ckscool.plot.sample.fig_compare_with_cks1
         # run_cksgaia create-plot #
 
         self.plot_dict = d
@@ -67,7 +68,7 @@ class Workflow(object):
         self.table_dict = d
 
         d = OrderedDict()
-        #d['fit'] = cksmet.values.val_fit
+        d['stat'] = ckscool.value.val_stat
         self.val_dict = d
 
         d = OrderedDict()

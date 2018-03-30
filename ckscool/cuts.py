@@ -4,6 +4,7 @@ Module for dealing with cuts.
 import numpy as np
 import sys
 import inspect
+from collections import OrderedDict
 
 texdict ={
     'teff':'\\teff',
@@ -16,6 +17,12 @@ plotdict ={
 }
 
 samples = 'koi-thompson18'.split()
+
+cd = OrderedDict()
+cd['max-kepmag'] = 16.0
+cd['max-steff'] = 5200
+cd['min-steff'] = 4000 
+cd['max-score'] = 0.75
 
 class CutBase(object):
     cuttype = 'base'
@@ -42,22 +49,22 @@ class CutNone(CutBase):
 
 class CutFaint(CutBase):
     cuttype = 'faint'
-    plotstr = '$Kp$ < 16.0 mag'
-    texstr = '$Kp$ < 16.0 mag'
+    plotstr = '$Kp$ < {} mag'.format(cd['max-kepmag'])
+    texstr = '$Kp$ < {} mag'.format(cd['max-kepmag'])
     def cut(self):
         kepmag = self.df['m17_kepmag']
-        b = kepmag > 16.0
+        b = kepmag > cd['max-kepmag']
         return b
 
 class CutTeffPhot(CutBase):
     """Remove stars where Teff falls outside allowed range
     """
     cuttype = 'badteffphot'
-    texstr = r'${teff:}$ < $4900$ K'.format(**texdict)
-    plotstr = r'${teff:}$ < 4900 K'.format(**plotdict)
+    texstr = r'${teff:}$ = ${min-steff:}$-${max-steff:}$ K'.format(**dict(texdict, **cd))
+    plotstr = r'${teff:}$ = ${min-steff:}$-${max-steff:}$ K'.format(**dict(plotdict, **cd))
     def cut(self):
         teff = self.df['m17_steff']
-        b = ~teff.between(0,4900)
+        b = ~teff.between(cd['min-steff'],cd['max-steff'])
         return b
 
 class CutNotReliable(CutBase):
@@ -69,7 +76,7 @@ class CutNotReliable(CutBase):
     def cut(self):
         if self.sample=='koi-thompson18':
             b1 = self.df.koi_disposition.str.contains('FALSE')  
-            b2 = self.df.koi_score < 0.75 
+            b2 = self.df.koi_score < cd['max-score']
             return b1 | b2
         else:
             assert False," error"
