@@ -45,13 +45,14 @@ class ObserveNIRC2(Observe):
         f17['f17_sig_diluted'] = (f17.f17_rcorr_avg - 1) > 0.05
         self.sample = pd.merge(self.sample, f17, on='id_koi',how='left')
 
-        # Is observed by Keck
+        # Is observed by Keck?
         f17 = ckscool.io.load_table('furlan17-tab2')
         f17 = f17['id_koi f17_ao_obs'.split()]
-        f17 = f17[f17.f17_ao_obs.str.contains('Keck')]
-        f17['f17_observed_keck'] = True
+        #f17 = f17[f17.f17_ao_obs.str.contains('Keck')]
+        #f17['f17_observed_keck'] = True
         self.sample = pd.merge(self.sample, f17, on='id_koi',how='left')
-        self.sample = self.sample.fillna(False)
+        self.sample['f17_ao_obs'] = self.sample['f17_ao_obs'].fillna('none')
+        self.sample['f17_sig_diluted'] = self.sample['f17_sig_diluted'].fillna(False)
 
     def expected_observing_time(self):
         """
@@ -66,10 +67,8 @@ class ObserveNIRC2(Observe):
         d = OrderedDict()
         d['nirc2-nstars'] = len(df)
         d['nirc2-time'] = (df.texp).sum()
-
         
-        
-        bobs = ~df.k18_observed & ~df.f17_sig_diluted
+        bobs = ~df.k18_observed & ~df.f17_sig_diluted & ~df.f17_ao_obs.str.contains('Keck|Gem')
         df = df[bobs]
         d['nirc2-nstars-notobserved'] = len(df)
         d['nirc2-time-notobserved'] = np.round((df.texp).sum(),1)

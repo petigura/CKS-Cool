@@ -19,7 +19,7 @@ plotdict ={
 samples = 'koi-thompson18'.split()
 
 cd = OrderedDict()
-cd['max-kepmag'] = 16.0
+cd['max-kepmag'] = 15.7
 cd['max-steff'] = 5200
 cd['min-steff'] = 4000 
 cd['max-score'] = 0.75

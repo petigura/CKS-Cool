@@ -10,7 +10,7 @@ def val_stat(return_dict=False):
     Statistics of sample
     """
     d = OrderedDict()
-    cand = ckscool.io.load_table('ckscool-cuts',cache=1)
+    cand = ckscool.io.load_table('ckscool-cuts',cache=2)
     stars = cand.groupby('id_kic',as_index=False).first()
 
     d['n-koi'] = "{}".format( len(cand) )
