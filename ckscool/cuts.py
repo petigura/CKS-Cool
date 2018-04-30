@@ -16,12 +16,12 @@ plotdict ={
     'logg':'\log g'
 }
 
-samples = 'koi-thompson18'.split()
+samples = 'koi-mullally15 koi-thompson18'.split()
 
 cd = OrderedDict()
-cd['max-kepmag'] = 15.7
+cd['max-kepmag'] = 15.8
 cd['max-steff'] = 5200
-cd['min-steff'] = 4000 
+cd['min-steff'] = 3500
 cd['max-score'] = 0.75
 
 class CutBase(object):
@@ -52,8 +52,32 @@ class CutFaint(CutBase):
     plotstr = '$Kp$ < {} mag'.format(cd['max-kepmag'])
     texstr = '$Kp$ < {} mag'.format(cd['max-kepmag'])
     def cut(self):
-        kepmag = self.df['m17_kepmag']
+        kepmag = self.df['kic_kepmag']
         b = kepmag > cd['max-kepmag']
+        return b
+
+class CutGiant(CutBase):
+    cuttype = 'giant'
+    plotstr = 'Not giant'.format(cd['max-kepmag'])
+    texstr = 'Not giant'.format(cd['max-kepmag'])
+    def cut(self):
+        b = self.df['gaia2_srad'] > 1.5
+        return b
+
+class CutBadParallax(CutBase):
+    cuttype = 'badparallax'
+    plotstr = 'Bad Parallax'
+    texstr = 'Bad parallax'
+    def cut(self):
+        b = self.df['gaia2_sparallax_over_err'] < 25
+        return b
+
+class CutDiluted(CutBase):
+    cuttype = 'diluted'
+    plotstr = 'Diluted'
+    texstr = 'Diluted'.format(cd['max-kepmag'])
+    def cut(self):
+        b = self.df['gaia2_gflux_ratio'] > 1.1
         return b
 
 class CutTeffPhot(CutBase):
@@ -78,6 +102,9 @@ class CutNotReliable(CutBase):
             b1 = self.df.koi_disposition.str.contains('FALSE')  
             b2 = self.df.koi_score < cd['max-score']
             return b1 | b2
+        elif self.sample=='koi-mullally15':
+            b1 = self.df.koi_disposition.str.contains('FALSE')  
+            return b1
         else:
             assert False," error"
 

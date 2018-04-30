@@ -61,7 +61,7 @@ class ObserveNIRC2(Observe):
 
         # Only count stars that haven't been observed
         df = self.sample
-        vmag = self.sample.m17_kepmag + 0.4 # 
+        vmag = self.sample.kic_kepmag + 0.4 # 
         df['texp'] = self.texp
 
         d = OrderedDict()
@@ -108,7 +108,7 @@ class ObserveHIRES(Observe):
         """
         # Only count stars that haven't been observed
         df = self.sample
-        vmag = self.sample.m17_kepmag + 0.4 # 
+        vmag = self.sample.kic_kepmag + 0.4 # 
         
         df['texp'] = cpsutils.hires.exposure.exposure_time(vmag, self.counts) 
         df['texp'] /= 3600

@@ -28,14 +28,14 @@ letter_text_props = dict(size='large', weight='bold')
 import ckscool.cuts
 
 def fig_cuts_kepmag_steff():
-    cuts('m17_kepmag','m17_steff',nrows=1,ncols=4,plot_func=None)
+    cuts('kic_kepmag','m17_steff',nrows=2,ncols=4,plot_func=None,stars=True)
     fig = gcf() 
     axL = fig.get_axes()
     setp(axL,ylim=(3000,7000))
     setp(axL[0],xlabel='Kp (mag)', ylabel='Teff (K)')
     
 def fig_cuts_period_prad():
-    cuts('koi_period','koi_prad',nrows=1,ncols=4,plot_func=loglog)
+    cuts('koi_period','koi_prad',nrows=2,ncols=4,plot_func=loglog)
     fig = gcf() 
     axL = fig.get_axes()
     setp(
@@ -44,7 +44,7 @@ def fig_cuts_period_prad():
     )
 
 def fig_cuts_smass_steff():
-    cuts('m17_smass','m17_steff',nrows=1,ncols=4,plot_func=semilogx)
+    cuts('m17_smass','m17_steff',nrows=2,ncols=4,plot_func=semilogx,stars=True)
     fig = gcf() 
     axL = fig.get_axes()
     setp(axL,ylim=(3000,7000))
@@ -53,8 +53,7 @@ def fig_cuts_smass_steff():
         ylabel='Teff (K)'
     )
 
-
-def cuts(xk,yk,nrows=None,ncols=None,plot_func=None):
+def cuts(xk,yk,nrows=None,ncols=None,plot_func=None, stars=False):
     sns.set_style('ticks')
     sns.set_context('paper')
 
@@ -63,8 +62,11 @@ def cuts(xk,yk,nrows=None,ncols=None,plot_func=None):
     else:
         plot = plt.plot
 
-    table = 'koi-thompson18'
+        
+    table = 'koi-mullally15'
     df = ckscool.io.load_table('ckscool-cuts')
+    cuttypes = df.cuttypes
+
     width = ncols * 2
     height = nrows * 2
 
@@ -86,12 +88,22 @@ def cuts(xk,yk,nrows=None,ncols=None,plot_func=None):
         cut = obj(df,table)
         df[key] = cut.cut()
         bpass += df[key].astype(int)
+            
         plotkw = dict(ms=4,rasterized=True)
-        plot(df[xk], df[yk],'.',color='LightGray',**plotkw)
+
+        x = df[xk]
+        y = df[yk]
+
+        plot(x, y,'.',color='LightGray',**plotkw)
         dfcut = df[bpass==0]
         
         plot(dfcut[xk], dfcut[yk],'.', **plotkw)
         _text = cut.plotstr + ' ({})'.format(len(dfcut))
+
+        if stars:
+            _text = cut.plotstr + ' ({})'.format(len(dfcut.id_kic.drop_duplicates()))
+
+
         textkw = dict(fontsize='small',transform=ax.transAxes, ha='right')
         text(0.95,0.05, _text, **textkw)
 
