@@ -28,14 +28,14 @@ letter_text_props = dict(size='large', weight='bold')
 import ckscool.cuts
 
 def fig_cuts_kepmag_steff():
-    cuts('m17_kepmag','m17_steff',nrows=1,ncols=4,plot_func=None)
+    cuts('kic_kepmag','m17_steff',nrows=2,ncols=4,plot_func=None,stars=True)
     fig = gcf() 
     axL = fig.get_axes()
     setp(axL,ylim=(3000,7000))
     setp(axL[0],xlabel='Kp (mag)', ylabel='Teff (K)')
     
 def fig_cuts_period_prad():
-    cuts('koi_period','koi_prad',nrows=1,ncols=4,plot_func=loglog)
+    cuts('koi_period','koi_prad',nrows=2,ncols=4,plot_func=loglog)
     fig = gcf() 
     axL = fig.get_axes()
     setp(
@@ -44,7 +44,7 @@ def fig_cuts_period_prad():
     )
 
 def fig_cuts_smass_steff():
-    cuts('m17_smass','m17_steff',nrows=1,ncols=4,plot_func=semilogx)
+    cuts('m17_smass','m17_steff',nrows=2,ncols=4,plot_func=semilogx,stars=True)
     fig = gcf() 
     axL = fig.get_axes()
     setp(axL,ylim=(3000,7000))
@@ -53,8 +53,7 @@ def fig_cuts_smass_steff():
         ylabel='Teff (K)'
     )
 
-
-def cuts(xk,yk,nrows=None,ncols=None,plot_func=None):
+def cuts(xk,yk,nrows=None,ncols=None,plot_func=None, stars=False):
     sns.set_style('ticks')
     sns.set_context('paper')
 
@@ -63,8 +62,11 @@ def cuts(xk,yk,nrows=None,ncols=None,plot_func=None):
     else:
         plot = plt.plot
 
-    table = 'koi-thompson18'
+        
+    table = 'koi-mullally15'
     df = ckscool.io.load_table('ckscool-cuts')
+    cuttypes = df.cuttypes
+
     width = ncols * 2
     height = nrows * 2
 
@@ -86,12 +88,22 @@ def cuts(xk,yk,nrows=None,ncols=None,plot_func=None):
         cut = obj(df,table)
         df[key] = cut.cut()
         bpass += df[key].astype(int)
+            
         plotkw = dict(ms=4,rasterized=True)
-        plot(df[xk], df[yk],'.',color='LightGray',**plotkw)
+
+        x = df[xk]
+        y = df[yk]
+
+        plot(x, y,'.',color='LightGray',**plotkw)
         dfcut = df[bpass==0]
         
         plot(dfcut[xk], dfcut[yk],'.', **plotkw)
         _text = cut.plotstr + ' ({})'.format(len(dfcut))
+
+        if stars:
+            _text = cut.plotstr + ' ({})'.format(len(dfcut.id_kic.drop_duplicates()))
+
+
         textkw = dict(fontsize='small',transform=ax.transAxes, ha='right')
         text(0.95,0.05, _text, **textkw)
 
@@ -124,7 +136,7 @@ class ComparisonPlotter(object):
         self.cksc = df
 
         df = ckscool.io.load_table('j17+m17')
-        df = df[df.m17_kepmag < 14.2]
+        df = df[df.kic_kepmag < 14.2]
         df = df.groupby('id_kic',as_index=False).first()
         self.cks1 = df
     
@@ -136,8 +148,8 @@ class ComparisonPlotter(object):
     def hist_kepmag(self):
         #fig = self._provision_figure()
         bins = arange(10,16.001,0.2)
-        hist(self.cks1.m17_kepmag,bins=bins,**self.cks1kw)
-        hist(self.cksc.m17_kepmag,bins=bins,**self.cksckw)
+        hist(self.cks1.kic_kepmag,bins=bins,**self.cks1kw)
+        hist(self.cksc.kic_kepmag,bins=bins,**self.cksckw)
 
         xlabel('Kepmag')
         ylabel('Stars per bin')

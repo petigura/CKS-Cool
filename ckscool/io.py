@@ -5,6 +5,9 @@ import pandas as pd
 import numpy as np
 import cksspec.io
 import ckscool.cuts
+import cksgaia.io
+import cpsutils.io
+
 DATADIR = os.path.join(os.path.dirname(__file__),'../data/')
 
 def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
@@ -64,6 +67,45 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
     elif table=='johnson17':
         df = pd.read_csv('data/cks_physical_merged.csv',index_col=0)
 
+
+    # Mathur 2017
+    elif table=='stellar17':
+        tablefn = os.path.join(DATADIR, 'kepler_stellar17.csv.gz')
+        df = pd.read_csv(tablefn,sep='|',dtype={'st_quarters':'str'})
+        namemap = {
+            'kepid':'id_kic','kepmag':'kic_kepmag', 'teff': 'kic_steff',
+            'st_quarters':'st_quarters','mass':'kic_smass',
+            'st_radius':'kic_srad', 'jmag':'kic_jmag',
+            'jmag_err':'kic_jmag_err','hmag':'kic_hmag',
+            'hmag_err':'kic_hmag_err','kmag':'kic_kmag',
+            'kmag_err':'kic_kmag_err',
+            'degree_ra':'kic_ra', 'degree_dec':'kic_dec'
+        }
+        df = df.rename(columns=namemap)[namemap.values()]
+
+    elif table=='m17':
+        df = load_table('stellar17')
+        namemap = {}
+        for col in list(df.columns):
+            if col[:3]=='kic':
+                namemap[col] = col.replace('kic','m17')
+        df = df.rename(columns=namemap)
+
+    # Gaia DR2
+    elif table=='gaia2':
+        fn = os.path.join('../CKS-Gaia/data/xmatch_m17_gaiadr2-result.csv')
+        df = cksgaia.xmatch.read_xmatch_gaia2(fn)
+
+    # Merged tables
+    elif table=='m17+gaia2':
+        print "performing crossmatch on gaia2"
+        df = cksgaia.io.load_table('m17')
+        df = df.rename(columns={'m17_kepmag':'kic_kepmag'})
+        gaia = load_table('gaia2')
+        stars = df['id_kic kic_kepmag'.split()].drop_duplicates()
+        mbest,mfull = cksgaia.xmatch.xmatch_gaia2(stars,gaia,'id_kic','gaia2')
+        df = pd.merge(df,mbest.drop(['kic_kepmag'],axis=1),on='id_kic')
+
     elif table=='j17+m17':
         df = load_table('johnson17')
         m17 = load_table('mathur17')
@@ -78,12 +120,41 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         df = pd.merge(df,m17, on='id_kic')
 
     elif table=='ckscool-cuts':
-        table = 'koi-thompson18'
-        cuttypes = ['none','notreliable','badteffphot','faint']
+        table = 'koi-mullally15'
+        cuttypes = [
+            'none','notreliable','badteffphot','faint','giant','badparallax',
+            'diluted'
+        ]
         df = load_table(table)
         df = ckscool.cuts.add_cuts(df,cuttypes,table)
         df.cuttypes = cuttypes
 
+    elif table=='ckscool+smemp':
+        df = ckscool.io.load_table('ckscool-cuts',cache=2)
+        df = df[~df.isany]
+
+        smemp = pd.read_csv('data/specmatch-emp_results.csv')
+        cols = 'obs name teff teff_err radius radius_err fe fe_err'.split()
+        smemp = smemp[cols]
+        smemp = smemp.dropna(subset=['name'])
+
+        #pd.merge(df,smemp)
+        kbc = cpsutils.kbc.loadkbc()
+        kbc = kbc[kbc.type.str.contains('t') 
+                  & kbc.name.str.contains('^K\d{5}$|^CK\d{5}$')]
+        kbc['id_koi']  = kbc.name.str.slice(start=-5).astype(int)
+        smemp = pd.merge(smemp,kbc,on=['obs','name'])
+        smemp = add_prefix(smemp,'sm_')
+        df = pd.merge(df,smemp,on='id_koi')
+        df['id_starname'] = df.sm_name.str.slice(start=-6)
+        
+
+    elif table=='ckscool+smemp+iso':
+        df = load_table('ckscool+smemp')
+        fn = os.path.join(DATADIR,'isoclassify_gaia2.csv')
+        iso = pd.read_csv(fn)
+        df = pd.merge(df, iso, on='id_starname')
+        
     elif table=='nrm-previous':
         # File is from an email that Adam sent me in 2017-11-02
         fn = os.path.join(DATADIR,'kraus/KOIours.txt')
@@ -140,7 +211,7 @@ def load_table_koi(table):
     
     df = df.rename(columns=namemap)
     df['id_koi'] = df.id_koicand.str.slice(start=1,stop=6).astype(int)
-    star = load_table('mathur17',cache=1)
+    star = load_table('m17+gaia2',cache=1)
     df = pd.merge(df,star)
     return df 
 
@@ -166,5 +237,19 @@ def sub_prefix(df, prefix,ignore=['id']):
         if not skip:
             namemap[col] = col.replace(prefix,'') 
     df = df.rename(columns=namemap)
+    return df
+
+def order_columns(df, verbose=False, drop=True):
+    columns = list(df.columns)
+    coldefs = load_table('coldefs',cache=0)
+    cols = []
+    for col in coldefs.column:
+        if columns.count(col) == 1:
+            cols.append(col)
+
+    df = df[cols]
+    if verbose and (len(cols) < len(columns)):
+        print "table contains columns not defined in coldef"
+
     return df
 
