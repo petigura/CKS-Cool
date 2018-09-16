@@ -136,7 +136,7 @@ class ComparisonPlotter(object):
         self.cksc = df
 
         df = ckscool.io.load_table('j17+m17')
-        df = df[df.m17_kepmag < 14.2]
+        df = df[df.kic_kepmag < 14.2]
         df = df.groupby('id_kic',as_index=False).first()
         self.cks1 = df
     
@@ -148,8 +148,8 @@ class ComparisonPlotter(object):
     def hist_kepmag(self):
         #fig = self._provision_figure()
         bins = arange(10,16.001,0.2)
-        hist(self.cks1.m17_kepmag,bins=bins,**self.cks1kw)
-        hist(self.cksc.m17_kepmag,bins=bins,**self.cksckw)
+        hist(self.cks1.kic_kepmag,bins=bins,**self.cks1kw)
+        hist(self.cksc.kic_kepmag,bins=bins,**self.cksckw)
 
         xlabel('Kepmag')
         ylabel('Stars per bin')

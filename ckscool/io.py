@@ -6,6 +6,8 @@ import numpy as np
 import cksspec.io
 import ckscool.cuts
 import cksgaia.io
+import cpsutils.io
+
 DATADIR = os.path.join(os.path.dirname(__file__),'../data/')
 
 def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
@@ -91,9 +93,8 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
 
     # Gaia DR2
     elif table=='gaia2':
-        fn = os.path.join(DATADIR, 'xmatch_m17_gaiadr2-result.csv')
+        fn = os.path.join('../CKS-Gaia/data/xmatch_m17_gaiadr2-result.csv')
         df = cksgaia.xmatch.read_xmatch_gaia2(fn)
-
 
     # Merged tables
     elif table=='m17+gaia2':
@@ -120,11 +121,40 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
 
     elif table=='ckscool-cuts':
         table = 'koi-mullally15'
-        cuttypes = ['none','notreliable','badteffphot','faint','giant','badparallax','diluted']
+        cuttypes = [
+            'none','notreliable','badteffphot','faint','giant','badparallax',
+            'diluted'
+        ]
         df = load_table(table)
         df = ckscool.cuts.add_cuts(df,cuttypes,table)
         df.cuttypes = cuttypes
 
+    elif table=='ckscool+smemp':
+        df = ckscool.io.load_table('ckscool-cuts',cache=2)
+        df = df[~df.isany]
+
+        smemp = pd.read_csv('data/specmatch-emp_results.csv')
+        cols = 'obs name teff teff_err radius radius_err fe fe_err'.split()
+        smemp = smemp[cols]
+        smemp = smemp.dropna(subset=['name'])
+
+        #pd.merge(df,smemp)
+        kbc = cpsutils.kbc.loadkbc()
+        kbc = kbc[kbc.type.str.contains('t') 
+                  & kbc.name.str.contains('^K\d{5}$|^CK\d{5}$')]
+        kbc['id_koi']  = kbc.name.str.slice(start=-5).astype(int)
+        smemp = pd.merge(smemp,kbc,on=['obs','name'])
+        smemp = add_prefix(smemp,'sm_')
+        df = pd.merge(df,smemp,on='id_koi')
+        df['id_starname'] = df.sm_name.str.slice(start=-6)
+        
+
+    elif table=='ckscool+smemp+iso':
+        df = load_table('ckscool+smemp')
+        fn = os.path.join(DATADIR,'isoclassify_gaia2.csv')
+        iso = pd.read_csv(fn)
+        df = pd.merge(df, iso, on='id_starname')
+        
     elif table=='nrm-previous':
         # File is from an email that Adam sent me in 2017-11-02
         fn = os.path.join(DATADIR,'kraus/KOIours.txt')
@@ -207,5 +237,19 @@ def sub_prefix(df, prefix,ignore=['id']):
         if not skip:
             namemap[col] = col.replace(prefix,'') 
     df = df.rename(columns=namemap)
+    return df
+
+def order_columns(df, verbose=False, drop=True):
+    columns = list(df.columns)
+    coldefs = load_table('coldefs',cache=0)
+    cols = []
+    for col in coldefs.column:
+        if columns.count(col) == 1:
+            cols.append(col)
+
+    df = df[cols]
+    if verbose and (len(cols) < len(columns)):
+        print "table contains columns not defined in coldef"
+
     return df
 

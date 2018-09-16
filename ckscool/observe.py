@@ -17,42 +17,60 @@ import cpsutils.hires
 import cpsutils.hires.exposure
 from collections import OrderedDict
 import numpy as np
+from astropy.io import ascii
 
 class Observe(object):
     def __init__(self):
-        df = ckscool.io.load_table('ckscool-cuts')
+        df = ckscool.io.load_table('ckscool-cuts',cache=2)
         df = df[~df.isany]
         df = df.groupby('id_kic',as_index=False).first()
         self.sample = df
 
 class ObserveNIRC2(Observe):
     texp = 10.0/60.0 # ten minutes per target.
-    def label_observed(self, start, stop):
+    def label_observed(self):
         """
         Label stars as observed fold in Adam Kraus's
         """
+        sample = self.sample
+
         k18 = ckscool.io.load_table('nrm-previous')
-        #start_jd = astropy.time.Time(start,format='iso').jd
-        #stop_jd = astropy.time.Time(stop,format='iso').jd
-        #prev = prev[prev.jd.between(start_jd,stop_jd)]
         k18['k18_observed'] = True
-        self.sample = pd.merge(self.sample,k18,on='id_koi',how='left')
-        self.sample['k18_observed'] = self.sample['k18_observed'].fillna(False)
+        sample = pd.merge(sample, k18, on='id_koi', how='left')
+        sample['k18_observed'] = sample['k18_observed'].fillna(False)
+
+
+        fn = 'data/nirc2-ascii/sci_n2_25769.tbl'
+        print "Reading in Petigura 2018 observations {}".format(fn)
+        p18 = ascii.read(fn)
+        p18 = p18.to_pandas()
+        p18 = p18[p18.object.str.contains('^CK\d{5}')]
+        p18['id_koi'] = p18.object.str.slice(start=2,stop=7).astype(int)
+        p18 = p18.groupby('id_koi',as_index=False).first()
+        p18 = p18[['id_koi']]
+
+        p18['p18_observed'] = True
+        sample = pd.merge(sample, p18, on='id_koi', how='left')
+        sample['p18_observed'] = sample['p18_observed'].fillna(False)
         
         f17 = ckscool.io.load_table('furlan17-tab9')
         f17 = f17['id_koi f17_rcorr_avg'.split()]
         f17['f17_diluted'] = True
         f17['f17_sig_diluted'] = (f17.f17_rcorr_avg - 1) > 0.05
-        self.sample = pd.merge(self.sample, f17, on='id_koi',how='left')
+        sample = pd.merge(sample, f17, on='id_koi',how='left')
 
         # Is observed by Keck?
         f17 = ckscool.io.load_table('furlan17-tab2')
         f17 = f17['id_koi f17_ao_obs'.split()]
         #f17 = f17[f17.f17_ao_obs.str.contains('Keck')]
         #f17['f17_observed_keck'] = True
-        self.sample = pd.merge(self.sample, f17, on='id_koi',how='left')
-        self.sample['f17_ao_obs'] = self.sample['f17_ao_obs'].fillna('none')
-        self.sample['f17_sig_diluted'] = self.sample['f17_sig_diluted'].fillna(False)
+        sample = pd.merge(sample, f17, on='id_koi',how='left')
+        sample['f17_ao_obs'] = sample['f17_ao_obs'].fillna('none')
+        sample['f17_sig_diluted'] = sample['f17_sig_diluted'].fillna(False)
+        sample['f17_observed'] = sample['f17_ao_obs'].str.contains('Keck')
+        cols = 'f17_observed k18_observed p18_observed'.split()
+        sample['isobserved'] = sample[cols].sum(axis=1) > 0 
+        self.sample = sample
 
     def expected_observing_time(self):
         """
@@ -68,8 +86,7 @@ class ObserveNIRC2(Observe):
         d['nirc2-nstars'] = len(df)
         d['nirc2-time'] = (df.texp).sum()
         
-        bobs = ~df.k18_observed & ~df.f17_sig_diluted & ~df.f17_ao_obs.str.contains('Keck|Gem')
-        df = df[bobs]
+        df = df[~df['isobserved']]
         d['nirc2-nstars-notobserved'] = len(df)
         d['nirc2-time-notobserved'] = np.round((df.texp).sum(),1)
         return d
@@ -122,3 +139,4 @@ class ObserveHIRES(Observe):
         d['hires-time-notobserved'] = np.round((df.texp + self.tover).sum(),1)
         return d
         
+

@@ -19,9 +19,10 @@ plotdict ={
 samples = 'koi-mullally15 koi-thompson18'.split()
 
 cd = OrderedDict()
-cd['max-kepmag'] = 15.8
-cd['max-steff'] = 5200
+cd['max-kepmag'] = 16.0
+cd['max-steff'] = 5000
 cd['min-steff'] = 3500
+cd['max-srad'] = 1.5
 cd['max-score'] = 0.75
 
 class CutBase(object):
@@ -61,7 +62,7 @@ class CutGiant(CutBase):
     plotstr = 'Not giant'.format(cd['max-kepmag'])
     texstr = 'Not giant'.format(cd['max-kepmag'])
     def cut(self):
-        b = self.df['gaia2_srad'] > 1.5
+        b = self.df['gaia2_srad'] > cd['max-srad']
         return b
 
 class CutBadParallax(CutBase):
@@ -69,7 +70,7 @@ class CutBadParallax(CutBase):
     plotstr = 'Bad Parallax'
     texstr = 'Bad parallax'
     def cut(self):
-        b = self.df['gaia2_sparallax_over_err'] < 25
+        b = self.df['gaia2_sparallax_over_err'] < 10
         return b
 
 class CutDiluted(CutBase):
