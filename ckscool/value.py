@@ -40,8 +40,6 @@ def val_stat(return_dict=False):
     obs.label_observed('2018-01-01','2019-01-10')
     _d = obs.expected_observing_time()
 
-
-
     d['date'] = strftime("%Y-%m-%d", gmtime())
 
     for key in 'hires-nstars-notobserved hires-time-notobserved'.split():
