@@ -47,8 +47,8 @@ def update_planet_parameters(df):
             e_per = rand.normal(row['koi_period'], unc_per, size=10000)
 
         # Teff
-        unc_teff = np.mean([row['sm_teff_err'], -row['sm_teff_err']])
-        e_teff = rand.normal(row['sm_teff'], unc_teff, size=10000)
+        unc_teff = np.mean([row['sm_steff_err'], -row['sm_steff_err']])
+        e_teff = rand.normal(row['sm_steff'], unc_teff, size=10000)
 
         # Planet radius (earth radii)
         unc_ror = np.mean([row['koi_ror_err1'], -row['koi_ror_err2']])

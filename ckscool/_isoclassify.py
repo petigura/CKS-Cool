@@ -115,11 +115,15 @@ def func(x):
 def scrape_direct():
     df = isoclassify.pipeline.scrape_csv('isoclassify/direct/*/*.csv')
     df['id_starname'] = df.id_starname.astype(str).apply(func)
+    import pdb;pdb.set_trace()
     namemap = {
         'id_starname':'id_starname',
         'dir_rad':'gdir_srad',
         'dir_rad_err1':'gdir_srad_err1',
         'dir_rad_err2':'gdir_srad_err2',
+        'dir_avs':'gdir_avs',
+        'dir_avs_err1':'gdir_avs_err1',
+        'dir_avs_err2':'gdir_avs_err2',
     }
     df = df.rename(columns=namemap)[namemap.values()]
     return df

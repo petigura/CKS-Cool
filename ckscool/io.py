@@ -8,6 +8,7 @@ import ckscool.cuts
 import cksgaia.io
 import cpsutils.io
 import ckscool.calc
+from astropy.io import ascii
 
 DATADIR = os.path.join(os.path.dirname(__file__),'../data/')
 
@@ -143,7 +144,7 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
 
     elif table=='ckscool+kbc':
         #pd.merge(df,smemp)
-        df = ckscool.io.load_table('ckscool-cuts',cache=2)
+        df = ckscool.io.load_table('ckscool-cuts')
         df = df[~df.isany]
 
         kbc = cpsutils.kbc.loadkbc()
@@ -156,32 +157,48 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         df = pd.merge(df,kbc,on='id_koi')
         
     elif table=='ckscool+smemp':
-        df = ckscool.io.load_table('ckscool-cuts',cache=2)
-        df = df[~df.isany]
-        smemp = pd.read_csv('data/specmatch-emp_results.csv')
-        cols = 'obs name teff teff_err radius radius_err fe fe_err'.split()
-        smemp = smemp[cols]
-        smemp = smemp.dropna(subset=['name'])
 
-        #pd.merge(df,smemp)
+        # Stellar sample
+        df = ckscool.io.load_table('ckscool-cuts')
+        df = df[~df.isany]
+
+        # Spectroscopic parameters
+        sm = pd.read_csv('data/specmatch-emp_results.csv')
+        sm = sm.dropna(subset=['name'])
+        namemap = {
+            'obs':'id_obs',
+            'name':'id_name',
+            'teff':'sm_steff',
+            'teff_err':'sm_steff_err',
+            'radius':'sm_srad',
+            'radius_err':'sm_srad_err',
+            'fe':'sm_smet',
+            'fe_err':'sm_smet_err',
+        }
+        sm = sm.rename(columns=namemap)[namemap.values()]
+
+        # KBC  
         kbc = cpsutils.kbc.loadkbc()
-        kbc = kbc[kbc.type.str.contains('t') 
-                  & kbc.name.str.contains('^K\d{5}$|^CK\d{5}$')]
+        b = ( kbc.type.str.contains('t') 
+              & kbc.name.str.contains('^K\d{5}$|^CK\d{5}$') )
+        kbc = kbc[b]
         kbc['id_koi'] = kbc.name.str.slice(start=-5).astype(int)
         kbc = kbc['obs name id_koi'.split()]
-        smemp = pd.merge(smemp,kbc,on=['obs','name'])
-        smemp = smemp.groupby('id_koi',as_index=False).nth(-1)
-        smemp = smemp.rename(columns={'obs':'id_obs','name':'id_name'})
-        smemp = add_prefix(smemp,'sm_')
-        df = pd.merge(df,smemp,on='id_koi',how='left')
-        df['id_starname'] = df.id_name.str.slice(start=-6)
+        namemap = {'obs':'id_obs','name':'id_name'}
+        kbc = kbc.rename(columns=namemap)
+        sm = pd.merge(sm, kbc, on=['id_obs','id_name'])
+        sm = sm.groupby('id_koi', as_index=False).nth(-1)
+
+        # Merge in SpecMatch parameters
+        df = pd.merge(df,sm,on='id_koi',how='left')
+        df['id_starname'] = df.id_name
         print "ckscool+smemp: {} stars, {} planets".format(
             len(df.id_koi.drop_duplicates()), 
             len(df.id_koicand.drop_duplicates())
         )
 
     elif table=='ckscool+smemp+iso':
-        df = load_table('ckscool+smemp',cache=2)
+        df = load_table('ckscool+smemp')
         
         fn = os.path.join(DATADIR,'isoclassify_gaia2.csv')
         iso = pd.read_csv(fn)
@@ -218,11 +235,86 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         cols = 'id_koi f17_rcorr_avg f17_rcorr_avg_err'.split()
         df = pd.merge(tab2,tab9[cols],how='left',on='id_koi')
 
+    elif table=='mann13':
+        fn = os.path.join(DATADIR,'mann13/table3.dat') 
+        readme = os.path.join(DATADIR,'mann13/ReadMe') 
+        df = ascii.read(fn,readme=readme)
+        df = df.to_pandas()
+        namemap = {
+            'KOI':'id_koi',
+            'Teff':'steff',
+            'R*':'srad',
+            'e_R*':'srad_err',
+            'M*':'smass',
+            'e_M*':'smass_err',
+            'L*':'slum',
+            'e_L*':'slum_err',
+        }
+        df = df.rename(columns=namemap)[namemap.values()]
+        df['id_koi'] = df['id_koi'].astype(int)
+        df['steff_err'] = 57
+        df = add_prefix(df,'m13_')
+
+    elif table=='dressing13':
+        fn = os.path.join(DATADIR,'dressing13/table1.dat') 
+        readme = os.path.join(DATADIR,'dressing13/ReadMe') 
+        df = ascii.read(fn,readme=readme)
+        df = df.to_pandas()
+        namemap = {
+            'KIC':'id_kic',
+            'Teff':'steff',
+            'E_Teff':'steff_err1',
+            'e_Teff':'steff_err2',
+            'R*':'srad',
+            'E_R*':'srad_err1',
+            'e_R*':'srad_err2',
+        }
+        df = df.rename(columns=namemap)[namemap.values()]
+
+        for c in df.columns:
+            if c.count('err2')==1:
+                df[c] *= -1 
+        df = add_prefix(df,'d13_')
+
+    elif table=='brewer18':
+        tab = ascii.read('data/brewer18/apjsaad501t3_mrt.txt')
+        df = tab.to_pandas()
+        df = df[df.Name.str.contains('KOI-.*\d$')]
+        df['id_koi']  = df.Name.apply(lambda x : x.split('-')[1]).astype(int)
+        df['steff'] = df['Teff']
+        df = df['id_koi steff'.split()]
+        df = add_prefix(df,'b18_')
+
+    elif table=='ckscool-mann13':
+        cks = load_table('ckscool+smemp+iso')
+        m13 = load_table('mann13')
+        df = pd.merge(cks,m13,on='id_koi')
+
+    elif table=='ckscool-dressing13':
+        cks = load_table('ckscool+smemp+iso')
+        d13 = load_table('dressing13')
+        df = pd.merge(cks,d13,on='id_kic')
+
+    elif table=='ckscool-brewer18':
+        cks = load_table('ckscool+smemp+iso')
+        m13 = load_table('brewer18')
+        df = pd.merge(cks,m13,on='id_koi')
 
     else:
         assert False, "table {} not valid table name".format(table)
     return df
 
+
+    '''
+    sm = pd.read_csv('data/specmatch-emp_results.csv')
+    sm = sm.dropna(subset=['name'])
+    sm = sm[sm.name.str.contains('K\d{5}$')]
+    sm['id_koi'] = sm.name.str.slice(start=-5).astype(int)
+    sm = sm.groupby('id_koi',as_index=False).nth(-1)
+    mann13 = df
+    temp = pd.merge(mann13,sm,on='id_koi')
+    temp['diff'] = temp.Teff - temp.teff
+    '''
 
 def read_furlan17_table2(fn):
     df = pd.read_csv(fn,sep='\s+')

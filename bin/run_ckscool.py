@@ -13,6 +13,7 @@ import ckscool.table  # module for computing scalar values for table
 import ckscool._isoclassify
 import ckscool.plot.sample   # submodule for including plots
 import ckscool.plot.spectra
+import ckscool.plot.hr
 
 
 def main():
@@ -82,14 +83,22 @@ class Workflow(object):
         d['cuts-smass-steff'] = ckscool.plot.sample.fig_cuts_smass_steff
         d['compare-with-cks1'] = ckscool.plot.sample.fig_compare_with_cks1
         d['spectra'] = ckscool.plot.spectra.fig_spectra
+        d['hr'] = ckscool.plot.hr.fig_hr
+
+        from ckscool.plot.compare import fig_compare
+        d['compare-ckscool-mann13'] = lambda : fig_compare('ckscool-mann13')
+        d['compare-ckscool-dressing13'] = lambda : fig_compare('ckscool-dressing13')
+        d['compare-ckscool-brewer18'] = lambda : fig_compare('ckscool-brewer18')
+
         # run_cksgaia create-plot #
 
         self.plot_dict = d
 
         d = OrderedDict()
         # register different tables here
-        d['star'] = lambda : ckscool.tables.tab_star(stub=True)
-        d['planet'] = lambda : ckscool.tables.tab_planet(stub=True)
+        d['star'] = lambda : ckscool.table.tab_star() 
+        d['star-stub'] = lambda : ckscool.table.tab_star()[:10]
+        d['planet'] = lambda : ckscool.table.tab_planet(stub=True)
         self.table_dict = d
 
         d = OrderedDict()
@@ -112,12 +121,11 @@ class Workflow(object):
             
     def create_file(self, kind, name):
         i = 0
-
         for key, func in self.all_dict[kind].iteritems():
             if kind=='plot':
                 if name=='all':
                     func()
-                elif name==key:
+                elif key.count(name)==1:
                     func()
                 else:
                     continue
@@ -128,7 +136,7 @@ class Workflow(object):
             elif kind=='table':
                 if name=='all':
                     lines = func()
-                elif name==key:
+                elif key.count(name)==1:
                     lines = func()
                 else:
                     continue
@@ -158,9 +166,8 @@ class Workflow(object):
                 ]
                 lines = lines1 + lines + lines2
 
-
                 with open(fn,'w') as f:
-                    f.writelines("\n".join(lines))
+                    f.writelines("%\n".join(lines))
 
             i+=1
 
