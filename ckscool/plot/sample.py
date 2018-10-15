@@ -116,10 +116,91 @@ def cuts(xk,yk,nrows=None,ncols=None,plot_func=None, stars=False):
         iplot+=1
 
     axL = axL.reshape(nrows,ncols)
+    fig.set_tight_layout(True)
+
+def fig_cuts_ckscool():
+    cuts_ckscool(
+        'sm_steff', 'gdir_srad', nrows=2, ncols=2, stars=True, 
+        plot_func=semilogy
+    )
+    fig = gcf()
+    axL = fig.get_axes()
+    setp(axL,xlabel="{} (K)".format(texteff),xlim=(5000,3500),ylim=(0.4,1))
+
+    for ax in axL:
+        sca(ax)
+        yt = [0.4,0.5,0.7,1.0,1.5]
+        yticks(yt,yt)
+        minorticks_off()
+
+
+
+def cuts_ckscool(xk, yk, nrows=None,ncols=None,plot_func=None, stars=False):
+    sns.set_style('ticks')
+    sns.set_context('paper')
+
+    if type(plot_func)!=type(None):
+        plot = plot_func
+    else:
+        plot = plt.plot
+
+    df = ckscool.io.load_table('ckscool-stars-cuts')
+    cuttypes = df.cuttypes
+
+    width = ncols * 2
+    height = nrows * 2
+
+    fig, axL = subplots(
+        nrows=nrows,ncols=ncols,figsize=(width,height),
+        sharex=True,sharey=True
+    )
+    axL = axL.flatten()
+
+    bpass = np.zeros(len(df))
+    iplot = 0
+    
+    for cuttype in df.cuttypes:
+        ax = axL[iplot] 
+        sca(ax)
+        
+        key = 'is'+cuttype
+        obj = ckscool.cuts.get_cut(cuttype)
+        cut = obj(df,table)
+        df[key] = cut.cut()
+        bpass += df[key].astype(int)
+            
+        plotkw = dict(ms=4,rasterized=True)
+
+        x = df[xk]
+        y = df[yk]
+
+        plot(x, y,'.',color='LightGray',**plotkw)
+        dfcut = df[bpass==0]
+        
+        plot(dfcut[xk], dfcut[yk],'.', **plotkw)
+        _text = cut.plotstr + ' ({})'.format(len(dfcut))
+
+        if stars:
+            _text = cut.plotstr + ' ({})'.format(len(dfcut.id_kic.drop_duplicates()))
+
+
+        textkw = dict(fontsize='small',transform=ax.transAxes, ha='right')
+        text(0.95,0.05, _text, **textkw)
+
+        letter = string.ascii_lowercase[iplot]
+        at = AnchoredText(letter,loc=2, frameon=True, prop=letter_text_props)
+        ax.add_artist(at)
+        setp(at.patch,**letter_bbox_props)
+        
+        #minorticks_off()
+        iplot+=1
+
+    axL = axL.reshape(nrows,ncols)
     #setp(axL[-1,:],xlabel='$R_p\, (R_{\oplus})$')
     #setp(axL[:,0],ylabel='[Fe/H]')
     fig.set_tight_layout(True)
     #fig.subplots_adjust(hspace=0.001,wspace=0.001,left=0.07,right=0.99,top=0.95,bottom=0.12)
+
 
 
 class ComparisonPlotter(object):

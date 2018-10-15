@@ -104,3 +104,8 @@ data/
 fig*
 tab*
 val*
+*ipynb
+temp*
+*tot
+
+*load_table_cache*

@@ -16,7 +16,7 @@ plotdict ={
     'logg':'\log g'
 }
 
-samples = 'koi-mullally15 koi-thompson18'.split()
+#samples = 'koi-mullally15 koi-thompson18 ckscool-planets'.split()
 
 cd = OrderedDict()
 cd['max-kepmag'] = 16.0
@@ -31,7 +31,7 @@ class CutBase(object):
     texstr = 'base'
 
     def __init__(self, df, sample):
-        assert samples.count(sample)==1,'{} not supported sample'.format(sample)
+        #assert samples.count(sample)==1,'{} not supported sample'.format(sample)
         self.df = df
         self.sample = sample 
         self.nrows = len(df)
@@ -81,6 +81,29 @@ class CutDiluted(CutBase):
         b = self.df['gaia2_gflux_ratio'] > 1.1
         return b
 
+class CutFurlan(CutBase):
+    cuttype = 'dilutedfurlan'
+    plotstr = 'furlan RCF > 1.05'
+    texstr = 'furlan RCF > 1.05'
+    def cut(self):
+        b = self.df['f17_rcf_avg'] > 1.05
+        return b
+
+class CutAO(CutBase):
+    cuttype = 'dilutedao'
+    plotstr = 'Comp. with $\Delta K < 2.5$'
+    texstr = 'Comp. with $\Delta K < 2.5$'
+    def cut(self):
+        b1 = self.df['f17_rcf_avg'] > 1.05
+
+        # K4 star has M_K = 4.31 and M = 0.73 Msun. Want to find the
+        # mass of a star with 10% of flux in So looking for star with
+        # M_K 4.31 + 2.5 4.31 + 2.5 = 6.81 7.55 M4 star has M_K 7.55
+        # and M = 0.24 Msun. So using a mass ratio of 0.3 will remove
+        # stars with a dilutoin factor of 10% in Kmag.
+        b2 = self.df['k16_max_massratio'] > 0.3
+        return b1 | b2 
+
 class CutTeffPhot(CutBase):
     """Remove stars where Teff falls outside allowed range
     """
@@ -108,6 +131,35 @@ class CutNotReliable(CutBase):
             return b1
         else:
             assert False," error"
+
+
+class CutSpecParallax(CutBase):
+    """Remove stars the spectroscopic parallax does not agree with the trig parallax
+    """
+    cuttype = 'sb2'
+    texstr = r'SB2'
+    plotstr = r'SB2'
+    def cut(self):
+
+        diff = self.df.gaia2_sparallax - self.df.giso2_sparallax
+        sigmadiff = np.sqrt(
+            self.df.giso2_sparallax_err1**2 + self.df.gaia2_sparallax_err**2 
+        ) 
+        ndiff = diff/sigmadiff
+        teff = self.df['m17_steff']
+        b = np.abs(ndiff) > 3
+        return b
+
+class CutSB2(CutBase):
+    """Remove stars that are SB2s"""
+    cuttype = 'badspecparallax'
+    texstr = r'Delta Parallax > 3 sigma'
+    plotstr = r'$|\pi_{trig} - \pi_{spec}| > 3 \sigma$'
+    def cut(self):
+        b = self.df.rm_sb2.isin([4,5])
+        return b
+
+
 
 clsmembers = inspect.getmembers(sys.modules[__name__], inspect.isclass)
 

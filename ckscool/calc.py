@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 from collections import OrderedDict
-
 import cksgaia.io
 from cksgaia.errors import equad
 
@@ -10,90 +9,59 @@ rand = np.random.RandomState(SEED)
 
 albedo = 0.30
 
-
 def update_planet_parameters(df):
-    prad_iso = []
-    prad_giso_err = []
-    sinc_iso = []
-    sinc_giso_err = []
-    teq_iso = []
-    teq_giso_err = []
-    sma_iso = []
-    sma_giso_err = []
-    # flux_zams = []
-    # flux_zams_err = []
+    newkeys = [
+        'gdir_prad','gdir_prad_err1','gdir_prad_err2',
+        'giso_sinc','giso_sinc_err1','giso_sinc_err2',
+        'giso_sma','giso_sma_err1','giso_sma_err2',
+    ]
+
+    for key in newkeys:
+        df[key] = np.nan
 
     for i, row in df.iterrows():
 
         # stellar radius
-        unc_rad = np.mean([row['gdir_srad_err1'], -row['gdir_srad_err2']])
-        # 8% floor on stellar radius uncertainty
-        # if unc_rad / row['gdir_srad'] < 0.08:
-        #     unc_rad = 0.08 * row['gdir_srad']
-        e_rad = rand.normal(row['gdir_srad'], unc_rad, size=10000)
+        srad = row.gdir_srad
+        srad_err = 0.5 * (row.gdir_srad_err1 - row.gdir_srad_err2)
+        srad_samp = rand.normal(row.gdir_srad, srad_err, size=10000)
 
         # stellar mass
-        unc_mstar = np.mean([row['giso_smass_err1'], -row['giso_smass_err2']])
-        # 5% floor on stellar mass uncertainty
-        # if unc_mstar / row['giso_smass'] < 0.05:
-        #     unc_mstar = 0.05 * row['giso_smass']
-        e_mstar = rand.normal(row['giso_smass'], unc_mstar, size=10000)
-
-        # period
-        unc_per = np.mean([row['koi_period_err1'], -row['koi_period_err2']])
-        if unc_per == 0.0:
-            e_per = row['koi_period']
-        else:
-            e_per = rand.normal(row['koi_period'], unc_per, size=10000)
+        smass = row.giso_srad
+        smass_err = 0.5 * (row.giso_smass_err1 - row.giso_smass_err2)
+        smass_samp = rand.normal(row.giso_smass, smass_err, size=10000)
 
         # Teff
-        unc_teff = np.mean([row['sm_steff_err'], -row['sm_steff_err']])
-        e_teff = rand.normal(row['sm_steff'], unc_teff, size=10000)
+        steff = row.sm_steff
+        steff_err = row.sm_steff_err
+        steff_samp = rand.normal(row.sm_steff, steff_err, size=10000)
 
-        # Planet radius (earth radii)
-        unc_ror = np.mean([row['koi_ror_err1'], -row['koi_ror_err2']])
-        e_ror = rand.normal(row['koi_ror'], unc_ror, size=10000)
+        # Radius ratio
+        ror = row.koi_ror
+        ror_err = 0.5 * (row.koi_ror_err1 - row.koi_ror_err2)
+        ror_samp = rand.normal(row.koi_ror, ror_err, size=10000)
 
-        unc_depth = np.mean([row['koi_depth'], row['koi_depth']])
-        e_depth = rand.normal(row['koi_depth'], unc_depth, size=10000)
+        # Planet radius
+        prad_samp = ror_samp * srad_samp * 109.245
 
-        prad = e_ror * e_rad * 109.245
-        # prad = np.sqrt(depth*1e-6) * e_rad * 109.245
-        prad_iso.append(np.median(prad))
-        prad_giso_err.append(np.std(prad))
-
-        a = (e_mstar * (e_per / 365.) ** 2.) ** (1. / 3.) / 0.00465
-        teq = e_teff * np.sqrt(e_rad / (2.0 * a)) * (1.0 - albedo) ** (1. / 4.)
-        teq_iso.append(np.median(teq))
-        teq_giso_err.append(np.std(teq))
+        # Semi-major axis
+        sma_samp = (smass_samp * (row.koi_period / 365.) ** 2.) ** (1. / 3.)
 
         # insolation flux
-        a = (e_mstar * (e_per / 365.) ** 2.) ** (1. / 3.)
-        sma_iso.append(np.median(a))
-        sma_giso_err.append(np.std(a))
+        sinc_samp = (steff_samp / 5778.) ** 4.0 * (srad_samp / sma_samp) ** 2.0
 
-        sinc = (e_teff / 5778.) ** 4.0 * (e_rad / a) ** 2.0
-        sinc_iso.append(np.median(sinc))
-        sinc_giso_err.append(np.std(sinc))
 
-    df['gdir_prad'] = prad_iso
-    df['gdir_prad_err1'] = np.array(prad_giso_err)
-    df['gdir_prad_err2'] = -np.array(prad_giso_err)
-
-    df['giso_insol'] = sinc_iso
-    df['giso_insol_err1'] = np.array(sinc_giso_err)
-    df['giso_insol_err2'] = -np.array(sinc_giso_err)
-
-    df['giso_teq'] = teq_iso
-    df['giso_teq_err1'] = np.array(teq_giso_err)
-    df['giso_teq_err2'] = -np.array(teq_giso_err)
-
-    df['giso_sma'] = sma_iso
-    df['giso_sma_err1'] = np.array(sma_giso_err)
-    df['giso_sma_err2'] = -np.array(sma_giso_err)
+        df.ix[i,'gdir_prad'] = np.median(prad_samp)
+        df.ix[i,'gdir_prad_err1'] = np.std(prad_samp)
+        df.ix[i,'gdir_prad_err2'] = -1.0 * np.std(prad_samp)
+        df.ix[i,'giso_sinc'] = np.median(sinc_samp)
+        df.ix[i,'giso_sinc_err1'] = np.std(sinc_samp)
+        df.ix[i,'giso_sinc_err2'] = -1.0 * np.std(sinc_samp)
+        df.ix[i,'giso_sma'] = np.median(sma_samp)
+        df.ix[i,'giso_sma_err1'] = np.std(sma_samp)
+        df.ix[i,'giso_sma_err2'] = -1.0 * np.std(sma_samp)
 
     return df
-
 
 def table_statistics():
     d = OrderedDict()

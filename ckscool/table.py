@@ -1,18 +1,18 @@
 import ckscool.io
 
 def tab_planet():
-    df = cksgaia.io.load_table('cksgaia-planets',cache=1)
+    df = ckscool.io.load_table('ckscool-planets',cache=2)
     df = df.sort_values(by='id_koicand')
     lines = []
     for i, row in df.iterrows():
-        
+
         s = r""
         s+=r"{id_koicand:s} & "
         s+=r"{koi_period:0.1f} & "
         s+=r"{koi_ror:.3f}  & "
         s+=r"{gdir_prad:.2f} & "  
         s+=r"{giso_sma:.3f} & "
-        s+=r"{giso_insol:.0f} \\  "
+        s+=r"{giso_sinc:.0f} \\  "
 
         s = s.format(**row)
         s = s.replace('nan','\\nodata')
@@ -21,7 +21,7 @@ def tab_planet():
     return lines
 
 def tab_star():
-    df = ckscool.io.load_table('ckscool-planets',cache=1)
+    df = ckscool.io.load_table('ckscool-stars',cache=1)
     df = df.groupby('id_starname',as_index=False).nth(0)
     df = df.sort_values(by='id_starname')
     lines = []
@@ -37,11 +37,12 @@ def tab_star():
         s+="{giso_smass:0.2f} & "
         s+="{giso_srad:0.2f} & "
         s+="{giso_srho:0.2f} & "
-#        s+="{giso_slogage:0.2f} & "
+        #        s+="{giso_slogage:0.2f} & "
 
         s+="{giso2_sparallax:0.2f} & "
         s+=r"{gaia2_gflux_ratio:0.2f} & " 
-#        s+=r"{fur17_rcorr_avg:.3f} \\"
+        #        s+=r"{fur17_rcorr_avg:.3f} \\"
+        s+=r" \\"
         s = s.format(**row)
         s = s.replace('nan','\\nodata')
         lines.append(s)

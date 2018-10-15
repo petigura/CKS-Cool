@@ -54,9 +54,9 @@ class ObserveNIRC2(Observe):
         sample['p18_observed'] = sample['p18_observed'].fillna(False)
         
         f17 = ckscool.io.load_table('furlan17-tab9')
-        f17 = f17['id_koi f17_rcorr_avg'.split()]
+        f17 = f17['id_koi f17_rcf_avg'.split()]
         f17['f17_diluted'] = True
-        f17['f17_sig_diluted'] = (f17.f17_rcorr_avg - 1) > 0.05
+        f17['f17_sig_diluted'] = (f17.f17_rcf_avg - 1) > 0.05
         sample = pd.merge(sample, f17, on='id_koi',how='left')
 
         # Is observed by Keck?

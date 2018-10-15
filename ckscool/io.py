@@ -57,15 +57,6 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
             names=['column','description']
         )
 
-    elif table=='koi-thompson18':
-        df = load_table_koi(table)
-
-    elif table=='koi-coughlin16':
-        df = load_table_koi(table)
-
-    elif table=='koi-mullally15':
-        df = load_table_koi(table)
-
     elif table=='mathur17':
         df = cksspec.io.load_table('stellar17')
         namemap = {}
@@ -76,7 +67,6 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
 
     elif table=='johnson17':
         df = pd.read_csv('data/cks_physical_merged.csv',index_col=0)
-
 
     # Mathur 2017
     elif table=='stellar17':
@@ -107,7 +97,6 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         df = cksgaia.xmatch.read_xmatch_gaia2(fn)
         # Systematic offset from Zinn et al. (2018)
         df['gaia2_sparallax'] += 0.053 
-
 
     # Merged tables
     elif table=='m17+gaia2':
@@ -142,29 +131,22 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         df = ckscool.cuts.add_cuts(df,cuttypes,table)
         df.cuttypes = cuttypes
 
-    elif table=='ckscool+kbc':
-        #pd.merge(df,smemp)
-        df = ckscool.io.load_table('ckscool-cuts')
-        df = df[~df.isany]
 
-        kbc = cpsutils.kbc.loadkbc()
-        b = (
-            kbc.type.str.contains('t') 
-            & kbc.name.str.contains('^K\d{5}$|^CK\d{5}$')
-        )
-        kbc = kbc[b]
-        kbc['id_koi'] = kbc.name.str.slice(start=-5).astype(int)
-        df = pd.merge(df,kbc,on='id_koi')
-        
-    elif table=='ckscool+smemp':
 
-        # Stellar sample
-        df = ckscool.io.load_table('ckscool-cuts')
-        df = df[~df.isany]
+    elif table=='reamatch':
+        fn = os.path.join(DATADIR, 'reamatch.csv')
+        df = pd.read_csv(fn,index_col=None, usecols=range(6))
+        namemap = {
+            'obs':'id_obs',
+            'is_sb2':'rm_sb2',
+        }
+        df = df.rename(columns=namemap)[namemap.values()]
 
-        # Spectroscopic parameters
-        sm = pd.read_csv('data/specmatch-emp_results.csv')
-        sm = sm.dropna(subset=['name'])
+
+    # Spectroscopic parameters
+    elif table=='smemp':
+        df = pd.read_csv('data/specmatch-emp_results.csv')
+        df = df.dropna(subset=['name'])
         namemap = {
             'obs':'id_obs',
             'name':'id_name',
@@ -175,42 +157,65 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
             'fe':'sm_smet',
             'fe_err':'sm_smet_err',
         }
-        sm = sm.rename(columns=namemap)[namemap.values()]
+        df = df.rename(columns=namemap)[namemap.values()]
 
-        # KBC  
-        kbc = cpsutils.kbc.loadkbc()
-        b = ( kbc.type.str.contains('t') 
-              & kbc.name.str.contains('^K\d{5}$|^CK\d{5}$') )
-        kbc = kbc[b]
-        kbc['id_koi'] = kbc.name.str.slice(start=-5).astype(int)
-        kbc = kbc['obs name id_koi'.split()]
+    elif table=='kbc':
+        df = cpsutils.kbc.loadkbc()
+        b = ( df.type.str.contains('t') 
+              & df.name.str.contains('^K\d{5}$|^CK\d{5}$') )
+        df = df[b]
+        df['id_koi'] = df.name.str.slice(start=-5).astype(int)
+        df = df['obs name id_koi'.split()]
         namemap = {'obs':'id_obs','name':'id_name'}
-        kbc = kbc.rename(columns=namemap)
-        sm = pd.merge(sm, kbc, on=['id_obs','id_name'])
-        sm = sm.groupby('id_koi', as_index=False).nth(-1)
+        df = df.rename(columns=namemap)
 
-        # Merge in SpecMatch parameters
-        df = pd.merge(df,sm,on='id_koi',how='left')
-        df['id_starname'] = df.id_name
-        print "ckscool+smemp: {} stars, {} planets".format(
-            len(df.id_koi.drop_duplicates()), 
-            len(df.id_koicand.drop_duplicates())
-        )
+    elif table=='ckscool+smemp':
+        df = ckscool.io.load_table('ckscool-cuts')
+        df = df[~df.isany]
 
-    elif table=='ckscool+smemp+iso':
-        df = load_table('ckscool+smemp')
+        # Grab observation using kbc
+        kbc = load_table('kbc')
+        kbc = kbc.groupby('id_koi', as_index=False).nth(-1)
+        df = pd.merge(df, kbc)
+
+        # Add in specmatch parameters
+        sm = load_table('smemp')
+        df = pd.merge(df, sm, on=['id_obs','id_name'], how='left')
         
+    # Stellar sample
+    elif table=='ckscool-stars':
+        df = load_table('ckscool+smemp')
+
+        # Add in ReaMatch parameters
+        rm = load_table('reamatch')
+        df = pd.merge(df, rm, how='left', on='id_obs')
+
+        # Add in Furlan parameters
+        f17 = load_table('fur17')
+        df = pd.merge(df, f17, how='left',on='id_koi')
+
+        # Add in Kraus parameters
+        k16 = load_table('kraus16')
+        df = pd.merge(df, k16, how='left', on='id_koi')
+
+        # Add in isoclassify parameters
+        df['id_starname'] = df.id_name
         fn = os.path.join(DATADIR,'isoclassify_gaia2.csv')
         iso = pd.read_csv(fn)
-        df = pd.merge(df, iso, on='id_starname')
-        print "ckscool+smemp+iso: {} stars, {} planets".format(
-            len(df.id_koi.drop_duplicates()), 
-            len(df.id_koicand.drop_duplicates())
-        )
+        df = pd.merge(df, iso, on='id_starname', how='left')
+        
+    elif table=='ckscool-stars-cuts':
+        df = load_table('ckscool-stars')
+        cuttypes = ['none','sb2','badspecparallax','dilutedao']
+        table='temp'
+        df = ckscool.cuts.add_cuts(df, cuttypes, table)
+        df.cuttypes = cuttypes
 
     elif table == "ckscool-planets":
-        df = load_table('ckscool+smemp+iso')
+        df = load_table('ckscool-stars-cuts')
+        df = df[~df.isany]
         df = ckscool.calc.update_planet_parameters(df)
+
         
     elif table=='nrm-previous':
         # File is from an email that Adam sent me in 2017-11-02
@@ -219,6 +224,19 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         df['id_koi'] = df.name.str.slice(start=4).astype(int)
         df = df[['id_koi']]
 
+    # ###########################
+    # Tables from other papers #
+    ############################
+
+    # KOI tables
+    elif table=='koi-thompson18':
+        df = load_table_koi(table)
+
+    elif table=='koi-coughlin16':
+        df = load_table_koi(table)
+
+    elif table=='koi-mullally15':
+        df = load_table_koi(table)
 
     # Furlan 2017
     elif table=='furlan17-tab2':
@@ -232,9 +250,35 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
     elif table=='fur17':
         tab2 = load_table('furlan17-tab2')
         tab9 = load_table('furlan17-tab9')
-        cols = 'id_koi f17_rcorr_avg f17_rcorr_avg_err'.split()
+        cols = 'id_koi f17_rcf_avg f17_rcf_avg_err'.split()
         df = pd.merge(tab2,tab9[cols],how='left',on='id_koi')
 
+
+    elif table=='kraus16':
+        # Add in Kraus AO
+        #import astropy.io.ascii
+        #from astropy.table import Table
+
+        fn = os.path.join(DATADIR,'kraus16/table7.dat')
+        readme = os.path.join(DATADIR,'kraus16/ReadMe')
+        df = ascii.read(fn,readme=readme)
+        df = df.to_pandas()
+        namemap = {
+            "KOI":"id_koi",
+            'M2/M1':'massratio',
+            'Sep':'sep',
+            'l_M2/M1':'massratio_ul'
+        }
+        df = df.rename(columns=namemap)[namemap.values()]
+        df['massratio_ul'] = (df.massratio_ul=="<").astype(int)
+        df = df[df.massratio_ul.astype(bool)]
+        g = df.sort_values(by=['massratio']).groupby('id_koi',as_index=False)
+        df = g.nth(-1)
+        df = df.rename(columns={'massratio':'max_massratio'})
+        df = add_prefix(df,'k16_')
+
+
+    # Mann et al. (2013)
     elif table=='mann13':
         fn = os.path.join(DATADIR,'mann13/table3.dat') 
         readme = os.path.join(DATADIR,'mann13/ReadMe') 
@@ -255,6 +299,12 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         df['steff_err'] = 57
         df = add_prefix(df,'m13_')
 
+    elif table=='ckscool-mann13':
+        cks = load_table('ckscool-stars-cuts')
+        m13 = load_table('mann13')
+        df = pd.merge(cks,m13,on='id_koi')
+
+    # Dressing et al (2013)
     elif table=='dressing13':
         fn = os.path.join(DATADIR,'dressing13/table1.dat') 
         readme = os.path.join(DATADIR,'dressing13/ReadMe') 
@@ -276,6 +326,12 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
                 df[c] *= -1 
         df = add_prefix(df,'d13_')
 
+    elif table=='ckscool-dressing13':
+        cks = load_table('ckscool-stars-cuts')
+        d13 = load_table('dressing13')
+        df = pd.merge(cks,d13,on='id_kic')
+
+    # Brewer et al. (2018)
     elif table=='brewer18':
         tab = ascii.read('data/brewer18/apjsaad501t3_mrt.txt')
         df = tab.to_pandas()
@@ -285,36 +341,14 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         df = df['id_koi steff'.split()]
         df = add_prefix(df,'b18_')
 
-    elif table=='ckscool-mann13':
-        cks = load_table('ckscool+smemp+iso')
-        m13 = load_table('mann13')
-        df = pd.merge(cks,m13,on='id_koi')
-
-    elif table=='ckscool-dressing13':
-        cks = load_table('ckscool+smemp+iso')
-        d13 = load_table('dressing13')
-        df = pd.merge(cks,d13,on='id_kic')
-
     elif table=='ckscool-brewer18':
-        cks = load_table('ckscool+smemp+iso')
+        cks = load_table('ckscool-stars-cuts')
         m13 = load_table('brewer18')
         df = pd.merge(cks,m13,on='id_koi')
 
     else:
         assert False, "table {} not valid table name".format(table)
     return df
-
-
-    '''
-    sm = pd.read_csv('data/specmatch-emp_results.csv')
-    sm = sm.dropna(subset=['name'])
-    sm = sm[sm.name.str.contains('K\d{5}$')]
-    sm['id_koi'] = sm.name.str.slice(start=-5).astype(int)
-    sm = sm.groupby('id_koi',as_index=False).nth(-1)
-    mann13 = df
-    temp = pd.merge(mann13,sm,on='id_koi')
-    temp['diff'] = temp.Teff - temp.teff
-    '''
 
 def read_furlan17_table2(fn):
     df = pd.read_csv(fn,sep='\s+')
@@ -327,15 +361,14 @@ def read_furlan17_table2(fn):
 def read_furlan17_table9(fn):
     names = """
     id_koi hst hst_err i i_err 692 692_err lp600 lp600_err jmag jmag_err 
-    kmag kmag_err jkdwarf jkdwarf_err jkgiant jkgiant_err rcorr_avg 
-    rcorr_avg_err
+    kmag kmag_err jkdwarf jkdwarf_err jkgiant jkgiant_err
+    avg avg_err
     """.split()
 
     df = pd.read_csv(fn,sep='\s+',skiprows=2,names=names)
     df['id_starname'] = ['K'+str(x).rjust(5, '0') for x in df.id_koi] 
-    df = add_prefix(df,'f17_')
+    df = add_prefix(df,'f17_rcf_')
     return df 
-
 
 def load_table_koi(table):
     """

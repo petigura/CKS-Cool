@@ -18,7 +18,7 @@ def create_iso_batch(args):
     """
 
     df = ckscool.io.load_table('ckscool+smemp')
-    df = df.groupby('id_koi',as_index=False).nth(0)
+    df = df.groupby('id_koi',as_index=False).nth(-1)
     df = df.sort_values(by='id_koi')
 
     # Direct method with parallax constraints
@@ -28,10 +28,10 @@ def create_iso_batch(args):
             'parallax_error':'parallax_err',
             'ks_m':'kmag',
             'ks_msigcom':'kmag_err',
-            'sm_fe':'feh',
-            'sm_fe_err':'feh_err',
-            'sm_teff':'teff',
-            'sm_teff_err':'teff_err',
+            'sm_smet':'feh',
+            'sm_smet_err':'feh_err',
+            'sm_steff':'teff',
+            'sm_steff_err':'teff_err',
             'm17_kmag':'kmag',
             'm17_kmag_err':'kmag_err',
             'gaia2_sparallax':'parallax',
@@ -44,8 +44,11 @@ def create_iso_batch(args):
     df['kmag_err'] = df['kmag_err'].fillna(0.02)
     df['band'] = 'kmag'
     df['dust'] = 'green18'
-    df['parallax'] /= 1e3
-    df['parallax_err'] /= 1e3
+    df['parallax'] /= 1e3 # Convert microarcsec to arcsec
+    df['parallax_err'] /= 1e3 
+    df['teff_err'] =  60 # Uncertainty over 3500--5000 K (see email from S. Yee)
+    df['feh_err'] = 0.12 # Ditto
+
     df0 = df.copy() 
 
     cols = [
@@ -53,6 +56,7 @@ def create_iso_batch(args):
         'parallax','parallax_err','kmag','kmag_err',
         'ra','dec','band','dust'
     ]
+
     # Direct method. Don't use spectroscopic logg values so as to not
     # pollute the parallax radii
     df = df0.copy()

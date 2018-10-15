@@ -12,17 +12,18 @@ def val_stat(return_dict=False):
     """
     d = OrderedDict()
     cand = ckscool.io.load_table('ckscool-cuts',cache=1)
-    stars = cand.groupby('id_kic',as_index=False).first()
+    stars = cand.groupby('id_kic',as_index=False).nth(0)
 
     d['n-koi'] = "{}".format( len(cand) )
     d['n-stars'] = "{}".format( len(stars) )
 
     cand = cand[~cand.isany]
-    stars = cand.groupby('id_kic',as_index=False).first()
+    stars = cand.groupby('id_kic',as_index=False).nth(0)
 
     d['n-koi-pass'] = "{}".format( len(cand))
     d['n-stars-pass'] = "{}".format( len(stars))
 
+    '''
     obs = ckscool.observe.ObserveHIRES()
     d['hires-min-counts'] = obs.counts
     d['hires-min-snr'] = "{:.0f}".format(np.sqrt(obs.counts / 10.0)  * 45 )
@@ -30,7 +31,9 @@ def val_stat(return_dict=False):
     _d = obs.expected_observing_time()
     for key in 'hires-nstars-notobserved hires-time-notobserved'.split():
         d[key] = _d[key]
+    '''
 
+    '''
     # drop stars that have been observed prior to 2018
     sample = obs.sample
     sample.index = sample.id_kic
@@ -44,7 +47,7 @@ def val_stat(return_dict=False):
 
     for key in 'hires-nstars-notobserved hires-time-notobserved'.split():
         d[key+'-2018'] = _d[key]
-
+    
 
     obs = ckscool.observe.ObserveNIRC2()
     obs.label_observed()
@@ -55,6 +58,7 @@ def val_stat(return_dict=False):
     for key in 'nirc2-nstars-notobserved nirc2-time-notobserved'.split():
         d[key] = _d[key]
     
+    '''
 
     df = ckscool.io.load_table('ckscool-planets',cache=1)
     d['sparallax-med'] = "{:.1f}".format(df.eval('gaia2_sparallax').median())
@@ -73,10 +77,19 @@ def val_stat(return_dict=False):
     d['mk-med'] = "{:.02f}".format(df.m17_kmag.median())
     d['mk-err-med'] = "{:.02f}".format(df.m17_kmag_err.median())
 
-
     ferr = df.eval('0.5*(gdir_srad_err1 - gdir_srad_err2) / gdir_srad')
     d['srad-med'] = "{:.1f}".format(df.gdir_srad.median())
     d['srad-ferr-med'] = "{:.1f}".format(100*ferr.median())
+    
+    df = ckscool.io.load_table('ckscool-stars-cuts',cache=0)
+    cuttypes = df.cuttypes
+    df = df.groupby('id_koi').nth(0)
+
+    for cut in cuttypes:
+        d['cut-nstars-'+cut] = df['is'+cut].sum()
+
+    d['cut-nstars-any'] = df['isany'].sum()
+
 
 
     '''

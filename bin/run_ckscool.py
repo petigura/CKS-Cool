@@ -81,6 +81,7 @@ class Workflow(object):
         d['cuts-kepmag-steff'] = ckscool.plot.sample.fig_cuts_kepmag_steff
         d['cuts-period-prad'] = ckscool.plot.sample.fig_cuts_period_prad
         d['cuts-smass-steff'] = ckscool.plot.sample.fig_cuts_smass_steff
+        d['cuts-ckscool-hr'] = ckscool.plot.sample.fig_cuts_ckscool
         d['compare-with-cks1'] = ckscool.plot.sample.fig_compare_with_cks1
         d['spectra'] = ckscool.plot.spectra.fig_spectra
         d['hr'] = ckscool.plot.hr.fig_hr
@@ -98,7 +99,8 @@ class Workflow(object):
         # register different tables here
         d['star'] = lambda : ckscool.table.tab_star() 
         d['star-stub'] = lambda : ckscool.table.tab_star()[:10]
-        d['planet'] = lambda : ckscool.table.tab_planet(stub=True)
+        d['planet'] = lambda : ckscool.table.tab_planet()
+        d['planet-stub'] = lambda : ckscool.table.tab_planet()[:10]
         self.table_dict = d
 
         d = OrderedDict()
