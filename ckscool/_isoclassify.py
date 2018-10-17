@@ -1,5 +1,6 @@
 import ckscool.io
 import pandas as pd
+
 def create_iso_batch(args):
     """Create Isoclassify Batch Jobs
 
@@ -119,7 +120,6 @@ def func(x):
 def scrape_direct():
     df = isoclassify.pipeline.scrape_csv('isoclassify/direct/*/*.csv')
     df['id_starname'] = df.id_starname.astype(str).apply(func)
-    import pdb;pdb.set_trace()
     namemap = {
         'id_starname':'id_starname',
         'dir_rad':'gdir_srad',

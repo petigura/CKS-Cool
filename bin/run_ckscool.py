@@ -14,7 +14,7 @@ import ckscool._isoclassify
 import ckscool.plot.sample   # submodule for including plots
 import ckscool.plot.spectra
 import ckscool.plot.hr
-
+import ckscool.plot.planet
 
 def main():
     psr = ArgumentParser()
@@ -83,7 +83,10 @@ class Workflow(object):
         d['cuts-smass-steff'] = ckscool.plot.sample.fig_cuts_smass_steff
         d['cuts-ckscool-hr'] = ckscool.plot.sample.fig_cuts_ckscool
         d['compare-with-cks1'] = ckscool.plot.sample.fig_compare_with_cks1
-        d['spectra'] = ckscool.plot.spectra.fig_spectra
+        d['ferr-hist-star'] = ckscool.plot.hr.fig_ferr_hist_star
+        d['ferr-hist-planet'] = ckscool.plot.hr.fig_ferr_hist_planet
+        d['planet-per-prad'] = ckscool.plot.planet.fig_per_prad
+
         d['hr'] = ckscool.plot.hr.fig_hr
 
         from ckscool.plot.compare import fig_compare

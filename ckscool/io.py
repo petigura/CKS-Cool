@@ -192,7 +192,7 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
 
         # Add in Furlan parameters
         f17 = load_table('fur17')
-        df = pd.merge(df, f17, how='left',on='id_koi')
+        df = pd.merge(df, f17, how='left',on=['id_kic','id_koi'])
 
         # Add in Kraus parameters
         k16 = load_table('kraus16')

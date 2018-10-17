@@ -68,3 +68,46 @@ def fig_compare():
     fig.subplots_adjust(
         hspace=0.001,left=0.12,top=0.96,right=0.98,wspace=0.4,bottom=0.14
     )
+
+import ckscool.io
+def fig_ferr_hist_star():
+    fig = subplots(figsize=(4,3))
+    df = ckscool.io.load_table('ckscool-stars-cuts')
+    df = df[~df.isany]
+
+    bins = arange(0,0.1,0.005)
+    kw = dict(lw=2, bins=bins, histtype='step')
+
+    rat = df.m17_kmag_err.dropna()
+    hist(rat/2,label='$\sigma(m_K$) /2',**kw)
+
+    rat = (df.gaia2_sparallax_err /  df.gaia2_sparallax).dropna()
+    hist(rat,label='$\sigma(\pi) / \pi$',color='m',**kw)
+
+    rat = 60 / df.sm_steff
+    hist([2 * rat],label='2 $\sigma$(teff) / teff',**kw)
+
+    rat = df.gdir_srad_err1/df.gdir_srad
+    rat = rat.dropna().tolist()
+    hist([rat],label='$\sigma(R_\star) / R_\star$',**kw)
+
+    legend()
+    xlabel('Fractional Precision')
+
+def fig_ferr_hist_planet():
+    fig = subplots(figsize=(4,3))
+    df = ckscool.io.load_table('ckscool-planets')
+
+    bins = arange(0,0.2,0.01)
+    kw = dict(lw=2, bins=bins, histtype='step')
+    rat = df.gdir_srad_err1/df.gdir_srad
+    rat = rat.dropna().tolist()
+    hist([rat],label='$\sigma(R_\star) / R_\star$', **kw)
+
+    rat = (df.koi_ror_err1 /df.koi_ror).dropna()
+    hist(rat,label='$\sigma(R_p/R_\star) / (R_p/R_\star)$',color='m',**kw)
+
+    rat = (df.gdir_prad_err1/df.gdir_prad).dropna()
+    hist(rat,label='$\sigma(R_p) / (R_p)$',**kw)
+    legend()
+    xlabel('Fractional Precision')

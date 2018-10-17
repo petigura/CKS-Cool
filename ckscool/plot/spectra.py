@@ -1,6 +1,6 @@
 import pandas as pd
-from matplotlib.pylab import *
 from matplotlib.transforms import blended_transform_factory as btf
+from matplotlib.pylab import *
 import specmatchemp.specmatch
 import specmatchemp.library
 
@@ -14,12 +14,11 @@ def get_spectra():
 
     cut = df[~df.is_sb2.isin([4,5])]
     bins = arange(3700,5100,100)
-    cut = cut.groupby(pd.cut(cut.sm_teff,bins)).nth(0)
+    cut = cut.groupby(pd.cut(cut.sm_steff,bins)).nth(0)
     basedir = "/data/user/petigura/public_html/smemp/results/"
     cut['file'] = cut.apply(lambda x : basedir + "{id_name:}_{id_obs:}/{id_name:}_{id_obs:}_sm.hdf".format(**x),axis=1)
     return cut 
     
-
 def fig_spectra():
     import seaborn as sns
     sns.set_context('paper',font_scale=1.3)
@@ -33,7 +32,7 @@ def fig_spectra():
     trans = btf(ax1.transAxes,ax1.transData)
     lib = specmatchemp.library.read_hdf()
 
-    cut = cut.sort_values(by='sm_teff')
+    cut = cut.sort_values(by='sm_steff')
     lw = 0.7
     shift = 0 
     for i, row in cut.iloc[::2].iterrows():
@@ -43,7 +42,7 @@ def fig_spectra():
         sca(ax1)
         plot(mt.w,mt.target.s+ shift,'-', color='black',lw=lw)
         plot(mt.w,mt.modified.s +shift, '-', color='red',lw=lw)
-        s = "{} {}".format(row.id_name,row.sm_teff)
+        s = "{} {}".format(row.id_name,row.sm_steff)
         text(0.03,shift + 0.8,s,transform=trans)
 
         sca(ax2)
