@@ -81,13 +81,17 @@ class Workflow(object):
         d['cuts-kepmag-steff'] = ckscool.plot.sample.fig_cuts_kepmag_steff
         d['cuts-period-prad'] = ckscool.plot.sample.fig_cuts_period_prad
         d['cuts-smass-steff'] = ckscool.plot.sample.fig_cuts_smass_steff
-        d['cuts-ckscool-hr'] = ckscool.plot.sample.fig_cuts_ckscool
+        d['cuts-stars-hr'] = ckscool.plot.sample.fig_cuts_stars_hr
+        d['cuts-planets-per-prad'] = ckscool.plot.sample.fig_cuts_planets_per_prad
         d['compare-with-cks1'] = ckscool.plot.sample.fig_compare_with_cks1
         d['ferr-hist-star'] = ckscool.plot.hr.fig_ferr_hist_star
         d['ferr-hist-planet'] = ckscool.plot.hr.fig_ferr_hist_planet
         d['planet-per-prad'] = ckscool.plot.planet.fig_per_prad
+        d['planet-smass-prad'] = ckscool.plot.planet.fig_smass_prad
+        d['planet-smet-prad'] = ckscool.plot.planet.fig_smet_prad
 
-        d['hr'] = ckscool.plot.hr.fig_hr
+        d['star-steff-srad'] = ckscool.plot.hr.fig_hr
+        d['star-smet-smass'] = ckscool.plot.hr.fig_smet_smass
 
         from ckscool.plot.compare import fig_compare
         d['compare-ckscool-mann13'] = lambda : fig_compare('ckscool-mann13')

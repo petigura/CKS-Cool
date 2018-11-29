@@ -13,26 +13,73 @@ texteff = '$\mathregular{T}_{\mathregular{eff}}$'
 texrp = '\mathregular{R}_\mathregular{P}' 
 texre = '\mathregular{R}_\mathregular{E}' 
 
+
+cks1kw = dict(
+    marker='.', lw=0, ms=7, color=sns.xkcd_rgb["dark sky blue"], 
+    zorder=1, label='CKS-I', mew=1,mfc='none'
+)
+ckscoolkw = dict(
+    marker='.',lw=0,ms=7,color=sns.xkcd_rgb["medium green"],zorder=1,
+    label='CKS-Cool', mew=1,mfc='none'
+)
+
+rstarticks = [0.5,0.7,1.0,1.4,2.0]
+
+
 def fig_hr():
-    fig = figure(figsize=(6,4.5))
+    sns.set_context('paper',font_scale=1.3)
+    fig,axL = subplots(figsize=(7,5))
     df = cksgaia.io.load_table(
         'cksgaia-planets-filtered',
         cachefn='../CKS-Gaia/load_table_cache.hdf',cache=1
     )
     df = df.groupby('id_koi',as_index=False).nth(0)
-    plot(df.cks_steff,df.gdir_srad,'.',label='CKS-I')
+    plot(df.cks_steff,df.gdir_srad,'.',**cks1kw)
 
     df = ckscool.io.load_table('ckscool-stars-cuts',cache=1)
     df = df.groupby('id_koi',as_index=False).nth(0)
     #plot(df.sm_steff,df.gdir_srad,'.')
     df = df[~df.isany]
 
-    plot(df.sm_steff,df.gdir_srad,'.',label='CKS-Cool')
+    plot(df.sm_steff,df.gdir_srad,'.',**ckscoolkw)
     xlabel(texteff)
     ylabel('Stellar Radius (Solar-Radii)')
     semilogy()
     xlim(7000,3500)
+    minorticks_off()
+    
+    yticks(rstarticks,rstarticks)
+    legend(frameon=True,loc=2,markerscale=1.5)
+    fig.set_tight_layout(True)
+
+
+def fig_smet_smass():
+    sns.set_context('paper',font_scale=1.3)
+    fig,axL = subplots(figsize=(7,5))
+    df = cksgaia.io.load_table(
+        'cksgaia-planets-filtered',
+        cachefn='../CKS-Gaia/load_table_cache.hdf',cache=1
+    )
+    df = df.groupby('id_koi',as_index=False).nth(0)
+    semilogy()
+    plot(df.cks_smet,df.giso_smass,'.',**cks1kw)
+
+    df = ckscool.io.load_table('ckscool-stars-cuts',cache=1)
+    df = df[~df.isany]
+    df = df.groupby('id_koi',as_index=False).nth(0)
+    #plot(df.sm_steff,df.gdir_srad,'.')
+
+    plot(df.sm_smet,df.giso_smass,'.',**ckscoolkw)
+    #xlabel(texteff)
+    ylabel('Stellar Radius (Solar-Radii)')
     legend()
+    tight_layout(True)
+    xlabel('[Fe/H] (dex)')
+    legend(frameon=True,loc=2,markerscale=1.5)
+    yticks(rstarticks,rstarticks)
+    minorticks_off()
+    fig.set_tight_layout(True)
+    
 
 def fig_compare():
     sns.set(

@@ -28,99 +28,36 @@ letter_text_props = dict(size='large', weight='bold')
 import ckscool.cuts
 
 def fig_cuts_kepmag_steff():
-    cuts('kic_kepmag','m17_steff',nrows=2,ncols=4,plot_func=None,stars=True)
-    fig = gcf() 
-    axL = fig.get_axes()
+    df = ckscool.io.load_table('ckscool-cuts')
+    cuts(df,'kic_kepmag','m17_steff',nrows=2,ncols=4,plot_func=None,stars=True)
+    axL = gcf().get_axes()
+    axL = np.array(axL).reshape(2,4) 
     setp(axL,ylim=(3000,7000))
-    setp(axL[0],xlabel='Kp (mag)', ylabel='Teff (K)')
+    setp(axL[1,:],xlabel='Kp (mag)')
+    setp(axL[:,0],ylabel='Teff (K)')
     
 def fig_cuts_period_prad():
-    cuts('koi_period','koi_prad',nrows=2,ncols=4,plot_func=loglog)
-    fig = gcf() 
-    axL = fig.get_axes()
-    setp(
-        axL[0],xlabel='Orbital Period (days)',
-        ylabel='Planet Size (Earth-radii)'
-    )
+    df = ckscool.io.load_table('ckscool-cuts')
+    cuts(df, 'koi_period','koi_prad',nrows=2,ncols=4,plot_func=loglog)
+    axL = gcf().get_axes()
+    axL = np.array(axL).reshape(2,4) 
+    setp(axL[1,:],xlabel='Orbital Period (days)',xlim=(0.1,1000),ylim=(0.1,100))
+    setp(axL[:,0],ylabel='Planet Size (Earth-radii)')
 
 def fig_cuts_smass_steff():
-    cuts('m17_smass','m17_steff',nrows=2,ncols=4,plot_func=semilogx,stars=True)
-    fig = gcf() 
-    axL = fig.get_axes()
+    df = ckscool.io.load_table('ckscool-cuts')
+    cuts(df, 'm17_smass','m17_steff',nrows=2,ncols=4,plot_func=semilogx,stars=True)
+    axL = gcf().get_axes()
     setp(axL,ylim=(3000,7000))
     setp(
         axL[0],xlabel='Stellar Mass (Solar-masses)',
         ylabel='Teff (K)'
     )
 
-def cuts(xk,yk,nrows=None,ncols=None,plot_func=None, stars=False):
-    sns.set_style('ticks')
-    sns.set_context('paper')
-
-    if type(plot_func)!=type(None):
-        plot = plot_func
-    else:
-        plot = plt.plot
-
-        
-    table = 'koi-mullally15'
-    df = ckscool.io.load_table('ckscool-cuts')
-    cuttypes = df.cuttypes
-
-    width = ncols * 2
-    height = nrows * 2
-
-    fig, axL = subplots(
-        nrows=nrows,ncols=ncols,figsize=(width,height),
-        sharex=True,sharey=True
-    )
-    axL = axL.flatten()
-
-    bpass = np.zeros(len(df))
-    iplot = 0
-    
-    for cuttype in df.cuttypes:
-        ax = axL[iplot] 
-        sca(ax)
-        
-        key = 'is'+cuttype
-        obj = ckscool.cuts.get_cut(cuttype)
-        cut = obj(df,table)
-        df[key] = cut.cut()
-        bpass += df[key].astype(int)
-            
-        plotkw = dict(ms=4,rasterized=True)
-
-        x = df[xk]
-        y = df[yk]
-
-        plot(x, y,'.',color='LightGray',**plotkw)
-        dfcut = df[bpass==0]
-        
-        plot(dfcut[xk], dfcut[yk],'.', **plotkw)
-        _text = cut.plotstr + ' ({})'.format(len(dfcut))
-
-        if stars:
-            _text = cut.plotstr + ' ({})'.format(len(dfcut.id_kic.drop_duplicates()))
-
-
-        textkw = dict(fontsize='small',transform=ax.transAxes, ha='right')
-        text(0.95,0.05, _text, **textkw)
-
-        letter = string.ascii_lowercase[iplot]
-        at = AnchoredText(letter,loc=2, frameon=True, prop=letter_text_props)
-        ax.add_artist(at)
-        setp(at.patch,**letter_bbox_props)
-        
-        #minorticks_off()
-        iplot+=1
-
-    axL = axL.reshape(nrows,ncols)
-    fig.set_tight_layout(True)
-
-def fig_cuts_ckscool():
-    cuts_ckscool(
-        'sm_steff', 'gdir_srad', nrows=2, ncols=2, stars=True, 
+def fig_cuts_stars_hr():
+    df = ckscool.io.load_table('ckscool-stars-cuts')
+    cuts(
+        df, 'sm_steff', 'gdir_srad', nrows=1, ncols=4, stars=True, 
         plot_func=semilogy
     )
     fig = gcf()
@@ -133,9 +70,30 @@ def fig_cuts_ckscool():
         yticks(yt,yt)
         minorticks_off()
 
+def fig_cuts_planets_per_prad():
+    xk = 'koi_period'
+    yk = 'gdir_prad'
+    df = ckscool.io.load_table('ckscool-planets-cuts',cache=2)
+    cuts(df, xk, yk , nrows=2, ncols=3, stars=False, plot_func=loglog)
+    axL = gcf().get_axes()
+    axL = np.array(axL).reshape(2,3) 
+
+    #setp(axL[1,:],xlabel='Orbital Period (days)',xlim=(0.1,1000),ylim=(0.1,100))
+
+    yt = [0.5,1,2,4,8,16]
+    xt = [0.3,1,3,10,30,100,300]
+    for ax in axL.flatten():
+        minorticks_off()
+        sca(ax)
+        xticks(xt,xt)
+        yticks(yt,yt)
+        grid()
+
+    setp(axL[1,:],xlabel='Orbital Period (days)',xlim=(0.3,300),ylim=(0.5,20))
+    setp(axL[:,0],ylabel='Planet Size (Earth-radii)')
 
 
-def cuts_ckscool(xk, yk, nrows=None,ncols=None,plot_func=None, stars=False):
+def cuts(df, xk,yk,nrows=None,ncols=None,plot_func=None, stars=False):
     sns.set_style('ticks')
     sns.set_context('paper')
 
@@ -144,7 +102,7 @@ def cuts_ckscool(xk, yk, nrows=None,ncols=None,plot_func=None, stars=False):
     else:
         plot = plt.plot
 
-    df = ckscool.io.load_table('ckscool-stars-cuts')
+    table = 'koi-mullally15'
     cuttypes = df.cuttypes
 
     width = ncols * 2
@@ -196,10 +154,7 @@ def cuts_ckscool(xk, yk, nrows=None,ncols=None,plot_func=None, stars=False):
         iplot+=1
 
     axL = axL.reshape(nrows,ncols)
-    #setp(axL[-1,:],xlabel='$R_p\, (R_{\oplus})$')
-    #setp(axL[:,0],ylabel='[Fe/H]')
     fig.set_tight_layout(True)
-    #fig.subplots_adjust(hspace=0.001,wspace=0.001,left=0.07,right=0.99,top=0.95,bottom=0.12)
 
 
 
@@ -210,7 +165,8 @@ class ComparisonPlotter(object):
         self.cks1kw = dict(hatch='//',color='g',label='CKS-I',**kw)
         self.cksckw = dict(hatch='\\',color='b',label='CKS-Cool',**kw)
 
-        df = ckscool.io.load_table('ckscool-cuts')
+        #df = ckscool.io.load_table('ckscool-cuts')
+        df = ckscool.io.load_table('ckscool-stars')
         df = df[~df.isany]
         df = df.groupby('id_kic',as_index=False).first()
 
@@ -246,7 +202,7 @@ class ComparisonPlotter(object):
 
         semilogx()
         hist(self.cks1.m17_smass.dropna(),bins=bins,**self.cks1kw)
-        hist(self.cksc.m17_smass.dropna(),bins=bins,**self.cksckw)
+        hist(self.cksc.giso_smass.dropna(),bins=bins,**self.cksckw)
         xt = [0.3,0.5,0.7,1.0,1.5,2.0]
         xticks(xt,xt)
         minorticks_off()
@@ -262,7 +218,7 @@ class ComparisonPlotter(object):
         bins = arange(3000,7000,bw)
 
         hist(self.cks1.m17_steff.dropna(),bins=bins,**self.cks1kw)
-        hist(self.cksc.m17_steff.dropna(),bins=bins,**self.cksckw)
+        hist(self.cksc.sm_steff.dropna(),bins=bins,**self.cksckw)
         legend(loc='upper left',fontsize='medium')
         xlabel('Teff')
         ylabel('Number of Stars per bin')

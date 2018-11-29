@@ -67,32 +67,34 @@ class CutGiant(CutBase):
 
 class CutBadParallax(CutBase):
     cuttype = 'badparallax'
-    plotstr = 'Bad Parallax'
-    texstr = 'Bad parallax'
+    plotstr = '$\sigma(\pi) / \pi < 10$'
+    texstr = '$\sigma(\pi) / \pi < 10$'
     def cut(self):
-        b = self.df['gaia2_sparallax_over_err'] < 10
+        b1 = self.df['gaia2_sparallax'].isnull()
+        b2 = self.df['gaia2_sparallax_over_err'] < 10 
+        b = b1 | b2
         return b
 
 class CutDiluted(CutBase):
     cuttype = 'diluted'
-    plotstr = 'Diluted'
-    texstr = 'Diluted'.format(cd['max-kepmag'])
+    plotstr = 'Not diluted'
+    texstr = 'Not diluted'
     def cut(self):
         b = self.df['gaia2_gflux_ratio'] > 1.1
         return b
 
 class CutFurlan(CutBase):
     cuttype = 'dilutedfurlan'
-    plotstr = 'furlan RCF > 1.05'
-    texstr = 'furlan RCF > 1.05'
+    plotstr = 'furlan RCF < 1.05'
+    texstr = 'furlan RCF < 1.05'
     def cut(self):
         b = self.df['f17_rcf_avg'] > 1.05
         return b
 
 class CutAO(CutBase):
     cuttype = 'dilutedao'
-    plotstr = 'Comp. with $\Delta K < 2.5$'
-    texstr = 'Comp. with $\Delta K < 2.5$'
+    plotstr = 'No companions with $\Delta K < 2.5$'
+    texstr = 'No companions with $\Delta K < 2.5$'
     def cut(self):
         b1 = self.df['f17_rcf_avg'] > 1.05
 
@@ -132,13 +134,16 @@ class CutNotReliable(CutBase):
         else:
             assert False," error"
 
+####################################
+# Cuts for filtered stellar sample #
+####################################
 
 class CutSpecParallax(CutBase):
     """Remove stars the spectroscopic parallax does not agree with the trig parallax
     """
     cuttype = 'sb2'
-    texstr = r'SB2'
-    plotstr = r'SB2'
+    texstr = r'Removing SB2s'
+    plotstr = r'Removing SB2s'
     def cut(self):
 
         diff = self.df.gaia2_sparallax - self.df.giso2_sparallax
@@ -153,13 +158,51 @@ class CutSpecParallax(CutBase):
 class CutSB2(CutBase):
     """Remove stars that are SB2s"""
     cuttype = 'badspecparallax'
-    texstr = r'Delta Parallax > 3 sigma'
-    plotstr = r'$|\pi_{trig} - \pi_{spec}| > 3 \sigma$'
+    texstr = r'Delta Parallax < 3 sigma'
+    plotstr = r'$|\pi_{trig} - \pi_{spec}| < 3 \sigma$'
     def cut(self):
         b = self.df.rm_sb2.isin([4,5])
         return b
 
+###################################
+# Cuts for filtered planet sample #
+###################################
 
+class CutImpact(CutBase):
+    """Remove planets with high impact parameters"""
+    cuttype = 'badimpact'
+    texstr = r'$b$ < 0.8'
+    plotstr = texstr
+    def cut(self):
+        b = self.df.koi_impact > 0.8
+        return b
+
+class CutPradPrecision(CutBase):
+    """Remove planets with large radius uncertainties"""
+    cuttype = 'badpradprecision'
+    texstr = r'$\sigma(R_p) / R_p $ < 0.1'
+    plotstr = texstr
+    def cut(self):
+        b = self.df.eval('gdir_prad_err1/gdir_prad') > 0.1
+        return b
+
+class CutPrad(CutBase):
+    """Remove planets with large radius uncertainties"""
+    cuttype = 'badprad'
+    texstr = r'$R_p = 0.5-20 R_E$'
+    plotstr = texstr
+    def cut(self):
+        b = ~self.df.gdir_prad.between(0.5,20)
+        return b
+
+class CutFPP(CutBase):
+    """Remove planets with high false positive probability"""
+    cuttype = 'largefpp'
+    texstr = r'FPP < 0.05'
+    plotstr = texstr
+    def cut(self):
+        b = self.df.fpp_prob > 0.99
+        return b
 
 clsmembers = inspect.getmembers(sys.modules[__name__], inspect.isclass)
 

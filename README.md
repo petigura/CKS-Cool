@@ -4,12 +4,16 @@ Repo for planning observations and initial catalog selection
 
 # Generate HIRES scripts
 
-Run 
-
-# Update progress during run. 
+## Update progress during run. 
 
 cps sync # update logs
 run_ckscool.py create-val stat
+
+- Download all the NIRC2 ascii files from KOA with Petigura as PI. 
+- save them in data/nirc2/ascii
+
+
+# 
 
 # Catalog paper
 

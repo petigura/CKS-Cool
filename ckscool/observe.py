@@ -21,7 +21,7 @@ from astropy.io import ascii
 
 class Observe(object):
     def __init__(self):
-        df = ckscool.io.load_table('ckscool-cuts',cache=2)
+        df = ckscool.io.load_table('ckscool-targets-cuts',cache=2)
         df = df[~df.isany]
         df = df.groupby('id_kic',as_index=False).first()
         self.sample = df
@@ -39,8 +39,8 @@ class ObserveNIRC2(Observe):
         sample = pd.merge(sample, k18, on='id_koi', how='left')
         sample['k18_observed'] = sample['k18_observed'].fillna(False)
 
-
-        fn = 'data/nirc2-ascii/sci_n2_25769.tbl'
+        
+        fn = 'data/nirc2-ascii/nirc2-petigura_2018-11-29.tbl'
         print "Reading in Petigura 2018 observations {}".format(fn)
         p18 = ascii.read(fn)
         p18 = p18.to_pandas()

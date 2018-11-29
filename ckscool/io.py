@@ -121,17 +121,19 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         m17 = load_table('mathur17')
         df = pd.merge(df,m17, on='id_kic')
 
-    elif table=='ckscool-cuts':
+    elif table=='ckscool-targets-cuts':
         table = 'koi-mullally15'
+#        cuttypes = [
+#            'none','notreliable','badteffphot','faint','giant','badparallax',
+#            'diluted'
+#        ]
         cuttypes = [
-            'none','notreliable','badteffphot','faint','giant','badparallax',
+           'none','badteffphot','faint','giant','badparallax',
             'diluted'
         ]
         df = load_table(table)
         df = ckscool.cuts.add_cuts(df,cuttypes,table)
         df.cuttypes = cuttypes
-
-
 
     elif table=='reamatch':
         fn = os.path.join(DATADIR, 'reamatch.csv')
@@ -141,7 +143,6 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
             'is_sb2':'rm_sb2',
         }
         df = df.rename(columns=namemap)[namemap.values()]
-
 
     # Spectroscopic parameters
     elif table=='smemp':
@@ -170,7 +171,7 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         df = df.rename(columns=namemap)
 
     elif table=='ckscool+smemp':
-        df = ckscool.io.load_table('ckscool-cuts')
+        df = ckscool.io.load_table('ckscool-targets-cuts')
         df = df[~df.isany]
 
         # Grab observation using kbc
@@ -206,7 +207,8 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         
     elif table=='ckscool-stars-cuts':
         df = load_table('ckscool-stars')
-        cuttypes = ['none','sb2','badspecparallax','dilutedao']
+        #cuttypes = ['none','sb2','badspecparallax','dilutedao']
+        cuttypes = ['none','dilutedao','badspecparallax','sb2',]
         table='temp'
         df = ckscool.cuts.add_cuts(df, cuttypes, table)
         df.cuttypes = cuttypes
@@ -215,7 +217,15 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         df = load_table('ckscool-stars-cuts')
         df = df[~df.isany]
         df = ckscool.calc.update_planet_parameters(df)
+        fpp = ckscool.io.load_table('fpp')
+        df = pd.merge(df, fpp)
 
+    elif table=='ckscool-planets-cuts':
+        df = load_table('ckscool-planets')
+        cuttypes = ['none','largefpp','badimpact','badpradprecision','badprad']
+        table = 'temp'
+        df = ckscool.cuts.add_cuts(df, cuttypes, table)
+        df.cuttypes = cuttypes
         
     elif table=='nrm-previous':
         # File is from an email that Adam sent me in 2017-11-02
@@ -227,6 +237,11 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
     # ###########################
     # Tables from other papers #
     ############################
+    elif table=='fpp':
+        df = pd.read_csv('data/q1_q17_dr25_koifpp.csv',comment='#')
+        namemap = {'kepoi_name':'id_koicand','fpp_prob':'fpp_prob'}
+        df = df.rename(columns=namemap)[namemap.values()]
+
 
     # KOI tables
     elif table=='koi-thompson18':
@@ -385,6 +400,9 @@ def load_table_koi(table):
     elif table=='koi-mullally15':
         csvfn = os.path.join(DATADIR,'q1_q16_koi.csv')
         df = pd.read_csv(csvfn, comment='#', skipinitialspace=True)
+    else:
+        assert False, "{} not valid table".format(table)
+
 
     namemap = {
         'kepid':'id_kic',
