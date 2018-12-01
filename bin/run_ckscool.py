@@ -31,6 +31,10 @@ def main():
     psr2.add_argument('name',type=str)
     psr2.set_defaults(func=create_val)
 
+    psr2 = subpsr.add_parser('create-csv', parents=[psr_parent], )
+    psr2.add_argument('name',type=str)
+    psr2.set_defaults(func=create_csv)
+
     psr2 = subpsr.add_parser('create-plot', parents=[psr_parent], )
     psr2.add_argument('name',type=str)
     psr2.set_defaults(func=create_plot)
@@ -56,6 +60,12 @@ def create_spectra_files(args):
     cut = ckscool.plot.spectra.get_spectra()
     fn = 'data/fig_spectra/fig_spectra-files.txt'
     cut.file.to_csv(fn,header=None,index=None) 
+    print "created {}".format(fn)
+
+def create_csv(args):
+    df = ckscool.io.load_table('ckscool-planets-cuts')
+    fn = 'data/ckscool-planets-cuts.csv'
+    df.to_csv(fn)
     print "created {}".format(fn)
 
 def create_table(args):
