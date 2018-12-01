@@ -123,14 +123,17 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
 
     elif table=='ckscool-targets-cuts':
         table = 'koi-mullally15'
-#        cuttypes = [
-#            'none','notreliable','badteffphot','faint','giant','badparallax',
-#            'diluted'
-#        ]
+        #table = 'koi-thompson18'
+        cuttypes = [
+            'none','notreliable','badteffphot','faint','giant','badparallax',
+            'diluted'
+        ]
+        '''
         cuttypes = [
            'none','badteffphot','faint','giant','badparallax',
             'diluted'
         ]
+        '''
         df = load_table(table)
         df = ckscool.cuts.add_cuts(df,cuttypes,table)
         df.cuttypes = cuttypes
@@ -208,7 +211,7 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
     elif table=='ckscool-stars-cuts':
         df = load_table('ckscool-stars')
         #cuttypes = ['none','sb2','badspecparallax','dilutedao']
-        cuttypes = ['none','dilutedao','badspecparallax','sb2',]
+        cuttypes = ['none','sb2','dilutedao','badspecparallax',]
         table='temp'
         df = ckscool.cuts.add_cuts(df, cuttypes, table)
         df.cuttypes = cuttypes
@@ -222,7 +225,7 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
 
     elif table=='ckscool-planets-cuts':
         df = load_table('ckscool-planets')
-        cuttypes = ['none','largefpp','badimpact','badpradprecision','badprad']
+        cuttypes = ['none','badprad','badpradprecision','badimpact','largefpp',]
         table = 'temp'
         df = ckscool.cuts.add_cuts(df, cuttypes, table)
         df.cuttypes = cuttypes

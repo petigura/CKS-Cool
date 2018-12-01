@@ -11,7 +11,7 @@ def val_stat(return_dict=False):
     Statistics of sample
     """
     d = OrderedDict()
-    cand = ckscool.io.load_table('ckscool-targets-cuts',cache=1)
+    cand = ckscool.io.load_table('ckscool-targets-cuts',cache=2)
     star = cand.groupby('id_kic',as_index=False).nth(0)
 
     d['n-koi'] = "{}".format( len(cand) )
@@ -20,15 +20,15 @@ def val_stat(return_dict=False):
     cand = cand[~cand.isany]
     star = cand.groupby('id_kic',as_index=False).nth(0)
 
-    d['n-koi-pass'] = "{}".format( len(cand))
-    d['n-star-pass'] = "{}".format( len(star))
+    d['n-koi-pass'] = "{}".format(len(cand))
+    d['n-star-pass'] = "{}".format(len(star))
     d['sparallax-med'] = "{:.1f}".format(star.eval('gaia2_sparallax').median())
     d['sparallax-ferr-med'] = "{:.1f}".format(star.eval('gaia2_sparallax_err / gaia2_sparallax').median() * 100)
 
     d['sdistance-med'] = "{:.0f}".format(star.eval('1000 / gaia2_sparallax').median())
 
-    d['kmag-med'] = "{:.1f}".format(star.m17_kmag.median())
-    d['kmag-err-med'] = "{:.1f}".format(star.m17_kmag_err.median())
+    d['kmag-med'] = "{:.2f}".format(star.m17_kmag.median())
+    d['kmag-err-med'] = "{:.2f}".format(star.m17_kmag_err.median())
     d['kepmag-med'] = "{:.1f}".format(star.kic_kepmag.median())
     d['kepmag-err-med'] = "{:.1f}".format(star.kic_kepmag.median())
     

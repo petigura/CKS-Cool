@@ -28,7 +28,7 @@ letter_text_props = dict(size='large', weight='bold')
 import ckscool.cuts
 
 def fig_cuts_kepmag_steff():
-    df = ckscool.io.load_table('ckscool-cuts')
+    df = ckscool.io.load_table('ckscool-targets-cuts')
     cuts(df,'kic_kepmag','m17_steff',nrows=2,ncols=4,plot_func=None,stars=True)
     axL = gcf().get_axes()
     axL = np.array(axL).reshape(2,4) 
@@ -37,7 +37,7 @@ def fig_cuts_kepmag_steff():
     setp(axL[:,0],ylabel='Teff (K)')
     
 def fig_cuts_period_prad():
-    df = ckscool.io.load_table('ckscool-cuts')
+    df = ckscool.io.load_table('ckscool-targets-cuts')
     cuts(df, 'koi_period','koi_prad',nrows=2,ncols=4,plot_func=loglog)
     axL = gcf().get_axes()
     axL = np.array(axL).reshape(2,4) 
@@ -45,7 +45,7 @@ def fig_cuts_period_prad():
     setp(axL[:,0],ylabel='Planet Size (Earth-radii)')
 
 def fig_cuts_smass_steff():
-    df = ckscool.io.load_table('ckscool-cuts')
+    df = ckscool.io.load_table('ckscool-targets-cuts')
     cuts(df, 'm17_smass','m17_steff',nrows=2,ncols=4,plot_func=semilogx,stars=True)
     axL = gcf().get_axes()
     setp(axL,ylim=(3000,7000))
@@ -63,6 +63,7 @@ def fig_cuts_stars_hr():
     fig = gcf()
     axL = fig.get_axes()
     setp(axL,xlabel="{} (K)".format(texteff),xlim=(5000,3500),ylim=(0.4,1))
+    setp(axL[0],ylabel='Stellar radius (Solar-radii)')
 
     for ax in axL:
         sca(ax)
@@ -106,7 +107,7 @@ def cuts(df, xk,yk,nrows=None,ncols=None,plot_func=None, stars=False):
     cuttypes = df.cuttypes
 
     width = ncols * 2
-    height = nrows * 2
+    height = nrows * 2.25
 
     fig, axL = subplots(
         nrows=nrows,ncols=ncols,figsize=(width,height),

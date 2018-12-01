@@ -180,28 +180,28 @@ class CutImpact(CutBase):
 class CutPradPrecision(CutBase):
     """Remove planets with large radius uncertainties"""
     cuttype = 'badpradprecision'
-    texstr = r'$\sigma(R_p) / R_p $ < 0.1'
+    texstr = r'$\sigma(R_p) / R_p $ < 0.2'
     plotstr = texstr
     def cut(self):
-        b = self.df.eval('gdir_prad_err1/gdir_prad') > 0.1
+        b = self.df.eval('gdir_prad_err1/gdir_prad') > 0.2
         return b
 
 class CutPrad(CutBase):
     """Remove planets with large radius uncertainties"""
     cuttype = 'badprad'
-    texstr = r'$R_p = 0.5-20 R_E$'
+    texstr = r'$R_p < 20 R_E$'
     plotstr = texstr
     def cut(self):
-        b = ~self.df.gdir_prad.between(0.5,20)
+        b = ~self.df.gdir_prad.between(0,20)
         return b
 
 class CutFPP(CutBase):
     """Remove planets with high false positive probability"""
     cuttype = 'largefpp'
-    texstr = r'FPP < 0.05'
+    texstr = r'FPP < 0.9'
     plotstr = texstr
     def cut(self):
-        b = self.df.fpp_prob > 0.99
+        b = self.df.fpp_prob > 0.9
         return b
 
 clsmembers = inspect.getmembers(sys.modules[__name__], inspect.isclass)
