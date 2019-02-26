@@ -50,7 +50,7 @@ def tab_star():
     return lines
 
 def tab_star_machine():
-    df = cksgaia.io.load_table('cksgaia-planets', cache=1)
+    df = ckscool.io.load_table('cksgaia-planets')
     df = df.groupby('id_starname', as_index=False).nth(0)
     df = df.sort_values(by='id_starname')
 
@@ -85,7 +85,7 @@ def tab_star_machine():
     return lines
 
 def tab_planet_machine():
-    df = cksgaia.io.load_table('cksgaia-planets', cache=1)
+    df = ckscool.io.load_table('cksgaia-planets')
     df = df.sort_values(by='id_koicand')
 
     cols = ['id_koicand',

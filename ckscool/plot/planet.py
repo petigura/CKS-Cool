@@ -2,6 +2,7 @@ import seaborn as sns
 from sklearn.neighbors import KernelDensity
 from matplotlib.pylab import *
 import ckscool.io
+import pandas as pd
 
 def fig_per_prad(nopoints=False,zoom=False):
     fig, axL = subplots(figsize=(5,4))
@@ -58,8 +59,6 @@ def fig_per_prad(nopoints=False,zoom=False):
     colorbar()
     tight_layout()
 
-import pandas as pd
-import cksgaia.io
 
 
 def fig_smass_prad(nopoints=False,zoom=False):
@@ -72,7 +71,7 @@ def fig_smass_prad(nopoints=False,zoom=False):
     df = ckscool.io.load_table('ckscool-planets-cuts',cache=1)
     df = df[~df.isany]
     df = df.query('giso_smass < 0.8')
-    df2 = cksgaia.io.load_table('cksgaia-planets-filtered',cache=1,cachefn='../CKS-Gaia/load_table_cache.hdf')
+    df2 = ckscool.io.load_table('cksgaia-planets-filtered')
     df2 = df2.query('giso_smass > 0.8')
 
     df = pd.concat([df,df2])
@@ -143,15 +142,7 @@ def fig_smet_prad(nopoints=False,zoom=False):
     yfac = 1.25
     df = ckscool.io.load_table('ckscool-planets-cuts',cache=1)
     df = df[~df.isany]
-    '''
-
-    df2 = cksgaia.io.load_table('cksgaia-planets-filtered',cache=1,cachefn='../CKS-Gaia/load_table_cache.hdf')
-    df2 = df2.rename(columns={'cks_smet':'sm_smet'})
-
-    df = pd.concat([df,df2])
-    '''
     df = df.dropna(subset=[xk,yk,yerrk])
-
     sns.set_context('talk')
     
     x = df[xk] * xfac

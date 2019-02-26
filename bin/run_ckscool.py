@@ -15,6 +15,8 @@ import ckscool.plot.sample   # submodule for including plots
 import ckscool.plot.spectra
 import ckscool.plot.hr
 import ckscool.plot.planet
+from ckscool.plot.compare import fig_compare
+import ckscool.workflow
 
 def main():
     psr = ArgumentParser()
@@ -67,151 +69,69 @@ def create_csv(args):
     df.to_csv(fn)
     print "created {}".format(fn)
 
+
 def create_table(args):
-    w = Workflow()
+    w = create_workflow()
     w.create_file('table', args.name ) 
 
 def create_plot(args):
-    w = Workflow()
+    w = create_workflow()
     w.create_file('plot', args.name ) 
 
 def create_val(args):
-    w = Workflow()
+    w = create_workflow()
     w.create_file('val',args.name) 
 
 def update_paper(args):
-    w = Workflow()
+    w = create_workflow()
     w.update_paper()
 
-class Workflow(object):
-    def __init__(self):
-        d = OrderedDict()
-        # register different plots here
-        d['cuts-kepmag-steff'] = ckscool.plot.sample.fig_cuts_kepmag_steff
-        d['cuts-period-prad'] = ckscool.plot.sample.fig_cuts_period_prad
-        d['cuts-smass-steff'] = ckscool.plot.sample.fig_cuts_smass_steff
-        d['cuts-stars-hr'] = ckscool.plot.sample.fig_cuts_stars_hr
-        d['cuts-planets-per-prad'] = ckscool.plot.sample.fig_cuts_planets_per_prad
-        d['compare-with-cks1'] = ckscool.plot.sample.fig_compare_with_cks1
-        d['ferr-hist-star'] = ckscool.plot.hr.fig_ferr_hist_star
-        d['ferr-hist-planet'] = ckscool.plot.hr.fig_ferr_hist_planet
+def create_workflow():
+    w = ckscool.workflow.Workflow()
+    w.build_dir = "build/ckscool-survey/"
+    w.paper_dir = "paper/ckscool-survey/"
 
-        d['planet-per-prad'] = ckscool.plot.planet.fig_per_prad
-        d['planet-per-prad-nopoints'] = lambda : ckscool.plot.planet.fig_per_prad(nopoints=True)
-        d['planet-per-prad-nopoints-zoom'] = lambda : ckscool.plot.planet.fig_per_prad(nopoints=True,zoom=True)
-        d['planet-per-prad-zoom'] = lambda : ckscool.plot.planet.fig_per_prad(zoom=True)
+    # register different plots here
+    w.plot['cuts-kepmag-steff'] = ckscool.plot.sample.fig_cuts_kepmag_steff
+    w.plot['cuts-period-prad'] = ckscool.plot.sample.fig_cuts_period_prad
+    w.plot['cuts-smass-steff'] = ckscool.plot.sample.fig_cuts_smass_steff
+    w.plot['cuts-stars-hr'] = ckscool.plot.sample.fig_cuts_stars_hr
+    w.plot['cuts-planets-per-prad'] = ckscool.plot.sample.fig_cuts_planets_per_prad
+    w.plot['compare-with-cks1'] = ckscool.plot.sample.fig_compare_with_cks1
+    w.plot['ferr-hist-star'] = ckscool.plot.hr.fig_ferr_hist_star
+    w.plot['ferr-hist-planet'] = ckscool.plot.hr.fig_ferr_hist_planet
 
-        d['planet-smass-prad'] = ckscool.plot.planet.fig_smass_prad
-        d['planet-smass-prad-nopoints'] = lambda : ckscool.plot.planet.fig_smass_prad(nopoints=True)
-        d['planet-smass-prad-nopoints-zoom'] = lambda : ckscool.plot.planet.fig_smass_prad(nopoints=True,zoom=True)
-        d['planet-smass-prad-zoom'] = lambda : ckscool.plot.planet.fig_smass_prad(zoom=True)
+    w.plot['planet-per-prad'] = ckscool.plot.planet.fig_per_prad
+    w.plot['planet-per-prad-nopoints'] = lambda : ckscool.plot.planet.fig_per_prad(nopoints=True)
+    w.plot['planet-per-prad-nopoints-zoom'] = lambda : ckscool.plot.planet.fig_per_prad(nopoints=True,zoom=True)
+    w.plot['planet-per-prad-zoom'] = lambda : ckscool.plot.planet.fig_per_prad(zoom=True)
 
-        d['planet-smet-prad'] = ckscool.plot.planet.fig_smet_prad
-        d['planet-smet-prad-nopoints'] = lambda : ckscool.plot.planet.fig_smet_prad(nopoints=True)
-        d['planet-smet-prad-nopoints-zoom'] = lambda : ckscool.plot.planet.fig_smet_prad(nopoints=True,zoom=True)
-        d['planet-smet-prad-zoom'] = lambda : ckscool.plot.planet.fig_smet_prad(zoom=True)
+    w.plot['planet-smass-prad'] = ckscool.plot.planet.fig_smass_prad
+    w.plot['planet-smass-prad-nopoints'] = lambda : ckscool.plot.planet.fig_smass_prad(nopoints=True)
+    w.plot['planet-smass-prad-nopoints-zoom'] = lambda : ckscool.plot.planet.fig_smass_prad(nopoints=True,zoom=True)
+    w.plot['planet-smass-prad-zoom'] = lambda : ckscool.plot.planet.fig_smass_prad(zoom=True)
 
+    w.plot['planet-smet-prad'] = ckscool.plot.planet.fig_smet_prad
+    w.plot['planet-smet-prad-nopoints'] = lambda : ckscool.plot.planet.fig_smet_prad(nopoints=True)
+    w.plot['planet-smet-prad-nopoints-zoom'] = lambda : ckscool.plot.planet.fig_smet_prad(nopoints=True,zoom=True)
+    w.plot['planet-smet-prad-zoom'] = lambda : ckscool.plot.planet.fig_smet_prad(zoom=True)
 
-        d['star-steff-srad'] = ckscool.plot.hr.fig_hr
-        d['star-smet-smass'] = ckscool.plot.hr.fig_smet_smass
+    w.plot['star-steff-srad'] = ckscool.plot.hr.fig_hr
+    w.plot['star-smet-smass'] = ckscool.plot.hr.fig_smet_smass
 
-        from ckscool.plot.compare import fig_compare
-        d['compare-ckscool-mann13'] = lambda : fig_compare('ckscool-mann13')
-        d['compare-ckscool-dressing13'] = lambda : fig_compare('ckscool-dressing13')
-        d['compare-ckscool-brewer18'] = lambda : fig_compare('ckscool-brewer18')
+    w.plot['compare-ckscool-mann13'] = lambda : fig_compare('ckscool-mann13')
+    w.plot['compare-ckscool-dressing13'] = lambda : fig_compare('ckscool-dressing13')
+    w.plot['compare-ckscool-brewer18'] = lambda : fig_compare('ckscool-brewer18')
 
-        # run_cksgaia create-plot #
+    # register different tables here
+    w.table['star'] = lambda : ckscool.table.tab_star() 
+    w.table['star-stub'] = lambda : ckscool.table.tab_star()[:10]
+    w.table['planet'] = lambda : ckscool.table.tab_planet()
+    w.table['planet-stub'] = lambda : ckscool.table.tab_planet()[:10]
 
-        self.plot_dict = d
-
-        d = OrderedDict()
-        # register different tables here
-        d['star'] = lambda : ckscool.table.tab_star() 
-        d['star-stub'] = lambda : ckscool.table.tab_star()[:10]
-        d['planet'] = lambda : ckscool.table.tab_planet()
-        d['planet-stub'] = lambda : ckscool.table.tab_planet()[:10]
-        self.table_dict = d
-
-        d = OrderedDict()
-        d['stat'] = ckscool.value.val_stat
-        self.val_dict = d
-
-        d = OrderedDict()
-        d['table'] = self.table_dict
-        d['plot'] = self.plot_dict
-        d['val'] = self.val_dict
-        self.all_dict = d
-
-    def key2fn(self, key, kind):
-        if kind=='plot':
-            return 'fig_'+key+'.pdf'
-        if kind=='table':
-            return 'tab_'+key+'.tex'
-        if kind=='val':
-            return 'val_'+key+'.tex'
-            
-    def create_file(self, kind, name):
-        i = 0
-        for key, func in self.all_dict[kind].iteritems():
-            if kind=='plot':
-                if name=='all':
-                    func()
-                elif key.count(name)==1:
-                    func()
-                else:
-                    continue
-                    
-                fn = self.key2fn(key, 'plot')
-                plt.gcf().savefig(fn)
-
-            elif kind=='table':
-                if name=='all':
-                    lines = func()
-                elif key.count(name)==1:
-                    lines = func()
-                else:
-                    continue
-                    
-                # Remove last \\
-                fn = self.key2fn(key, 'table')
-                with open(fn,'w') as f:
-                    f.writelines("\n".join(lines))
-
-            elif kind=='val':
-                fn = self.key2fn(key, 'val')
-                if name=='all':
-                    lines = func()
-                elif name==key:
-                    lines = func()
-                else:
-                    continue
-
-                lines1 = [
-                    "\\newcommand{\%s}[1]{%%" % key,
-                    "\IfEqCase{#1}{",
-                ]
-
-                lines2 = [
-                    "}[XX]",
-                    "}"
-                ]
-                lines = lines1 + lines + lines2
-
-                with open(fn,'w') as f:
-                    f.writelines("%\n".join(lines))
-
-            i+=1
-
-        if i==0:
-            assert False, name + " not a valid key"
-
-    def update_paper(self):
-        for kind, d in self.all_dict.iteritems():
-            for key, val in d.iteritems():
-                fn = self.key2fn(key, kind)
-                cmd = 'cp {} paper/'.format(fn)
-                print cmd
-                os.system(cmd)
+    # val
+    w.val['stat'] = ckscool.value.val_stat
+    return w
 
 if __name__=="__main__":
     main()

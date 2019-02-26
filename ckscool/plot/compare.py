@@ -6,7 +6,7 @@ import pandas as pd
 from astropy import constants as c
 from ckscool.plot.config import *
 import ckscool.io
-import cksgaia.io
+
 sns.set_style('ticks')
 sns.set_color_codes()
 

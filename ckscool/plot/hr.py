@@ -6,13 +6,11 @@ import pandas as pd
 from astropy import constants as c
 from ckscool.plot.config import *
 import ckscool.io
-import cksgaia.io
 sns.set_style('ticks')
 sns.set_color_codes()
 texteff = '$\mathregular{T}_{\mathregular{eff}}$'
 texrp = '\mathregular{R}_\mathregular{P}' 
 texre = '\mathregular{R}_\mathregular{E}' 
-
 
 cks1kw = dict(
     marker='.', lw=0, ms=7, color=sns.xkcd_rgb["dark sky blue"], 
@@ -25,14 +23,10 @@ ckscoolkw = dict(
 
 rstarticks = [0.5,0.7,1.0,1.4,2.0]
 
-
 def fig_hr():
     sns.set_context('paper',font_scale=1.3)
     fig,axL = subplots(figsize=(7,5))
-    df = cksgaia.io.load_table(
-        'cksgaia-planets-filtered',
-        cachefn='../CKS-Gaia/load_table_cache.hdf',cache=1
-    )
+    df = ckscool.io.load_table('cksgaia-planets-filtered')
     df = df.groupby('id_koi',as_index=False).nth(0)
     plot(df.cks_steff,df.gdir_srad,'.',**cks1kw)
 
@@ -56,10 +50,7 @@ def fig_hr():
 def fig_smet_smass():
     sns.set_context('paper',font_scale=1.3)
     fig,axL = subplots(figsize=(7,5))
-    df = cksgaia.io.load_table(
-        'cksgaia-planets-filtered',
-        cachefn='../CKS-Gaia/load_table_cache.hdf',cache=1
-    )
+    df = ckscool.io.load_table('cksgaia-planets-filtered')
     df = df.groupby('id_koi',as_index=False).nth(0)
     semilogy()
     plot(df.cks_smet,df.giso_smass,'.',**cks1kw)

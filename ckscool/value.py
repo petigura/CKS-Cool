@@ -5,7 +5,6 @@ import ckscool.observe
 import numpy as np
 from time import gmtime, strftime
 
-
 def val_stat(return_dict=False):
     """
     Statistics of sample
@@ -58,8 +57,6 @@ def val_stat(return_dict=False):
 
     d['cut-nstars-any'] = df['isany'].sum()
 
-
-
     obs = ckscool.observe.ObserveNIRC2()
     obs.label_observed()
 
@@ -69,34 +66,7 @@ def val_stat(return_dict=False):
     d['nirc2-tot-observed'] = obs.sample['isobserved'].sum()
 
 
-    '''
-    d['ror-med'] = "{:.1f}".format(100*df.koi_ror.median())
-    d['ror-ferr-med'] = "{:.1f}".format(100*ferr.median())
-    ferr= cut.eval('0.5*(gdir_prad_err1 - gdir_prad_err2) / gdir_prad')
-    d['prad-ferr-med'] = "{:.1f}".format(100*ferr.median())
-    d['prad-med'] = "{:.1f}".format(cut.gdir_prad.median())
-
-
-    d['cks-gaia-distmod-err-med'] = "{:.2f}".format(cut.eval('gaia2_sparallax_err / gaia2_sparallax').median())
-
-    dist = 1 / (1e-3  * df.gaia2_sparallax)
-    mu = 5 * np.log10(dist) - 5 
-    d['cks-gaia-distmod-med'] = "{:.2f}".format(mu.median())
-
-
-
-
-    d['steff-med'] = "{:.0f}".format(df.cks_steff.median())
-    # Properties of cks+gaia2 table
-    df = cksgaia.io.load_table('cksgaia-planets',cache=1)
-    cut = df
-    '''
-
-    import cksgaia.io
-    df = cksgaia.io.load_table(
-        'cksgaia-planets',
-        cachefn='../CKS-Gaia/load_table_cache.hdf',cache=1
-    )
+    df = ckscool.io.load_table('cksgaia-planets')
     df = df.groupby('id_koi',as_index=False).nth(0)
     d['cks1-sdistance-med'] = "{:.0f}".format(df.query('kic_kepmag < 14.2').eval('1000 / gaia2_sparallax').median())
 
@@ -104,7 +74,6 @@ def val_stat(return_dict=False):
     for key in cd.keys():
         d[key] = cd[key]
     
-
     lines = []
     for k, v in d.iteritems():
         line = r"{{{}}}{{{}}}".format(k,v)

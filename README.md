@@ -1,5 +1,33 @@
 # CKS-Cool
 
+## Use conda environment
+
+source activate ckscool
+
+## Dependencies
+
+
+### had to install the following packages with conda
+conda install scipy
+conda install matplotlib
+conda install pandas
+conda install astropy
+conda install h5py
+pip install lmfit
+pip install ebfpy
+conda install -c conda-forge healpy # needed for dustmaps
+pip install dustmaps 
+pip install mwdust # needed for dustmaps
+pip install pyephem
+conda install seaborn
+conda install scikit-learn
+conda install pytables
+
+# Copy over the table cache from CKS-Gaia
+
+$ cp ../CKS-Gaia/load_table_cache.hdf data/cksgaia_cache.hdf
+
+
 Repo for the CKS-Cool project includes code to
 
 - Construct target list

@@ -5,12 +5,12 @@ import pandas as pd
 import numpy as np
 import cksspec.io
 import ckscool.cuts
-import cksgaia.io
 import cpsutils.io
 import ckscool.calc
 from astropy.io import ascii
 
 DATADIR = os.path.join(os.path.dirname(__file__),'../data/')
+CKSGAIA_CACHEFN = os.path.join(DATADIR,'cksgaia_cache.hdf')
 
 def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
     """Load tables used in cksmet
@@ -101,7 +101,8 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
     # Merged tables
     elif table=='m17+gaia2':
         print "performing crossmatch on gaia2"
-        df = cksgaia.io.load_table('m17')
+
+        df = pd.read_hdf(CKSGAIA_CACHEFN,'m17')
         df = df.rename(columns={'m17_kepmag':'kic_kepmag'})
         gaia = load_table('gaia2')
         stars = df['id_kic kic_kepmag'.split()].drop_duplicates()
@@ -295,7 +296,6 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         df = df.rename(columns={'massratio':'max_massratio'})
         df = add_prefix(df,'k16_')
 
-
     # Mann et al. (2013)
     elif table=='mann13':
         fn = os.path.join(DATADIR,'mann13/table3.dat') 
@@ -363,6 +363,12 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         cks = load_table('ckscool-stars-cuts')
         m13 = load_table('brewer18')
         df = pd.merge(cks,m13,on='id_koi')
+
+    # CKS-VII
+    elif table=='cksgaia-planets-filtered':
+        df = pd.read_hdf(CKSGAIA_CACHEFN,'cksgaia-planets-filtered')
+    elif table=='cksgaia-planets':
+        df = pd.read_hdf(CKSGAIA_CACHEFN,'cksgaia-planets')
 
     else:
         assert False, "table {} not valid table name".format(table)
