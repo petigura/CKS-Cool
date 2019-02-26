@@ -122,8 +122,8 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         df = pd.merge(df,m17, on='id_kic')
 
     elif table=='ckscool-targets-cuts':
-        table = 'koi-mullally15'
-        #table = 'koi-thompson18'
+        #table = 'koi-mullally15'
+        table = 'koi-thompson18'
         cuttypes = [
             'none','notreliable','badteffphot','faint','giant','badparallax',
             'diluted'

@@ -49,7 +49,6 @@ def main():
     args = psr.parse_args()
     args.func(args)
 
-
 def create_iso_batch(args):
     ckscool._isoclassify.create_iso_batch(args)
 
@@ -96,9 +95,22 @@ class Workflow(object):
         d['compare-with-cks1'] = ckscool.plot.sample.fig_compare_with_cks1
         d['ferr-hist-star'] = ckscool.plot.hr.fig_ferr_hist_star
         d['ferr-hist-planet'] = ckscool.plot.hr.fig_ferr_hist_planet
+
         d['planet-per-prad'] = ckscool.plot.planet.fig_per_prad
+        d['planet-per-prad-nopoints'] = lambda : ckscool.plot.planet.fig_per_prad(nopoints=True)
+        d['planet-per-prad-nopoints-zoom'] = lambda : ckscool.plot.planet.fig_per_prad(nopoints=True,zoom=True)
+        d['planet-per-prad-zoom'] = lambda : ckscool.plot.planet.fig_per_prad(zoom=True)
+
         d['planet-smass-prad'] = ckscool.plot.planet.fig_smass_prad
+        d['planet-smass-prad-nopoints'] = lambda : ckscool.plot.planet.fig_smass_prad(nopoints=True)
+        d['planet-smass-prad-nopoints-zoom'] = lambda : ckscool.plot.planet.fig_smass_prad(nopoints=True,zoom=True)
+        d['planet-smass-prad-zoom'] = lambda : ckscool.plot.planet.fig_smass_prad(zoom=True)
+
         d['planet-smet-prad'] = ckscool.plot.planet.fig_smet_prad
+        d['planet-smet-prad-nopoints'] = lambda : ckscool.plot.planet.fig_smet_prad(nopoints=True)
+        d['planet-smet-prad-nopoints-zoom'] = lambda : ckscool.plot.planet.fig_smet_prad(nopoints=True,zoom=True)
+        d['planet-smet-prad-zoom'] = lambda : ckscool.plot.planet.fig_smet_prad(zoom=True)
+
 
         d['star-steff-srad'] = ckscool.plot.hr.fig_hr
         d['star-smet-smass'] = ckscool.plot.hr.fig_smet_smass
