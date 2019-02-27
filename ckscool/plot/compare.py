@@ -154,7 +154,6 @@ def provision_figure():
     axL = [ax1,ax2]
     return fig,axL 
 
-
 def subplots_compare(x1, x2, x3, xerr3=None, fig0=None, axL0=None, **kwargs):
     if fig0 is None:
         fig, axL = provision_figure()
