@@ -61,7 +61,11 @@ def fig_per_prad(nopoints=False,zoom=False):
 
 
 
-def fig_smass_prad(nopoints=False,zoom=False):
+def fig_smass_prad(nopoints=False,zoom=False, boost=True):
+
+    """
+    Boost: whether to normalize KDE so that each mass bin gets equal weight
+    """
     fig, axL = subplots(figsize=(5,4))
     xk = 'giso_smass'
     yk = 'gdir_prad'
@@ -97,14 +101,23 @@ def fig_smass_prad(nopoints=False,zoom=False):
     xmax = x.max()
     ymin = y.min()
     ymax = y.max()
-    X, Y = np.mgrid[xmin:xmax:300j, ymin:ymax:300j]
+    X, Y = np.mgrid[xmin:xmax:300j, ymin:ymax:200j]
     positions = np.vstack([X.ravel(), Y.ravel()])
     Z = np.reshape(np.exp(kde.score_samples(positions.T)), X.shape)
 
-    imshow(
-        np.rot90(Z), cmap=plt.cm.afmhot_r, extent=[xmin, xmax, ymin, ymax],
-        aspect='auto',zorder=1,vmax=8
-    )
+    if boost:
+        #imshow(np.rot90((Z/fac[:,np.newaxis])),vmax=3,aspect='auto')
+        #import pdb;pdb.set_trace()
+        Z = Z / Z.sum(axis=1)
+        imshow(
+            np.rot90(Z), cmap=plt.cm.afmhot_r, extent=[xmin, xmax, ymin, ymax],
+            aspect='auto',zorder=1,vmax=8
+        )
+    else:
+        imshow(
+            np.rot90(Z), cmap=plt.cm.afmhot_r, extent=[xmin, xmax, ymin, ymax],
+            aspect='auto',zorder=1,vmax=8
+        )
 
 
     xt = [0.3,0.5,0.7,1,1.4,2]
