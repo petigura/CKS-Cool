@@ -94,7 +94,7 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
     # Gaia DR2
     elif table=='gaia2':
         fn = os.path.join('../CKS-Gaia/data/xmatch_m17_gaiadr2-result.csv')
-        df = cksgaia.xmatch.read_xmatch_gaia2(fn)
+        df = read_xmatch_gaia2(fn)
         # Systematic offset from Zinn et al. (2018)
         df['gaia2_sparallax'] += 0.053 
 
@@ -106,7 +106,7 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         df = df.rename(columns={'m17_kepmag':'kic_kepmag'})
         gaia = load_table('gaia2')
         stars = df['id_kic kic_kepmag'.split()].drop_duplicates()
-        mbest,mfull = cksgaia.xmatch.xmatch_gaia2(stars,gaia,'id_kic','gaia2')
+        mbest,mfull = xmatch_gaia2(stars,gaia,'id_kic','gaia2')
         df = pd.merge(df,mbest.drop(['kic_kepmag'],axis=1),on='id_kic')
 
     elif table=='j17+m17':
@@ -124,7 +124,9 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
 
     elif table=='ckscool-targets-cuts':
         #table = 'koi-mullally15'
-        table = 'koi-thompson18'
+        #table = 'koi-thompson18'
+        table = 'koi-thompson18-dr25'
+        sample = 'koi-thompson18'
         cuttypes = [
             'none','notreliable','badteffphot','faint','giant','badparallax',
             'diluted'
@@ -136,7 +138,7 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         ]
         '''
         df = load_table(table)
-        df = ckscool.cuts.add_cuts(df,cuttypes,table)
+        df = ckscool.cuts.add_cuts(df,cuttypes,sample)
         df.cuttypes = cuttypes
 
     elif table=='reamatch':
@@ -251,6 +253,25 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
     elif table=='koi-thompson18':
         df = load_table_koi(table)
 
+    elif table=='koi-thompson18-dr25':
+        df = load_table_koi('koi-thompson18')
+        dr25 = pd.read_hdf('../Kepler-Radius-Ratio/data/kepler_project_chains.hdf','dr25',)
+        namemap = {
+            'dr25_RD1_cum':'koi_ror',
+            'dr25_RD1_cum_err1':'koi_ror_err1',
+            'dr25_RD1_cum_err2':'koi_ror_err2'
+        }
+        cols = ['id_koicand'] +  namemap.values()
+        df25 = dr25.rename(columns=namemap)[cols]
+        print "swapping in dr25 radius ratios"
+        print "       old"  
+        print df.head(3)['id_koicand koi_ror koi_ror_err1 koi_ror_err2'.split()]
+        df = df.drop(columns=namemap.values())
+        df = pd.merge(df,df25)
+        print "       new"
+        print df.head(3)['id_koicand koi_ror koi_ror_err1 koi_ror_err2'.split()]
+
+
     elif table=='koi-coughlin16':
         df = load_table_koi(table)
 
@@ -274,10 +295,6 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
 
 
     elif table=='kraus16':
-        # Add in Kraus AO
-        #import astropy.io.ascii
-        #from astropy.table import Table
-
         fn = os.path.join(DATADIR,'kraus16/table7.dat')
         readme = os.path.join(DATADIR,'kraus16/ReadMe')
         df = ascii.read(fn,readme=readme)
@@ -463,3 +480,88 @@ def order_columns(df, verbose=False, drop=True):
 
     return df
 
+def read_xmatch_gaia2(fn):
+    df = pd.read_csv(fn)
+    namemap = {
+        'source_id':'id_gaia2',
+        'ra':'ra', 
+        'dec':'dec',
+        'parallax':'sparallax', 
+        'parallax_error':'sparallax_err', 
+        'phot_g_mean_flux':'gflux',
+        'phot_g_mean_flux_error':'gflux_err',
+        'phot_g_mean_mag':'gmag',
+
+        'phot_bp_mean_flux':'bpflux',
+        'phot_bp_mean_flux_error':'bpflux_err',
+        'phot_bp_mean_mag':'bpmag',
+        'phot_rp_mean_flux':'rpflux',
+        'phot_rp_mean_flux_error':'rpflux_err',
+        'phot_rp_mean_mag':'rpmag',
+        'parallax_over_error':'sparallax_over_err',
+        'astrometric_excess_noise':'astrometric_excess_noise',
+        'astrometric_excess_noise_sig':'astrometric_excess_noise_sig',
+        'id_kic':'id_kic',
+        'dist':'angdist',
+    }
+    
+    df['steff'] = df['teff_val']
+    df['steff_err1'] = df.eval('teff_percentile_upper - teff_val')
+    df['steff_err2'] = df.eval('teff_percentile_lower - teff_val')
+    df['srad'] = df['radius_val']
+    df['srad_err1'] = df.eval('radius_percentile_upper - radius_val')
+    df['srad_err2'] = df.eval('radius_percentile_lower - radius_val')
+    df = df.rename(columns=namemap)
+    df['angdist'] *= 60*60
+    cols = namemap.values() + 'steff steff_err1 steff_err2 srad srad_err1 srad_err2 '.split()
+    df = df[cols]
+    df = add_prefix(df, 'gaia2_')
+    return df
+
+
+def xmatch_gaia2(df, gaia, key, gaiadr):
+    """
+    Crossmatch the sources in Gaia 2
+
+    Args:
+        df (pandas.DataFrame): Target catalog 
+        gaia (pandas.DataFrame): Gaia DR2 table
+        key (str): key to join on
+        gaiadr (str): {'gaiadr1','gaiadr2'}
+    """
+
+    id_gaia = 'id_{}'.format(gaiadr)
+    assert len(df.id_kic)==len(df.id_kic.drop_duplicates()), "No duplicate stars"
+    gaia[id_gaia]= gaia[id_gaia].astype(str)  # handle nans
+
+    # just want the stars
+    m = pd.merge(df,gaia,on=key,how='left')
+    m[id_gaia]= m[id_gaia].fillna('-99')
+    m[id_gaia]= m[id_gaia].astype(np.int64)
+    ndf = len(df)
+    print "max(gaia_angdist) = {} (arcsec)".format(m[gaiadr+'_angdist'].max())
+    print "{} gaia sources within 8 arcsec of {} target sources".format(
+        len(m),ndf
+    )
+
+    # count the number of stars within 8 arcsec
+    m.index = m.id_kic
+    g = m.groupby('id_kic')
+    m[gaiadr+'_gflux_sum'] = g[gaiadr+'_gflux'].sum()
+    m['absdiff_gmag_kepmag'] = np.abs(m['gaia2_gmag'] - m['kic_kepmag'])
+    m['gaia2_n_8arcsec'] = g.size()
+
+    # Match candidate
+    mbest = m.query('gaia2_angdist < 1 and abs(kic_kepmag - gaia2_gmag) < 0.5') # within 1 arcsec
+    mbest['gaia2_n_1arcsec'] = mbest.groupby('id_kic').size()
+
+    print "{} gaia sources within 1 arcsec of {} target sources".format(
+        len(mbest),mbest.id_kic.drop_duplicates().count()
+    )
+
+    mbest = mbest.sort_values(by=['id_kic','absdiff_gmag_kepmag'])
+    g = mbest.groupby('id_kic',as_index=False)
+    mbest['gaia2_n_1arcsec'] = g.size()
+    mbest = g.nth(0) 
+    mbest['gaia2_gflux_ratio'] = mbest.eval('gaia2_gflux_sum / gaia2_gflux')
+    return mbest, m 
