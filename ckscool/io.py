@@ -123,8 +123,8 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         df = pd.merge(df,m17, on='id_kic')
 
     elif table=='ckscool-targets-cuts':
-        #table = 'koi-mullally15'
-        #table = 'koi-thompson18'
+        # table = 'koi-mullally15'
+        # table = 'koi-thompson18'
         table = 'koi-thompson18-dr25'
         sample = 'koi-thompson18'
         cuttypes = [
@@ -242,7 +242,6 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         namemap = {'kepoi_name':'id_koicand','fpp_prob':'fpp_prob'}
         df = df.rename(columns=namemap)[namemap.values()]
 
-
     # KOI tables
     elif table=='koi-thompson18':
         df = load_table_koi(table)
@@ -255,6 +254,7 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
             'dr25_RD1_cum_err1':'koi_ror_err1',
             'dr25_RD1_cum_err2':'koi_ror_err2'
         }
+
         cols = ['id_koicand'] +  namemap.values()
         df25 = dr25.rename(columns=namemap)[cols]
         print "swapping in dr25 radius ratios"
@@ -264,6 +264,7 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         df = pd.merge(df,df25)
         print "       new"
         print df.head(3)['id_koicand koi_ror koi_ror_err1 koi_ror_err2'.split()]
+
 
 
     elif table=='koi-coughlin16':
@@ -412,6 +413,24 @@ def load_table_koi(table):
     if table=='koi-thompson18':
         csvfn = os.path.join(DATADIR,'q1_q17_dr25_koi.csv')
         df = pd.read_csv(csvfn,comment='#',index_col=0)
+        names = [
+            'koi_disposition',
+            'koi_score',
+            'koi_period',
+            'koi_period_err1',
+            'koi_period_err2',
+            'koi_ror',
+            'koi_ror_err1',
+            'koi_ror_err2',
+            'koi_impact',
+            'koi_impact_err1',
+            'koi_impact_err2',
+            'kepid',
+            'kepoi_name',
+            'kepler_name',
+        ]
+        df = df[names]
+
 
     elif table=='koi-coughlin16':
         csvfn = os.path.join(DATADIR,'q1_q17_dr24_koi.csv')
