@@ -2,8 +2,8 @@
 
 Repo for the CKS-Cool project includes code to
 
-- Construct target list
-- Plan/execute observations
+- [Construct target list](docs/observing.md)
+- [Plan/execute observations](docs/observing.md)
 - Compute stellar/planet parameters
 
 ## Compute Stellar/Planetary Properties
