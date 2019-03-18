@@ -1,14 +1,13 @@
 # CKS-Cool
 
-Repo for the CKS-Cool project includes code to
-
 - [Construct target list](docs/observing.md)
 - [Plan/execute observations](docs/observing.md)
 - Compute stellar/planet parameters
+- Access the CKS-Cool dataset
 
 ## Compute Stellar/Planetary Properties
 
-1. Download smemp and smsyn catalogs to data/
+1. Download smemp and smsyn catalogs to `data/`
 
 ```
 rsync -av cadence:/data/user/petigura/public_html/smemp/specmatch_results.csv data/specmatch-emp_results.csv
@@ -28,19 +27,23 @@ cat isoclassify-grid-parallax-no.tot | parallel -j 6  # takes about 20min on Eri
 cat isoclassify-grid-parallax-yes.tot | parallel -j 6 # takes about 20min on Erik's laptop
 ```
 
+```
 run_ckscool.py create-iso-table
+```
 
 3. Generate ReaMatch table
 
-Run ReaMatch ipython notebook. Copy ~/Dropbox/CKS-Cool/hires/reamatch.csv
+Run `ReaMatch.ipynb` and copy output file to `reamatch.csv` to `~/Dropbox/CKS-Cool/hires/reamatch.csv`. Howard Isaacson will then add the appropriate RM designations to file.
 
-4. Download representative spectra
+4. Generate representative spectra figure
 
 Run the 3_Spectra-Figure ipython notebook
 
+```
 rsync -av --progress --files-from=data/fig_spectra/fig_spectra-files.txt cadence:/ data/fig_spectra/ 
+```
 
-## Machine Readable Tables
+## Access CKS-Cool dataset
 
 The full list of star and planet properties are in 
 
