@@ -131,12 +131,6 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
             'none','notreliable','badteffphot','faint','giant','badparallax',
             'diluted'
         ]
-        '''
-        cuttypes = [
-           'none','badteffphot','faint','giant','badparallax',
-            'diluted'
-        ]
-        '''
         df = load_table(table)
         df = ckscool.cuts.add_cuts(df,cuttypes,sample)
         df.cuttypes = cuttypes
