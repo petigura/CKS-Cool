@@ -74,12 +74,11 @@ rsync -av --progress --files-from=data/fig_spectra/fig_spectra-files.txt cadence
 
 ## Access CKS-Cool dataset
 
-The full list of star and planet properties are in 
+The full list of star and planet properties are in `data/ckscool-planets-cuts.csv ` see `data/column-definitions.txt` for a description of the columns.
 
-`data/ckscool-planets-cuts.csv `
+The `is*` columns correspond to cuts. See the ckscool/cuts.py for additional info. The radius gap be comes more clear when one adopts a koi_impact of > 0.7 or 0.8.
 
-see
 
-`data/column-definitions.txt`
 
-For a description of the columns
+
+
