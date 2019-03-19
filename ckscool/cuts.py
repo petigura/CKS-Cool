@@ -171,10 +171,10 @@ class CutSB2(CutBase):
 class CutImpact(CutBase):
     """Remove planets with high impact parameters"""
     cuttype = 'badimpact'
-    texstr = r'$b$ < 0.8'
+    texstr = r'$b$ < 0.7'
     plotstr = texstr
     def cut(self):
-        b = self.df.koi_impact > 0.8
+        b = self.df.koi_impact > 0.7
         return b
 
 class CutPradPrecision(CutBase):

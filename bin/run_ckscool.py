@@ -58,8 +58,8 @@ def create_spectra_files(args):
     print "created {}".format(fn)
 
 def create_csv(args):
-    df = ckscool.io.load_table('ckscool-planets-cuts')
-    fn = 'data/ckscool-planets-cuts.csv'
+    df = ckscool.io.load_table(args.name)
+    fn = 'data/{}.csv'.format(args.name)
     df.to_csv(fn)
     print "created {}".format(fn)
 

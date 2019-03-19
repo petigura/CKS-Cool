@@ -216,9 +216,11 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
     elif table == "ckscool-planets":
         df = load_table('ckscool-stars-cuts')
         df = df[~df.isany]
+        df['tau0'] = 2.036 * df.koi_period**(1/3.) * df.giso_srho**(-1/3.0)
         df = ckscool.calc.update_planet_parameters(df)
         fpp = ckscool.io.load_table('fpp')
         df = pd.merge(df, fpp)
+        df = order_columns(df, verbose=True)
 
     elif table=='ckscool-planets-cuts':
         df = load_table('ckscool-planets')
@@ -226,6 +228,7 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         table = 'temp'
         df = ckscool.cuts.add_cuts(df, cuttypes, table)
         df.cuttypes = cuttypes
+        
         
     elif table=='nrm-previous':
         # File is from an email that Adam sent me in 2017-11-02
@@ -252,19 +255,34 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         namemap = {
             'dr25_RD1_cum':'koi_ror',
             'dr25_RD1_cum_err1':'koi_ror_err1',
-            'dr25_RD1_cum_err2':'koi_ror_err2'
+            'dr25_RD1_cum_err2':'koi_ror_err2',
+#            'dr25_BB1_cum':'koi_impact',
+#            'dr25_BB1_cum_err1':'koi_impact_err1',
+#            'dr25_BB1_cum_err2':'koi_impact_err2'
+#            'dr25_TAU1_cum':'koi_tau',
+#            'dr25_TAU1_cum_err1':'koi_tau_err1',
+#            'dr25_TAU1_cum_err2':'koi_tau_err2'
         }
 
         cols = ['id_koicand'] +  namemap.values()
         df25 = dr25.rename(columns=namemap)[cols]
         print "swapping in dr25 radius ratios"
         print "       old"  
-        print df.head(3)['id_koicand koi_ror koi_ror_err1 koi_ror_err2'.split()]
+
+        pnames = [
+            'id_koicand',
+            'koi_ror',
+            'koi_ror_err1',
+            'koi_ror_err2',
+            'koi_impact',
+            'koi_impact_err1',
+            'koi_impact_err2'
+        ]
+        print df.head(3)[pnames]
         df = df.drop(columns=namemap.values())
         df = pd.merge(df,df25)
         print "       new"
-        print df.head(3)['id_koicand koi_ror koi_ror_err1 koi_ror_err2'.split()]
-
+        print df.head(3)[pnames]
 
 
     elif table=='koi-coughlin16':
@@ -479,7 +497,8 @@ def sub_prefix(df, prefix,ignore=['id']):
     df = df.rename(columns=namemap)
     return df
 
-def order_columns(df, verbose=False, drop=True):
+def order_columns(df, verbose=False, drop=False):
+    df0 = df.copy()
     columns = list(df.columns)
     coldefs = load_table('coldefs',cache=0)
     cols = []
@@ -489,8 +508,12 @@ def order_columns(df, verbose=False, drop=True):
 
     df = df[cols]
     if verbose and (len(cols) < len(columns)):
-        print "table contains columns not defined in coldef"
+        mcols = list(df0.drop(cols,axis=1).columns)
+        print "following columns not defined"
+        print mcols
 
+    if not drop:
+        df = pd.concat([df,df0[mcols]],axis=1,sort=False)
     return df
 
 def read_xmatch_gaia2(fn):

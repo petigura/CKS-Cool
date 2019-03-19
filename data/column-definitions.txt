@@ -11,130 +11,18 @@ id_tycho2             Tycho-2 identifier [int]
 id_kepler_name        Kepler name [str]
 koi_disposition       Exoplanet Archive Disposition [str] 
 #
-# Columns from Q16 KOI catalog (Mullally et al. 2015)
+# Columns from DR25
 #
 koi_period            Orbital Period [days] 
 koi_period_err1       Orbital Period Upper Unc. [days]
 koi_period_err2       Orbital Period Lower Unc. [days]
-koi_time0             Transit Epoch [BJD]
-koi_time0_err1        
-koi_time0_err2        
-koi_impact            Impact Parameter [float]
-koi_impact_err1       
-koi_impact_err2       
-koi_duration          Transit Duration [hrs]
-koi_duration_err1     
-koi_duration_err2     
-koi_ingress           Ingress Duration [hrs]
-koi_ingress_err1     
-koi_ingress_err2     
-koi_depth             Transit Depth [ppm]
-koi_depth_err1        
-koi_depth_err2        
-koi_ror               Planet-Star Radius Ratio [float]
+koi_ror               Planet-Star Radius Ratio [float] (MCMC)
 koi_ror_err1          
 koi_ror_err2          
-koi_srho              Fitted Stellar Density [g/cm**3]
-koi_srho_err1         
-koi_srho_err2	      
-koi_prad              Planetary Radius [Earth radii]
-koi_prad_err1         
-koi_prad_err2         
-koi_sma               Orbit Semi-Major Axis [AU]
-koi_sma_err1
-koi_sma_err2
-koi_teq               Equilibrium Temperature [K]
-koi_teq_err1          
-koi_teq_err2          
-koi_insol             Insolation Flux [Earth flux]
-koi_insol_err1        
-koi_insol_err2        
-koi_dor               Planet-Star Distance over Star Radius [float]
-koi_dor_err1          
-koi_dor_err2          
-koi_max_mult_ev       Maximum Multiple Event Statistic
-koi_model_snr         Transit Signal-to-Noise
-koi_count             Number of Planets
-koi_num_transits      Number of Transits
-koi_steff             Stellar Effective Temperature [K]
-koi_steff_err1        
-koi_steff_err2        
-koi_slogg             Stellar Surface Gravity [log10(cm/s**2)]
-koi_slogg_err1        
-koi_slogg_err2        
-koi_smet              Stellar Metallicity [dex]
-koi_smet_err1         
-koi_smet_err2         
-koi_srad              Stellar Radius [Solar radii]
-koi_srad_err1         
-koi_srad_err2         
-koi_smass             Stellar Mass [Solar mass]
-koi_smass_err1        
-koi_smass_err2        
-koi_sage              Stellar Age [Gyr]
-koi_sage_err1         
-koi_sage_err2         
-koi_sparprov          Stellar Parameter Provenance
+koi_impact            Impact Parameter [float] (bestfit)
+koi_impact_err1       
+koi_impact_err2       
 kic_kepmag            Kepler-band [mag]
-kic_jmag              J-band [mag]
-kic_hmag              H-band [mag]
-kic_kmag              K-band [mag]
-#
-# Columns from CKS-I
-#
-cks_fpsys	      CKS False positive designation for star/system
-cks_fp                CKS False positive designation for candidate
-cks_steff             CKS Effective Temperature [K]
-cks_steff_err1        
-cks_steff_err2        
-cks_slogg             CKS Stellar Surface Gravity [log10(cm/s**2)]
-cks_slogg_err1        
-cks_slogg_err2        
-cks_smet              CKS Stellar Metallicity [dex]
-cks_smet_err1         
-cks_smet_err2         
-cks_svsini            CKS Projected Stellar Rotational Velocity [km/s]
-cks_svsini_err1       
-cks_svsini_err2       
-#
-# Columns from CKS-II
-#
-iso_steff              Effective Temperature [K]
-iso_steff_err1        
-iso_steff_err2        
-iso_slogg              Stellar Surface Gravity [log10(cm/s**2)]
-iso_slogg_err1        
-iso_slogg_err2        
-iso_smet               Stellar Metallicity [dex]
-iso_smet_err1         
-iso_smet_err2         
-iso_srad               Stellar Radius [Solar radii]
-iso_srad_err1         
-iso_srad_err2         
-iso_smass              Stellar Mass [Solar mass]
-iso_smass_err1        
-iso_smass_err2        
-iso_sage               Stellar Age [Gyr]
-iso_sage_err1
-iso_sage_err2         
-iso_slogage            Stellar Age [log10(yrs)]
-iso_slogage_err1              
-iso_slogage_err2              
-iso_sparallax          Stellar parallax [mas]
-iso_sparallax_err1    
-iso_sparallax_err2    
-iso_prad               Planet Radius [Earth radii]
-iso_prad_err1         
-iso_prad_err2         
-iso_sma                semi-major axis [AU]
-iso_sma_err1
-iso_sma_err2
-iso_insol              Incident flux [Earth units]
-iso_insol_err1        
-iso_insol_err2        
-iso_teq                Planet equilibrium temperature (bond albedo = 0.3)
-iso_teq_err1          
-iso_teq_err2          
 #
 # Columns from Gaia DR2
 #
@@ -147,6 +35,9 @@ gaia2_gflux           Mean flux in Gaia bandpass [e-/s]
 gaia2_gflux_err       
 gaia2_n_1arcsec       Number of sources within 1 arcsec
 gaia2_n_8arcsec       Number of sources within 8 arcsec
+gaia2_astrometric_excess_noise
+gaia2_sparallax_over_err
+
 gaia2_gflux_ratio     Total G-band flux within 8 arcsec of target divided by target G-band flux
 gaia2_gmag            Mean magnitude in Gaia bandpass [mag]
 gaia2_srad            Stellar radius [Solar-radii] 
@@ -155,10 +46,20 @@ gaia2_srad_err2
 gaia2_steff           Stellar effective temperature [Kelvin] 
 gaia2_steff_err1       
 gaia2_steff_err2
+
 m17_kmag              2MASS Kmag 
 m17_kmag_err          2MASS Kmag
+m17_ra                RA
+m17_dec               Dec
 #
-# Columns from CKS VII
+# SpecMatch parameters
+# 
+sm_steff              SpecMatch teff
+sm_steff_err
+sm_smet               SpecMatch metallicity
+sm_smet_err 
+sm_srad               SpecMatch Stellar Radius 
+sm_srad_err           
 #
 # Properties from isoclassify analysis (direct mode)
 #
@@ -208,9 +109,22 @@ giso_teq            Planet equilibrium temperature (bond albedo = 0.3)
 giso_teq_err1
 giso_teq_err2
 #
-# Properties from Furlan (2017)
+# Properties from ReaMatch
 #
-fur17_ao_obs        Which telescopes observed the KOI?
-fur17_rcorr_avg     Radius correction factor
-fur17_rcorr_avg_err 
-
+rm_sb2                Is star spectroscopic binary?
+#
+# Properties from  Furlan (2017)
+#
+f17_ao_obs          Which telescopes observed the KOI?
+f17_rcf_avg         Radius correction factor
+f17_rcf_avg_err
+#
+# Properties from  Kraus (2016)
+#
+k16_sep
+k16_max_massratio
+k16_massratio_ul
+#
+# Properties from Morton et al.
+#
+fpp_prob            False positive probability from Morton

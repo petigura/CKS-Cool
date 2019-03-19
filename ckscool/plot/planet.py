@@ -10,8 +10,8 @@ from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
 
 class ContourPlotter(object):
     def __init__(self, x, xerr, y, yerr, xscale='log', yscale='log'):
-        self._kde_nx = 100
-        self._kde_ny = 200
+        self._kde_nx = 200
+        self._kde_ny = 400
         self.xscale = xscale
         self.yscale = yscale
 
@@ -67,7 +67,6 @@ class ContourPlotter(object):
         frac = self.ds['Z'].sum(dim='ky')
         frac = frac / frac.mean()
         self.ds['Z'] /= frac
-
 
     def plot_contour(self):
         self.ds.Z.plot.contourf(x='kx', cmap=plt.cm.afmhot_r, levels=20)
@@ -125,8 +124,8 @@ def fig_per_prad(nopoints=False,zoom=False):
     '''
     x = df[xk]
     y = df[yk]
-    xerr = x * 1
-    yerr = df[yerrk] * 1.5
+    xerr = x * 0.5
+    yerr = df[yerrk] 
 
     p1 = ContourPlotter(x, xerr, y, yerr,xscale='log',yscale='log')
     p1.xmin = 0.3
@@ -221,8 +220,6 @@ def fig_intfxuv_prad(nopoints=False,zoom=False):
     df = df.query('giso_smass < 0.8')
 
     data = np.load('mcdonald/posterior_padova125_1000_lookup.npy')
-
-
     mass = pd.read_csv('mcdonald/posterior_mass_vec.csv',names=['mass'],squeeze=True)
     logage = pd.read_csv('mcdonald/posterior_logage_vec.csv',names=['logage'],squeeze=True)
     coords={'mass':mass,'logage':logage,'sample':arange(1000)}
