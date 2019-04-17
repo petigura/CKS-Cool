@@ -1,6 +1,7 @@
 """
-Module for dealing with cuts.
+Defining cuts for CKS-Cool Spectroscopic Campaign 
 """
+
 import numpy as np
 import sys
 import inspect
@@ -31,7 +32,6 @@ class CutBase(object):
     texstr = 'base'
 
     def __init__(self, df, sample):
-        #assert samples.count(sample)==1,'{} not supported sample'.format(sample)
         self.df = df
         self.sample = sample 
         self.nrows = len(df)
@@ -53,7 +53,7 @@ class CutFaint(CutBase):
     plotstr = '$Kp$ < {} mag'.format(cd['max-kepmag'])
     texstr = '$Kp$ < {} mag'.format(cd['max-kepmag'])
     def cut(self):
-        kepmag = self.df['kic_kepmag']
+        kepmag = self.df['kepmag']
         b = kepmag > cd['max-kepmag']
         return b
 
@@ -106,6 +106,7 @@ class CutAO(CutBase):
         b2 = self.df['k16_max_massratio'] > 0.3
         return b1 | b2 
 
+
 class CutTeffPhot(CutBase):
     """Remove stars where Teff falls outside allowed range
     """
@@ -113,7 +114,7 @@ class CutTeffPhot(CutBase):
     texstr = r'${teff:}$ = ${min-steff:}$-${max-steff:}$ K'.format(**dict(texdict, **cd))
     plotstr = r'${teff:}$ = ${min-steff:}$-${max-steff:}$ K'.format(**dict(plotdict, **cd))
     def cut(self):
-        teff = self.df['m17_steff']
+        teff = self.df['ber18_steff']
         b = ~teff.between(cd['min-steff'],cd['max-steff'])
         return b
 
@@ -134,82 +135,14 @@ class CutNotReliable(CutBase):
         else:
             assert False," error"
 
-####################################
-# Cuts for filtered stellar sample #
-####################################
-
-class CutSpecParallax(CutBase):
-    """Remove stars the spectroscopic parallax does not agree with the trig parallax
-    """
-    cuttype = 'sb2'
-    texstr = r'Removing SB2s'
-    plotstr = r'Removing SB2s'
-    def cut(self):
-
-        diff = self.df.gaia2_sparallax - self.df.giso2_sparallax
-        sigmadiff = np.sqrt(
-            self.df.giso2_sparallax_err1**2 + self.df.gaia2_sparallax_err**2 
-        ) 
-        ndiff = diff/sigmadiff
-        teff = self.df['m17_steff']
-        b = np.abs(ndiff) > 3
-        return b
-
-class CutSB2(CutBase):
-    """Remove stars that are SB2s"""
-    cuttype = 'badspecparallax'
-    texstr = r'Delta Parallax < 3 sigma'
-    plotstr = r'$|\pi_{trig} - \pi_{spec}| < 3 \sigma$'
-    def cut(self):
-        b = self.df.rm_sb2.isin([4,5])
-        return b
-
-###################################
-# Cuts for filtered planet sample #
-###################################
-
-class CutImpact(CutBase):
-    """Remove planets with high impact parameters"""
-    cuttype = 'badimpact'
-    texstr = r'$b$ < 0.7'
-    plotstr = texstr
-    def cut(self):
-        b = self.df.koi_impact > 0.7
-        return b
-
-class CutPradPrecision(CutBase):
-    """Remove planets with large radius uncertainties"""
-    cuttype = 'badpradprecision'
-    texstr = r'$\sigma(R_p) / R_p $ < 0.2'
-    plotstr = texstr
-    def cut(self):
-        b = self.df.eval('gdir_prad_err1/gdir_prad') > 0.2
-        return b
-
-class CutPrad(CutBase):
-    """Remove planets with large radius uncertainties"""
-    cuttype = 'badprad'
-    texstr = r'$R_p < 20 R_E$'
-    plotstr = texstr
-    def cut(self):
-        b = ~self.df.gdir_prad.between(0,20)
-        return b
-
-class CutFPP(CutBase):
-    """Remove planets with high false positive probability"""
-    cuttype = 'largefpp'
-    texstr = r'FPP < 0.9'
-    plotstr = texstr
-    def cut(self):
-        b = self.df.fpp_prob > 0.9
-        return b
 
 clsmembers = inspect.getmembers(sys.modules[__name__], inspect.isclass)
 
 def get_cut(cuttype):
     for name, obj in clsmembers:
-        if getattr(obj,'cuttype')==cuttype:
-            return obj
+        if name.count('Cut'):
+            if getattr(obj,'cuttype')==cuttype:
+                return obj
 
     assert False, "{} not defined".format(cuttype)
 
