@@ -3,11 +3,16 @@ import cPickle as pickle
 
 import pandas as pd
 import numpy as np
-import cksspec.io
-import ckscool.cuts
-import cpsutils.io
-import ckscool.calc
 from astropy.io import ascii
+from scipy.io import idl
+
+import cpsutils.io
+import cksspec.io
+
+import ckscool.cuts
+import ckscool.calc
+import ckscool.pdplus
+import ckscool.cuts.ckscool
 
 DATADIR = os.path.join(os.path.dirname(__file__),'../data/')
 CKSGAIA_CACHEFN = os.path.join(DATADIR,'cksgaia_cache.hdf')
@@ -31,7 +36,7 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
     """
     if cache==1:
         try:
-            df = pd.read_hdf(cachefn,table)
+            df = pd.read_hdf(cachefn,table, mode='a')
             print "read table {} from {}".format(table,cachefn)
             return df
         except IOError:
@@ -98,6 +103,24 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         # Systematic offset from Zinn et al. (2018)
         df['gaia2_sparallax'] += 0.053 
 
+    elif table=='cdpp':
+        fn = os.path.join(DATADIR,'kic_q0_q17.dat')
+        df = idl.readsav(fn) 
+        df = df['kic']
+        df = ckscool.pdplus.LittleEndian(df) # Deals with the byte order
+        df = pd.DataFrame(df)
+        df = df.rename(columns={
+            'KEPMAG':'kepmag','KICID':'id_kic','CDPP3':'cdpp3','CDPP6':'cdpp6',
+            'CDPP12':'cdpp12'}
+        )
+        df = df['id_kic kepmag cdpp3 cdpp6 cdpp12'.split()]
+        for col in 'cdpp3 cdpp6 cdpp12'.split():
+            cdpp = np.vstack(df.ix[:,col])
+            cdpp[cdpp==0.0] = np.nan
+            cdpp = np.nanmedian(cdpp,axis=1)
+            df[col] = cdpp
+            df['log'+col] = np.log10(cdpp)
+        
     # Merged tables
     elif table=='m17+gaia2':
         print "performing crossmatch on gaia2"
@@ -106,8 +129,23 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         df = df.rename(columns={'m17_kepmag':'kic_kepmag'})
         gaia = load_table('gaia2')
         stars = df['id_kic kic_kepmag'.split()].drop_duplicates()
-        mbest,mfull = xmatch_gaia2(stars,gaia,'id_kic','gaia2')
+        mbest, mfull = xmatch_gaia2(stars,gaia,'id_kic','gaia2')
         df = pd.merge(df,mbest.drop(['kic_kepmag'],axis=1),on='id_kic')
+
+    elif table=='ber18+gaia2':
+        ber18 = load_table('berger18')
+        gaia = load_table('gaia2')
+        df = pd.merge(ber18,gaia,on=['id_gaia2','id_kic'])
+
+    elif table=='ber18+gaia2+cdpp':
+        m17 = load_table('ber18+gaia2')
+        cdpp = load_table('cdpp')
+        df = pd.merge(m17,cdpp)
+
+    elif table=='field-cuts':
+        df = load_table('ber18+gaia2+cdpp')
+        #cuttypes = ckscool.cuts.field_cuttypes
+        #df = ckscool.cuts.add_cuts(df, cuttypes, 'field')
 
     elif table=='j17+m17':
         df = load_table('johnson17')
@@ -132,7 +170,7 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
             'diluted'
         ]
         df = load_table(table)
-        df = ckscool.cuts.add_cuts(df,cuttypes,sample)
+        df = ckscool.cuts.ckscool.add_cuts(df,cuttypes,sample)
         df.cuttypes = cuttypes
 
     elif table=='reamatch':
@@ -208,15 +246,15 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
     elif table=='ckscool-stars-cuts':
         df = load_table('ckscool-stars')
         #cuttypes = ['none','sb2','badspecparallax','dilutedao']
-        cuttypes = ['none','sb2','dilutedao','badspecparallax',]
-        table='temp'
-        df = ckscool.cuts.add_cuts(df, cuttypes, table)
-        df.cuttypes = cuttypes
+        #cuttypes = ['none','rizzuto','sb2','dilutedao','badspecparallax',]
+        #table='temp'
+        #df = ckscool.cuts.add_cuts(df, cuttypes, table)
+        #df.cuttypes = cuttypes
 
     elif table == "ckscool-planets":
         df = load_table('ckscool-stars-cuts')
         df = df[~df.isany]
-        df['tau0'] = 2.036 * df.koi_period**(1/3.) * df.giso_srho**(-1/3.0)
+        df['giso_tau0'] = 2.036 * df.koi_period**(1/3.) * df.giso_srho**(-1/3.0)
         df = ckscool.calc.update_planet_parameters(df)
         fpp = ckscool.io.load_table('fpp')
         df = pd.merge(df, fpp)
@@ -224,7 +262,7 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
 
     elif table=='ckscool-planets-cuts':
         df = load_table('ckscool-planets')
-        cuttypes = ['none','badprad','badpradprecision','badimpact','largefpp',]
+        cuttypes = ['none','badprad','badpradprecision','badimpacttau','largefpp']
         table = 'temp'
         df = ckscool.cuts.add_cuts(df, cuttypes, table)
         df.cuttypes = cuttypes
@@ -237,7 +275,7 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         df['id_koi'] = df.name.str.slice(start=4).astype(int)
         df = df[['id_koi']]
 
-    # ###########################
+    ############################
     # Tables from other papers #
     ############################
     elif table=='fpp':
@@ -249,40 +287,35 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
     elif table=='koi-thompson18':
         df = load_table_koi(table)
 
+    # KOI tables
+    elif table=='koi-thompson18-dr25-chains':
+        df = load_table_koi(table)
+        t18.index = t18.id_koicand
+        df = pd.read_csv('data/dr25-mcmc-chains_missing.txt',sep=' ',names=['s','x'])
+        df['id_koicand'] = df.s.apply(lambda x : x.split('-')[-1]).str.upper()
+        t18 = t18.drop(df.id_koicand)
+        df = t18
+        
     elif table=='koi-thompson18-dr25':
         df = load_table_koi('koi-thompson18')
-        dr25 = pd.read_hdf('../Kepler-Radius-Ratio/data/kepler_project_chains.hdf','dr25',)
+        dr25 = pd.read_hdf('data/dr25-mcmc-summary.hdf','dr25',)
         namemap = {
-            'dr25_RD1_cum':'koi_ror',
-            'dr25_RD1_cum_err1':'koi_ror_err1',
-            'dr25_RD1_cum_err2':'koi_ror_err2',
-#            'dr25_BB1_cum':'koi_impact',
-#            'dr25_BB1_cum_err1':'koi_impact_err1',
-#            'dr25_BB1_cum_err2':'koi_impact_err2'
-#            'dr25_TAU1_cum':'koi_tau',
-#            'dr25_TAU1_cum_err1':'koi_tau_err1',
-#            'dr25_TAU1_cum_err2':'koi_tau_err2'
+            'dr25_RD1_cum':'dr25_ror',
+            'dr25_RD1_cum_err1':'dr25_ror_err1',
+            'dr25_RD1_cum_err2':'dr25_ror_err2',
+            'dr25_BB1_cum':'dr25_impact',
+            'dr25_BB1_cum_err1':'dr25_impact_err1',
+            'dr25_BB1_cum_err2':'dr25_impact_err2',
+            'dr25_TAU1_cum':'dr25_tau',
+            'dr25_TAU1_cum_err1':'dr25_tau_err1',
+            'dr25_TAU1_cum_err2':'dr25_tau_err2',
+            'fgraz':'dr25_fgraz',
+            'autocorr_over_length':'dr25_autocorr_over_length',
         }
 
         cols = ['id_koicand'] +  namemap.values()
-        df25 = dr25.rename(columns=namemap)[cols]
-        print "swapping in dr25 radius ratios"
-        print "       old"  
-
-        pnames = [
-            'id_koicand',
-            'koi_ror',
-            'koi_ror_err1',
-            'koi_ror_err2',
-            'koi_impact',
-            'koi_impact_err1',
-            'koi_impact_err2'
-        ]
-        print df.head(3)[pnames]
-        df = df.drop(columns=namemap.values())
-        df = pd.merge(df,df25)
-        print "       new"
-        print df.head(3)[pnames]
+        dr25 = dr25.rename(columns=namemap)[cols]
+        df = pd.merge(df,dr25)
 
 
     elif table=='koi-coughlin16':
@@ -305,7 +338,6 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         tab9 = load_table('furlan17-tab9')
         cols = 'id_koi f17_rcf_avg f17_rcf_avg_err'.split()
         df = pd.merge(tab2,tab9[cols],how='left',on='id_koi')
-
 
     elif table=='kraus16':
         fn = os.path.join(DATADIR,'kraus16/table7.dat')
@@ -379,6 +411,22 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         d13 = load_table('dressing13')
         df = pd.merge(cks,d13,on='id_kic')
 
+
+    # Berger al. (2018)
+    elif table=='berger18':
+        tab = ascii.read('data/berger18/apjaada83t1_mrt.txt')
+        df = tab.to_pandas()
+        namemap = {
+            'KIC':'id_kic',
+            'Gaia':'id_gaia2',
+            'Teff':'steff',
+            'e_Teff':'steff_err',
+            'R*':'srad',
+            'e_R*':'srad_err',
+        }
+        df = df.rename(columns=namemap)[namemap.values()]
+        df = add_prefix(df,'ber18_')
+
     # Brewer et al. (2018)
     elif table=='brewer18':
         tab = ascii.read('data/brewer18/apjsaad501t3_mrt.txt')
@@ -440,14 +488,28 @@ def load_table_koi(table):
             'koi_ror',
             'koi_ror_err1',
             'koi_ror_err2',
+            'koi_prad',
+            'koi_prad_err1',
+            'koi_prad_err2',
             'koi_impact',
             'koi_impact_err1',
             'koi_impact_err2',
             'kepid',
             'kepoi_name',
             'kepler_name',
+            'koi_max_sngle_ev',
+            'koi_max_mult_ev',
+            'koi_model_snr',
+            'koi_count',
+            'koi_num_transits',
+            'koi_tce_plnt_num',
+            'koi_tce_delivname',
+            'koi_quarters',
+            'koi_bin_oedp_sig',
+
         ]
         df = df[names]
+
 
 
     elif table=='koi-coughlin16':
@@ -469,7 +531,7 @@ def load_table_koi(table):
     
     df = df.rename(columns=namemap)
     df['id_koi'] = df.id_koicand.str.slice(start=1,stop=6).astype(int)
-    star = load_table('m17+gaia2',cache=1)
+    star = load_table('ber18+gaia2+cdpp',cache=1)
     df = pd.merge(df,star)
     return df 
 
@@ -509,11 +571,11 @@ def order_columns(df, verbose=False, drop=False):
     df = df[cols]
     if verbose and (len(cols) < len(columns)):
         mcols = list(df0.drop(cols,axis=1).columns)
-        print "following columns not defined"
+        print "following columns are not defined"
         print mcols
 
     if not drop:
-        df = pd.concat([df,df0[mcols]],axis=1,sort=False)
+        df = pd.concat([df,df0[mcols]],axis=1)
     return df
 
 def read_xmatch_gaia2(fn):
@@ -581,7 +643,7 @@ def xmatch_gaia2(df, gaia, key, gaiadr):
     )
 
     # count the number of stars within 8 arcsec
-    m.index = m.id_kic
+    #m.index = m.id_kic
     g = m.groupby('id_kic')
     m[gaiadr+'_gflux_sum'] = g[gaiadr+'_gflux'].sum()
     m['absdiff_gmag_kepmag'] = np.abs(m['gaia2_gmag'] - m['kic_kepmag'])

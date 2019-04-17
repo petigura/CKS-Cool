@@ -7,6 +7,7 @@ source activate ckscool
 ## Dependencies
 
 ### had to install the following packages with conda
+
 conda install scipy
 conda install matplotlib
 conda install pandas
@@ -25,7 +26,6 @@ conda install pytables
 # Copy over the table cache from CKS-Gaia
 
 $ cp ../CKS-Gaia/load_table_cache.hdf data/cksgaia_cache.hdf
-
 
 Repo for the CKS-Cool project includes code to
 
@@ -83,3 +83,29 @@ see
 `data/column-definitions.txt`
 
 For a description of the columns
+
+## Generate HDF version of DR25 chains.
+
+First run
+
+```
+run_ckscool.py create-chain-hdf
+```
+
+To read the chain info from its ascii format
+
+Notes
+- Chains take about 2s to read and store in hdf format or 4 hours for all 8000
+- 4MB per chain or 32 GB for all 8000.
+- There are roughly ~100 KOIs for which there are no chains
+
+```
+run_ckscool.py create-chain-summary # stores the precentile summary
+```
+
+Notes 
+- Takes about 30 min to complete.
+
+
+
+

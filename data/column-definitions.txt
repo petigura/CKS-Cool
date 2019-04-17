@@ -87,6 +87,7 @@ giso_sage_err2
 giso_slogage         CKS+Gaia Stellar Age [lgo10(yrs)]
 giso_slogage_err1    
 giso_slogage_err2
+giso_tau0            Maximum transit duration (circular orbit)
 #
 # Properties from isoclassify analysis, grid mode, no parallax
 #

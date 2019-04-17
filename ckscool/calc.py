@@ -35,9 +35,9 @@ def update_planet_parameters(df):
         steff_samp = rand.normal(row.sm_steff, steff_err, size=10000)
 
         # Radius ratio
-        ror = row.koi_ror
-        ror_err = 0.5 * (row.koi_ror_err1 - row.koi_ror_err2)
-        ror_samp = rand.normal(row.koi_ror, ror_err, size=10000)
+        ror = row.dr25_ror
+        ror_err = 0.5 * (row.dr25_ror_err1 - row.dr25_ror_err2)
+        ror_samp = rand.normal(row.dr25_ror, ror_err, size=10000)
 
         # Planet radius
         prad_samp = ror_samp * srad_samp * 109.245

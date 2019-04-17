@@ -56,8 +56,9 @@ def fig_cuts_smass_steff():
 
 def fig_cuts_stars_hr():
     df = ckscool.io.load_table('ckscool-stars-cuts')
+    nplots = len(df.cuttypes)
     cuts(
-        df, 'sm_steff', 'gdir_srad', nrows=1, ncols=4, stars=True, 
+        df, 'sm_steff', 'gdir_srad', nrows=1, ncols=nplots, stars=True, 
         plot_func=semilogy
     )
     fig = gcf()
@@ -71,7 +72,7 @@ def fig_cuts_stars_hr():
         yticks(yt,yt)
         minorticks_off()
 
-def fig_cuts_planets_per_prad():
+def fig_cuts_planets_per_prad(zoom=False):
     xk = 'koi_period'
     yk = 'gdir_prad'
     df = ckscool.io.load_table('ckscool-planets-cuts',cache=2)
@@ -89,8 +90,13 @@ def fig_cuts_planets_per_prad():
         xticks(xt,xt)
         yticks(yt,yt)
         grid()
+    
 
-    setp(axL[1,:],xlabel='Orbital Period (days)',xlim=(0.3,300),ylim=(0.5,20))
+    if zoom:
+        ylim=(1,4)
+    else:
+        ylim=(0.5,20)
+    setp(axL[1,:],xlabel='Orbital Period (days)',xlim=(0.3,300),ylim=ylim)
     setp(axL[:,0],ylabel='Planet Size (Earth-radii)')
 
 
@@ -142,12 +148,11 @@ def cuts(df, xk,yk,nrows=None,ncols=None,plot_func=None, stars=False):
         if stars:
             _text = cut.plotstr + ' ({})'.format(len(dfcut.id_kic.drop_duplicates()))
 
-
         textkw = dict(fontsize='small',transform=ax.transAxes, ha='right')
         text(0.95,0.05, _text, **textkw)
 
         letter = string.ascii_lowercase[iplot]
-        at = AnchoredText(letter,loc=2, frameon=True, prop=letter_text_props)
+        at = AnchoredText(letter,loc=2, frameon=True, prop={'weight':'bold','size':'large'})
         ax.add_artist(at)
         setp(at.patch,**letter_bbox_props)
         
@@ -239,3 +244,113 @@ def fig_compare_with_cks1():
     cp.hist_steff()
     fig.set_tight_layout(True)
 
+
+'''
+def samples():
+    ncols = 3
+    nrows = 3
+    height = 2.5 * nrows
+    width = 3.0 * ncols
+
+    fig, axL = subplots(nrows=nrows, ncols=ncols, figsize=(width, height))
+
+    lamo = cksmet.io.load_table('lamost-cal-cuts',cache=1)
+    lamoc = lamo[~lamo.isany]
+
+    cks = cksmet.io.load_table('cks-cuts',cache=1)
+    cksc = cks.query('isany==False')
+    
+    cks = cks.groupby('id_kic').first()
+    cksc = cksc.groupby('id_kic').first()
+    
+    field = cksmet.io.load_table('field-cuts',cache=1)
+    fieldc = field.query('isany==False')
+
+    kwpts = dict(color='LightGray',rasterized=True,marker='o',ms=1.5,lw=0)
+    kwptsc = dict(color='b',rasterized=True,marker='o',ms=1.5,lw=0)
+
+    bins = np.arange(9,16.0001,0.2)
+    histkw = dict(bins=bins,histtype='stepfilled',color='LightGray')
+    histkwc = dict(bins=bins,histtype='stepfilled',color='b')
+    
+    bins = np.arange(-1.0,0.5001,0.1)
+    smethistkw = dict(bins=bins,histtype='stepfilled',color='LightGray')
+    smethistkwc = dict(bins=bins,histtype='stepfilled',color='b')
+
+    jcks = 0
+    jfield = 1 
+    jlamo = 2
+
+    ihr = 0 
+    ikepmag = 1 
+    ismet = 2
+
+    # HR diagrams
+    sca(axL[0,jcks])
+    plot(cks.cks_steff, cks.cks_slogg, **kwpts)
+    plot(cksc.cks_steff, cksc.cks_slogg, **kwptsc)
+
+    sca(axL[0,jfield])
+    print list(field.columns)
+    plot(field.m17_steff, field.m17_slogg, **kwpts)
+    plot(fieldc.m17_steff, fieldc.m17_slogg, **kwptsc)
+
+    sca(axL[0,2])
+    plot(lamo.lamo_steff, lamo.lamo_slogg,**kwpts)
+    plot(lamoc.lamo_steff, lamoc.lamo_slogg,**kwptsc)
+
+    # KepMag
+    sca(axL[1,jcks])
+    hist(cks.m17_kepmag,**histkw)
+    hist(cksc.m17_kepmag,**histkwc)
+
+    sca(axL[1,jfield])
+    hist(field.kepmag,**histkw)
+    hist(fieldc.kepmag,**histkwc)
+
+    sca(axL[1,2])
+    hist(lamo.m17_kepmag,**histkw)
+    hist(lamoc.m17_kepmag,**histkwc)
+    
+    # Metal
+    sca(axL[ismet,jcks])
+    hist(cks.cks_smet.dropna(),**smethistkw)
+    hist(cksc.cks_smet.dropna(),**smethistkwc)
+
+    sca(axL[ismet,jfield])
+    hist(field.m17_smet.dropna(),**smethistkw)
+    hist(fieldc.m17_smet.dropna(),**smethistkwc)
+
+    sca(axL[ismet,jlamo])
+    hist(lamo.lamo_smet,**smethistkw)
+    hist(lamoc.lamo_smet,**smethistkwc)
+
+    setp(
+        axL[0,:], xlim=(7000,4000), ylim=(5,3.0), xlabel='Teff (K)', 
+        ylabel='logg (dex)'
+    )
+    fig.set_tight_layout(True)
+
+    setp(axL[1,:],ylabel='Number of Stars',xlabel='Kepmag')
+    setp(axL[2,:],ylabel='Number of Stars',xlabel='[Fe/H]')
+
+    for ax in axL[:,2]:
+        sca(ax)
+        add_anchored('LAMOST',loc=1)
+        
+    for ax in axL[:,jcks]:
+        sca(ax)
+        add_anchored('CKS',loc=1)
+
+    for ax in axL[:,jfield]:
+        sca(ax)
+        add_anchored('Field',loc=1)
+
+    for ax, letter in zip(axL.flatten(),string.ascii_lowercase):
+        sca(ax)
+        add_anchored(
+            letter,loc=2, frameon=False, 
+            prop=dict(size='large', weight='bold')
+        )
+
+'''

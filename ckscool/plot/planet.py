@@ -109,19 +109,21 @@ class ContourPlotter(object):
     def plot_points(self):
         errorbar(self.x,self.y,yerr=self.yerr,fmt='.',elinewidth=0.5,ms=4)
 
-def fig_per_prad(nopoints=False,zoom=False):
+
+
+
+def fig_per_prad(**kwargs):
     sns.set_context('paper')
     fig, axL = subplots(figsize=(5,4))
+    df = ckscool.io.load_table('ckscool-planets-cuts',cache=1)
+    df = df[~df.isany]
+    _per_prad(df, **kwargs)
+
+def _per_prad(df,nopoints=False,zoom=False):
+    print len(df)
     xk = 'koi_period'
     yk = 'gdir_prad'
     yerrk = 'gdir_prad_err1'
-    df = ckscool.io.load_table('ckscool-planets-cuts',cache=1)
-    df = df[~df.isany]
-    '''
-    df2 = ckscool.io.load_table('cksgaia-planets-filtered')
-    df = pd.concat([df,df2])
-    df = df2.query('0.8 < giso_smass < 0.95')
-    '''
     x = df[xk]
     y = df[yk]
     xerr = x * 0.5
@@ -272,7 +274,6 @@ def fig_intfxuv_prad(nopoints=False,zoom=False):
         p1.plot_points()
 
     tight_layout()
-
 
 def fig_smass_prad(nopoints=False,zoom=False, boost=True):
     """
