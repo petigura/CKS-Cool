@@ -133,9 +133,14 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         df = pd.merge(df,mbest.drop(['kic_kepmag'],axis=1),on='id_kic')
 
     elif table=='ber18+gaia2':
-        ber18 = load_table('berger18')
-        gaia = load_table('gaia2')
+        ber18 = load_table('berger18',cache=1)
+        gaia = load_table('gaia2',cache=1)
+
+        # Needed fro kmag
+        m17 = pd.read_hdf(CKSGAIA_CACHEFN,'m17')
+        m17 = m17.rename(columns={'m17_kepmag':'kic_kepmag'})
         df = pd.merge(ber18,gaia,on=['id_gaia2','id_kic'])
+        df = pd.merge(df,m17,on=['id_kic'])
 
     elif table=='ber18+gaia2+cdpp':
         m17 = load_table('ber18+gaia2')

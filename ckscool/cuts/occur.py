@@ -6,7 +6,7 @@ import numpy as np
 import sys
 import inspect
 from collections import OrderedDict
-
+from numpy import log10
 
 cd = OrderedDict()
 cd['max-kepmag'] = 16.0

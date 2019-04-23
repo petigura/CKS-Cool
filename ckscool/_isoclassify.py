@@ -1,5 +1,89 @@
 import ckscool.io
 import pandas as pd
+import isoclassify.pipeline
+import ckscool.cuts.occur
+import numpy as np
+
+def load_iso_batch_table():
+    # Spectra
+    plnt = ckscool.io.load_table('koi-thompson18-dr25')
+    cuttypes = ['faint','giant','rizzuto','notreliable','lowsnr']
+    plnt.sample = 'koi-thompson18'
+    plnt = ckscool.cuts.occur.add_cuts(plnt, cuttypes, 'koi-thompson18')
+    plntc = plnt.query('isany==False')
+    star = plntc.groupby('id_koi', as_index=False).nth(0)
+    star = star['id_koi id_koicand id_kic kepmag ber18_srad ber18_steff m17_kmag m17_kmag_err gaia2_sparallax gaia2_sparallax_err gaia2_ra gaia2_dec'.split()]
+    star['steff'] = np.nan
+    star['steff_err'] = np.nan
+    star['smet'] = np.nan
+    star['smet_err'] = np.nan
+    star['svsini'] = np.nan
+    star['svsini_err'] = np.nan
+    star['sprov'] = None
+    star.index=star.id_koi
+
+    # Load SpecMatch-Emp and set uncertainties
+    kbc = ckscool.io.load_table('kbc')
+    kbc = kbc.groupby('id_koi', as_index=False).nth(-1)
+    df = pd.read_csv('data/specmatch-emp_results.csv')
+    df = df.dropna(subset=['name'])
+    namemap = {
+       'obs':'id_obs',
+       'name':'id_name',
+       'teff':'steff',
+       'teff_err':'steff_err',
+       'fe':'smet',
+       'fe_err':'smet_err',
+    }
+    df = df.rename(columns=namemap)[namemap.values()]
+    df['sprov'] = 'emp'
+    df['steff_err'] = 60
+    df['smet_err'] = 0.12
+    sme = pd.merge(kbc, df, on=['id_obs','id_name'], how='left')
+    sme.index=sme.id_koi
+
+    # Load up CKS-I and set uncertainties
+    cks1 = pd.read_csv('data/cks_physical_merged.csv')
+    cks1['id_koi'] = cks1.id_koicand.str.slice(start=1,stop=6).astype(int)
+    cks1 = cks1.groupby('id_koi').nth(0)
+    namemap = {
+       'cks_steff':'steff',
+       'cks_smet':'smet',
+       'cks_svsini':'svsini',
+    }
+    cks1 = cks1.rename(columns=namemap)
+    cks1['steff_err'] = 100
+    cks1['smet_err'] = 0.06
+    cks1['sprov'] = 'cks1'
+
+    # Load up SpecMatch-Syn and set uncertainties 
+    df = pd.read_csv('data/specmatch-syn_results.csv')
+    df = df.dropna(subset=['name'])
+    namemap = {
+       'obs':'id_obs',
+       'name':'id_name',
+       'teff':'steff',
+       'teff_err':'steff_err',
+       'fe':'smet',
+       'fe_err':'smet_err',
+       'vsini':'svsini',
+    }
+    df = df.rename(columns=namemap)[namemap.values()]
+    df['sprov'] = 'syn'
+    df['steff_err'] = 100
+    sms = pd.merge(kbc, df, on=['id_obs','id_name'], how='left')
+    sms.index=sms.id_koi
+
+    # Cut off for using emp
+    idxsmemp = sme.query('steff < 4700').index
+    idxsmsyn = sme.query('steff > 4700').index
+
+    star.fillna(value=sme.loc[idxsmemp],inplace=True) # Cool stars fill in with emp
+    star.fillna(value=cks1,inplace=True) # Stars that are in CKS-I fill, also take vsini for everythinh
+    star.fillna(value=sms.loc[idxsmsyn],inplace=True) #
+    star['sprov'].fillna(value='None',inplace=True)
+    star['ber18_srad'] = star.ber18_srad.astype(float)
+    return star
 
 def create_iso_batch(args):
     """Create Isoclassify Batch Jobs
@@ -8,6 +92,7 @@ def create_iso_batch(args):
     
        1. The direct method with the following constraints
           - teff, logg, fe, parallax, kmag
+
        2. The grid method with the following constraints
           - teff, logg, met, kmag [no parallax]
 
@@ -17,40 +102,32 @@ def create_iso_batch(args):
     dilution.
 
     """
-
-    df = ckscool.io.load_table('ckscool+smemp')
-    df = df.groupby('id_koi',as_index=False).nth(-1)
-    df = df.sort_values(by='id_koi')
+    star = load_iso_batch_table()
 
     # Direct method with parallax constraints
-    df = df.rename(
+    star = star.rename(
         columns={
-            'id_name':'id_starname',
-            'parallax_error':'parallax_err',
-            'ks_m':'kmag',
-            'ks_msigcom':'kmag_err',
-            'sm_smet':'feh',
-            'sm_smet_err':'feh_err',
-            'sm_steff':'teff',
-            'sm_steff_err':'teff_err',
-            'm17_kmag':'kmag',
-            'm17_kmag_err':'kmag_err',
-            'gaia2_sparallax':'parallax',
-            'gaia2_sparallax_err':'parallax_err',
             'gaia2_ra':'ra',
             'gaia2_dec':'dec',
+            'gaia2_sparallax':'parallax',
+            'gaia2_sparallax_err':'parallax_err',
+            'm17_kmag':'kmag',
+            'm17_kmag_err':'kmag_err',
+            'steff':'teff',
+            'steff_err':'teff_err',
+            'smet':'feh',
+            'smet_err':'feh_err',
         }
     )
+    star['id_starname'] = star.id_koi.apply(lambda x : "K{:05d}".format(x))
+    star['kmag_err'] = star['kmag_err'].fillna(0.02)
+    star['band'] = 'kmag'
+    star['dust'] = 'green18'
+    star['parallax'] /= 1e3 # Convert microarcsec to arcsec
+    star['parallax_err'] /= 1e3 
+    star['feh_err'] = 0.12 # Ditto
 
-    df['kmag_err'] = df['kmag_err'].fillna(0.02)
-    df['band'] = 'kmag'
-    df['dust'] = 'green18'
-    df['parallax'] /= 1e3 # Convert microarcsec to arcsec
-    df['parallax_err'] /= 1e3 
-    df['teff_err'] =  60 # Uncertainty over 3500--5000 K (see email from S. Yee)
-    df['feh_err'] = 0.12 # Ditto
-
-    df0 = df.copy() 
+    star0 = star.copy() 
 
     cols = [
         'id_starname','teff','teff_err','logg','logg_err','feh','feh_err',
@@ -60,37 +137,35 @@ def create_iso_batch(args):
 
     # Direct method. Don't use spectroscopic logg values so as to not
     # pollute the parallax radii
-    df = df0.copy()
-    df['logg_err'] = 1 # use large uncertainties
-    df['logg'] = 4.7 
-    df = df[cols]
+    star = star0.copy()
+    star['logg_err'] = 1 # use large uncertainties
+    star['logg'] = 4.7 
+    star = star[cols]
     fn = 'data/isoclassify-direct.csv'
-    df.to_csv(fn)
+    star.to_csv(fn)
     print "created {}".format(fn)
 
     # Grid method with parallax. This will return model-dependent
     # values of Mstar, Rstar, age, density, luminosity
-    df = df0.copy()
-    df['logg_err'] = 1 # use large uncertainties
-    df['logg'] = 4.7 
-    df = df[cols]
+    star = star0.copy()
+    star['logg_err'] = 1 # use large uncertainties
+    star['logg'] = 4.7 
+    star = star[cols]
     fn = 'data/isoclassify-grid-parallax-yes.csv'
-    df.to_csv(fn)
+    star.to_csv(fn)
     print "created {}".format(fn)
 
     # Grid method. Don't set parallax so we can compare later
-    df = df0.copy()
-    df['logg_err'] = 1 # use large uncertainties
-    df['logg'] = 4.7
-    df = df[cols]
-    df['parallax'] = -99
-    df['parallax_err'] = 0
+    star = star0.copy()
+    star['logg_err'] = 1 # use large uncertainties
+    star['logg'] = 4.7
+    star = star[cols]
+    star['parallax'] = -99
+    star['parallax_err'] = 0
     fn = 'data/isoclassify-grid-parallax-no.csv'
-    df.to_csv(fn)
+    star.to_csv(fn)
     print "created {}".format(fn)
 
-
-import isoclassify.pipeline
 
 def create_iso_table(args):
     """
@@ -108,7 +183,7 @@ def create_iso_table(args):
     dfm = dfm.drop(['id_starname'],axis=1)
     dfm = dfm.convert_objects(convert_numeric=True)
     dfm['id_starname'] = temp.astype(str)
-    dfm = ckscool.io.order_columns(dfm)
+    #dfm = ckscool.io.order_columns(dfm)
     
     fn = 'data/isoclassify_gaia2.csv'
     dfm.to_csv(fn)

@@ -15,7 +15,7 @@ conda install astropy
 conda install h5py
 pip install lmfit
 pip install ebfpy
-conda install -c conda-forge healpy # needed for dustmaps
+conda install -c conda-forge healpy # needed for dustmaps also got healpy==1.11 to work
 pip install dustmaps 
 pip install mwdust # needed for dustmaps
 pip install pyephem
@@ -45,15 +45,21 @@ rsync -av cadence:/data/user/petigura/public_html/smsyn/specmatch_results.csv da
 
 2. Run the isoclassify code
 
+First create the batch processing files. In total there are about 900 stars that pass the photometric only cuts.
+
 ```
 run_ckscool.py create-iso-batch 
 isoclassify batch direct data/isoclassify-direct.csv -o isoclassify/direct/ > isoclassify-direct.tot
 isoclassify batch grid data/isoclassify-grid-parallax-yes.csv  -o isoclassify/grid-parallax-yes/ > isoclassify-grid-parallax-yes.tot
 isoclassify batch grid data/isoclassify-grid-parallax-no.csv -o isoclassify/grid-parallax-no/ > isoclassify-grid-parallax-no.tot
+```
 
+Then run them in parallel. Running isoclassify takes about 3s per star / core. Can process in about 7*3 min with six cores.
+
+```
 cat isoclassify-direct.tot | parallel -j 6 
-cat isoclassify-grid-parallax-no.tot | parallel -j 6  # takes about 20min on Erik's laptop
-cat isoclassify-grid-parallax-yes.tot | parallel -j 6 # takes about 20min on Erik's laptop
+cat isoclassify-grid-parallax-no.tot | parallel -j 6 
+cat isoclassify-grid-parallax-yes.tot | parallel -j 6 
 ```
 
 ```

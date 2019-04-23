@@ -10,7 +10,7 @@ from matplotlib import pylab as plt
 import ckscool.io     # module for reading and writing datasets
 import ckscool.value  # module for computing scalar values for table
 import ckscool.table  # module for computing scalar values for table
-#import ckscool._isoclassify
+import ckscool._isoclassify
 import ckscool.plot.sample   # submodule for including plots
 import ckscool.plot.spectra
 import ckscool.plot.hr
