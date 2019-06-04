@@ -55,10 +55,10 @@ def fig_cuts_smass_steff():
     )
 
 def fig_cuts_stars_hr():
-    df = ckscool.io.load_table('ckscool-stars-cuts')
+    df = ckscool.io.load_table('planets-cuts2+iso',cache=2)
     nplots = len(df.cuttypes)
     cuts(
-        df, 'sm_steff', 'gdir_srad', nrows=1, ncols=nplots, stars=True, 
+        df, 'cks_steff', 'gdir_srad', nrows=1, ncols=nplots, stars=True, 
         plot_func=semilogy
     )
     fig = gcf()
@@ -75,13 +75,10 @@ def fig_cuts_stars_hr():
 def fig_cuts_planets_per_prad(zoom=False):
     xk = 'koi_period'
     yk = 'gdir_prad'
-    df = ckscool.io.load_table('ckscool-planets-cuts',cache=2)
+    df = ckscool.io.load_table('planets-cuts2+iso',cache=2)
     cuts(df, xk, yk , nrows=2, ncols=3, stars=False, plot_func=loglog)
     axL = gcf().get_axes()
     axL = np.array(axL).reshape(2,3) 
-
-    #setp(axL[1,:],xlabel='Orbital Period (days)',xlim=(0.1,1000),ylim=(0.1,100))
-
     yt = [0.5,1,2,4,8,16]
     xt = [0.3,1,3,10,30,100,300]
     for ax in axL.flatten():
@@ -98,7 +95,6 @@ def fig_cuts_planets_per_prad(zoom=False):
         ylim=(0.5,20)
     setp(axL[1,:],xlabel='Orbital Period (days)',xlim=(0.3,300),ylim=ylim)
     setp(axL[:,0],ylabel='Planet Size (Earth-radii)')
-
 
 def cuts(df, xk,yk,nrows=None,ncols=None,plot_func=None, stars=False):
     sns.set_style('ticks')
@@ -129,7 +125,7 @@ def cuts(df, xk,yk,nrows=None,ncols=None,plot_func=None, stars=False):
         sca(ax)
         
         key = 'is'+cuttype
-        obj = ckscool.cuts.get_cut(cuttype)
+        obj = ckscool.cuts.occur.get_cut(cuttype)
         cut = obj(df,table)
         df[key] = cut.cut()
         bpass += df[key].astype(int)

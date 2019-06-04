@@ -9,7 +9,7 @@ from scipy.io import idl
 import cpsutils.io
 import cksspec.io
 
-import ckscool.cuts
+import ckscool.cuts.occur
 import ckscool.calc
 import ckscool.pdplus
 import ckscool.cuts.ckscool
@@ -123,7 +123,7 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         
     # Merged tables
     elif table=='m17+gaia2':
-        print "performing crossmatch on gaia2"
+        print "performng crossmatch on gaia2"
 
         df = pd.read_hdf(CKSGAIA_CACHEFN,'m17')
         df = df.rename(columns={'m17_kepmag':'kic_kepmag'})
@@ -181,8 +181,9 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
     elif table=='reamatch':
         fn = os.path.join(DATADIR, 'reamatch.csv')
         df = pd.read_csv(fn,index_col=None, usecols=range(6))
+        df['id_koi'] = df.name.str.slice(start=-5).astype(int)
         namemap = {
-            'obs':'id_obs',
+            'id_koi':'id_koi',
             'is_sb2':'rm_sb2',
         }
         df = df.rename(columns=namemap)[namemap.values()]
@@ -225,15 +226,28 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         # Add in specmatch parameters
         sm = load_table('smemp')
         df = pd.merge(df, sm, on=['id_obs','id_name'], how='left')
-        
+
+    elif table=='planets-cuts1':
+        plnt = load_table('koi-thompson18-dr25')
+        cuttypes = ['faint','giant','rizzuto','notreliable','lowsnr']
+        plnt.sample = 'koi-thompson18'
+        plnt = ckscool.cuts.occur.add_cuts(plnt, cuttypes, 'koi-thompson18')
+        df = plnt
+
     # Stellar sample
-    elif table=='ckscool-stars':
-        df = load_table('ckscool+smemp')
+    elif table=='planets-cuts1+iso':
+        df = ckscool.io.load_iso_batch_table(mode='cks')
+
+        # Add in isoclassify parameters
+        df['id_starname'] = df.id_koi.apply(lambda x : "K{:05d}".format(x))
+        fn = os.path.join(DATADIR,'isoclassify_gaia2.csv')
+        iso = pd.read_csv(fn)
+        df = pd.merge(df, iso, on='id_starname', how='left')
 
         # Add in ReaMatch parameters
         rm = load_table('reamatch')
-        df = pd.merge(df, rm, how='left', on='id_obs')
-
+        df = pd.merge(df, rm, how='left', on='id_koi')
+        #import pdb;pdb.set_trace()
         # Add in Furlan parameters
         f17 = load_table('fur17')
         df = pd.merge(df, f17, how='left',on=['id_kic','id_koi'])
@@ -242,37 +256,22 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         k16 = load_table('kraus16')
         df = pd.merge(df, k16, how='left', on='id_koi')
 
-        # Add in isoclassify parameters
-        df['id_starname'] = df.id_name
-        fn = os.path.join(DATADIR,'isoclassify_gaia2.csv')
-        iso = pd.read_csv(fn)
-        df = pd.merge(df, iso, on='id_starname', how='left')
-        
-    elif table=='ckscool-stars-cuts':
-        df = load_table('ckscool-stars')
-        #cuttypes = ['none','sb2','badspecparallax','dilutedao']
-        #cuttypes = ['none','rizzuto','sb2','dilutedao','badspecparallax',]
-        #table='temp'
-        #df = ckscool.cuts.add_cuts(df, cuttypes, table)
-        #df.cuttypes = cuttypes
-
-    elif table == "ckscool-planets":
-        df = load_table('ckscool-stars-cuts')
-        df = df[~df.isany]
-        df['giso_tau0'] = 2.036 * df.koi_period**(1/3.) * df.giso_srho**(-1/3.0)
-        df = ckscool.calc.update_planet_parameters(df)
+        # Add in false positive prob
         fpp = ckscool.io.load_table('fpp')
         df = pd.merge(df, fpp)
-        df = order_columns(df, verbose=True)
-
-    elif table=='ckscool-planets-cuts':
-        df = load_table('ckscool-planets')
-        cuttypes = ['none','badprad','badpradprecision','badimpacttau','largefpp']
+        
+        # Add in expected transit duration
+        df['giso_tau0'] = 2.036 * df.koi_period**(1/3.) * df.giso_srho**(-1/3.0)
+        df = ckscool.calc.update_planet_parameters(df)
+        #df = order_columns(df, verbose=True)
+        
+    elif table=='planets-cuts2+iso':
+        df = load_table('planets-cuts1+iso',cache=1)
+        cuttypes = ['none','sb2','badprad','badimpacttau']
         table = 'temp'
-        df = ckscool.cuts.add_cuts(df, cuttypes, table)
+        df = ckscool.cuts.occur.add_cuts(df, cuttypes, table)
         df.cuttypes = cuttypes
-        
-        
+
     elif table=='nrm-previous':
         # File is from an email that Adam sent me in 2017-11-02
         fn = os.path.join(DATADIR,'kraus/KOIours.txt')
@@ -539,6 +538,82 @@ def load_table_koi(table):
     star = load_table('ber18+gaia2+cdpp',cache=1)
     df = pd.merge(df,star)
     return df 
+
+def load_iso_batch_table(mode='isoclassify'):
+    """
+    This function defines the values that are sent to isoclassify .
+    """
+
+    plnt = load_table('planets-cuts1')
+    plntc = plnt.query('isany==False')
+    #star = plntc.groupby('id_koi', as_index=False).nth(0)
+    plntc['cks_steff'] = np.nan
+    plntc['cks_steff_err'] = np.nan
+    plntc['cks_smet'] = np.nan
+    plntc['cks_smet_err'] = np.nan
+    plntc['cks_svsini'] = np.nan
+    plntc['cks_svsini_err'] = np.nan
+    plntc['cks_sprov'] = None
+    plntc.index = plntc.id_koi
+
+    # Load SpecMatch-Emp and set uncertainties
+    kbc = ckscool.io.load_table('kbc')
+    kbc = kbc.groupby('id_koi', as_index=False).nth(-1)
+    df = pd.read_csv('data/specmatch-emp_results.csv')
+    df = df.dropna(subset=['name'])
+    namemap = {
+       'obs':'id_obs',
+       'name':'id_name',
+       'teff':'cks_steff',
+       'teff_err':'cks_steff_err',
+       'fe':'cks_smet',
+       'fe_err':'cks_smet_err',
+    }
+    df = df.rename(columns=namemap)[namemap.values()]
+    df['cks_sprov'] = 'emp'
+    df['cks_steff_err'] = 60
+    df['cks_smet_err'] = 0.12
+    sme = pd.merge(kbc, df, on=['id_obs','id_name'], how='left')
+    sme.index = sme.id_koi
+
+    # Load up CKS-I and set uncertainties
+    cks1 = pd.read_csv('data/cks_physical_merged.csv')
+    cks1['id_koi'] = cks1.id_koicand.str.slice(start=1,stop=6).astype(int)
+    cks1 = cks1.groupby('id_koi').nth(0)
+    cks1['cks_steff_err'] = 100
+    cks1['cks_smet_err'] = 0.06
+    cks1['cks_sprov'] = 'cks1'
+
+    # Load up SpecMatch-Syn and set uncertainties 
+    df = pd.read_csv('data/specmatch-syn_results.csv')
+    df = df.dropna(subset=['name'])
+    namemap = {
+       'obs':'id_obs',
+       'name':'id_name',
+       'teff':'cks_steff',
+       'teff_err':'cks_steff_err',
+       'fe':'cks_smet',
+       'fe_err':'cks_smet_err',
+       'vsini':'cks_svsini',
+    }
+    df = df.rename(columns=namemap)[namemap.values()]
+    df['cks_sprov'] = 'syn'
+    df['cks_steff_err'] = 100
+    sms = pd.merge(kbc, df, on=['id_obs','id_name'], how='left')
+    sms.index=sms.id_koi
+
+    # Cut off for using emp
+    idxsmemp = sme.query('cks_steff < 4700').index
+    idxsmsyn = sme.query('cks_steff > 4700').index
+
+    plntc.fillna(value=sme.loc[idxsmemp],inplace=True) # Cool plntcs fill in with emp
+    plntc.fillna(value=cks1,inplace=True) # Stars that are in CKS-I fill, also take vsini for everythinh
+    plntc.fillna(value=sms.loc[idxsmsyn],inplace=True) #
+    plntc['cks_sprov'].fillna(value='None',inplace=True)
+    plntc['ber18_srad'] = plntc.ber18_srad.astype(float)
+    return plntc
+
+
 
 def add_prefix(df,prefix,ignore=['id']):
     namemap = {}

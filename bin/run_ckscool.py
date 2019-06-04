@@ -167,7 +167,7 @@ def create_workflow():
 
     w.plot['compare-with-cks1'] = ckscool.plot.sample.fig_compare_with_cks1
     w.plot['ferr-hist-star'] = ckscool.plot.hr.fig_ferr_hist_star
-    w.plot['ferr-hist-planet'] = ckscool.plot.hr.fig_ferr_hist_planet
+    #w.plot['ferr-hist-planet'] = ckscool.plot.hr.fig_ferr_hist_planet
     w.plot['star-steff-srad'] = ckscool.plot.hr.fig_hr
     w.plot['star-smet-smass'] = ckscool.plot.hr.fig_smet_smass
     w.plot['compare-ckscool-mann13'] = lambda : fig_compare('ckscool-mann13')

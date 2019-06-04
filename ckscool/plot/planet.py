@@ -115,7 +115,7 @@ class ContourPlotter(object):
 def fig_per_prad(**kwargs):
     sns.set_context('paper')
     fig, axL = subplots(figsize=(5,4))
-    df = ckscool.io.load_table('ckscool-planets-cuts',cache=1)
+    df = ckscool.io.load_table('planets-cuts2+iso')
     df = df[~df.isany]
     _per_prad(df, **kwargs)
 
@@ -284,11 +284,9 @@ def fig_smass_prad(nopoints=False,zoom=False, boost=True):
     xk = 'giso_smass'
     yk = 'gdir_prad'
     yerrk = 'gdir_prad_err1'
-    df = ckscool.io.load_table('ckscool-planets-cuts',cache=1)
+    df = ckscool.io.load_table('planets-cuts2+iso',cache=1)
+    df = df.dropna(subset=['giso_smass'])
     df = df[~df.isany]
-    df2 = ckscool.io.load_table('cksgaia-planets-filtered')
-    df = pd.concat([df,df2])
-    df = df.dropna(subset=[xk,yk,yerrk])
 
     x = df[xk]
     y = df[yk]

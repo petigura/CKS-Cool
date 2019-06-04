@@ -67,7 +67,7 @@ class CutGiant(CutBase):
     def cut(self):
         srad = self.df['ber18_srad']
         steff = self.df['ber18_steff']
-        b = np.log10(srad) > 0.00020 * (steff - 5500) + 0.20
+        b = np.log10(srad) > 0.00015 * (steff - 5500) + 0.20
         return b
 
 class CutFaint(CutBase):

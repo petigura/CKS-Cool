@@ -30,9 +30,9 @@ def update_planet_parameters(df):
         smass_samp = rand.normal(row.giso_smass, smass_err, size=10000)
 
         # Teff
-        steff = row.sm_steff
-        steff_err = row.sm_steff_err
-        steff_samp = rand.normal(row.sm_steff, steff_err, size=10000)
+        steff = row.cks_steff
+        steff_err = row.cks_steff_err
+        steff_samp = rand.normal(row.cks_steff, steff_err, size=10000)
 
         # Radius ratio
         ror = row.dr25_ror
