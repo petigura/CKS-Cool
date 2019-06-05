@@ -14,7 +14,7 @@ def contour_plot_kde(physmerge, xcol, ycol, xlim, ylim, ylog=True,
                      pltxlim=None, pltylim=None, epos=[3000, 5], cont=True, 
                      nodata=False, weighted=False, nstars=36075., 
                      eaoff=(0, -30), clabel=None, vlims=(0.0, 0.05), 
-                     kwidth=None, single=False, cbar=True):
+                     kwidth=None, single=False, cbar=True,levels=None):
     """Plot contour plots
 
     Make the contour plots associated with Figures 8-10 in Fulton et al. (2017)
@@ -92,15 +92,11 @@ def contour_plot_kde(physmerge, xcol, ycol, xlim, ylim, ylog=True,
     # cmap = plt.cm.Blues_r
 
     vmin, vmax = vlims
-    levels = np.arange(vmin, vmax + 0.0001, 0.005)
-    if len(levels) <= 7:
-        levels = np.linspace(vmin, vmax + 1e-4, 11)
-
     if single:
         levels = [0, np.mean([vmin, vmax])]
 
     if cont and not single:
-        CS = plt.contourf(10 ** xi, 10 ** yi, zi, levels=levels, cmap=cmap, vmin=vmin, vmax=vmax)
+        CS = plt.contourf(10 ** xi, 10 ** yi, zi, 10,levels=levels, cmap=cmap, vmin=vmin, vmax=vmax)
         for c in CS.collections:
             c.set_edgecolor("face")
     if single:

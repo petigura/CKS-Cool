@@ -49,14 +49,14 @@ def update_planet_parameters(df):
         sinc_samp = (steff_samp / 5778.) ** 4.0 * (srad_samp / sma_samp) ** 2.0
 
 
-        df.ix[i,'gdir_prad'] = np.median(prad_samp)
-        df.ix[i,'gdir_prad_err1'] = np.std(prad_samp)
-        df.ix[i,'gdir_prad_err2'] = -1.0 * np.std(prad_samp)
-        df.ix[i,'giso_sinc'] = np.median(sinc_samp)
-        df.ix[i,'giso_sinc_err1'] = np.std(sinc_samp)
-        df.ix[i,'giso_sinc_err2'] = -1.0 * np.std(sinc_samp)
-        df.ix[i,'giso_sma'] = np.median(sma_samp)
-        df.ix[i,'giso_sma_err1'] = np.std(sma_samp)
-        df.ix[i,'giso_sma_err2'] = -1.0 * np.std(sma_samp)
+        df.loc[i,'gdir_prad'] = np.median(prad_samp)
+        df.loc[i,'gdir_prad_err1'] = np.std(prad_samp)
+        df.loc[i,'gdir_prad_err2'] = -1.0 * np.std(prad_samp)
+        df.loc[i,'giso_sinc'] = np.median(sinc_samp)
+        df.loc[i,'giso_sinc_err1'] = np.std(sinc_samp)
+        df.loc[i,'giso_sinc_err2'] = -1.0 * np.std(sinc_samp)
+        df.loc[i,'giso_sma'] = np.median(sma_samp)
+        df.loc[i,'giso_sma_err1'] = np.std(sma_samp)
+        df.loc[i,'giso_sma_err2'] = -1.0 * np.std(sma_samp)
 
     return df
