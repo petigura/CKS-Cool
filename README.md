@@ -49,18 +49,22 @@ First create the batch processing files. In total there are about 900 stars that
 
 ```
 run_ckscool.py create-iso-batch 
-isoclassify batch direct data/isoclassify-direct.csv -o isoclassify/direct/ > isoclassify-direct.tot
-isoclassify batch grid data/isoclassify-grid-parallax-yes.csv  -o isoclassify/grid-parallax-yes/ > isoclassify-grid-parallax-yes.tot
-isoclassify batch grid data/isoclassify-grid-parallax-no.csv -o isoclassify/grid-parallax-no/ > isoclassify-grid-parallax-no.tot
+source bin/create_tot.sh
 ```
 
 Then run them in parallel. Running isoclassify takes about 3s per star / core. Can process in about 7*3 min with six cores.
 
+### Test first 9 from each method
+
 ```
-cat isoclassify-direct.tot | parallel -j 6 
-cat isoclassify-grid-parallax-no.tot | parallel -j 6 
-cat isoclassify-grid-parallax-yes.tot | parallel -j 6 
+head `ls isoclassify*tot` | grep mkdir | parallel
 ```
+
+### Run them in batch with
+
+cat isoclassify*tot | grep mkdir | parallel
+
+
 
 ```
 run_ckscool.py create-iso-table

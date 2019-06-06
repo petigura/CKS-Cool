@@ -549,7 +549,6 @@ def load_iso_batch_table(mode='isoclassify'):
     """
     plnt = ckscool.io.load_table('planets-cuts1')
     plntc = plnt.query('isany==False')
-
     star = plntc.groupby('id_koi', as_index=False).nth(0)
     star = star.copy()
     star['cks_steff'] = np.nan
