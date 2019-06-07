@@ -3,6 +3,7 @@ import pandas as pd
 import isoclassify.pipeline
 import ckscool.cuts.occur
 import numpy as np
+import os
 
 def create_iso_batch_frames(source):
     """Create Isoclassify Batch Jobs
@@ -183,7 +184,7 @@ def create_iso_table(inpdir,outcsv):
     #dfm = ckscool.io.order_columns(dfm)
     
     dfm.to_csv(outcsv)
-    print "created {}".format(fn)
+    print "created {}".format(outcsv)
 
 def func(x):
     return x.split('.')[0]

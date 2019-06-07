@@ -21,9 +21,8 @@ import ckscool.workflow
 import numpy as np
 
 import sys
-sys.path.append('../Kepler-Radius-Ratio/')
-import keprat.io
-import emcee
+#sys.path.append('../Kepler-Radius-Ratio/')
+#import keprat.io
 
 def main():
     psr = ArgumentParser()
