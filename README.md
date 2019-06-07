@@ -8,20 +8,15 @@ source activate ckscool
 
 ### had to install the following packages with conda
 
-conda install scipy
-conda install matplotlib
-conda install pandas
-conda install astropy
-conda install h5py
+conda install scipy matplotlib astropy pandas h5py seaborn scikit-learn pytables
+conda install -c conda-forge healpy # needed for dustmaps also got healpy==1.11 to work
+pip install dustmaps
+pip install mwdust 
+pip install pyephem
 pip install lmfit
 pip install ebfpy
-conda install -c conda-forge healpy # needed for dustmaps also got healpy==1.11 to work
-pip install dustmaps 
-pip install mwdust # needed for dustmaps
-pip install pyephem
-conda install seaborn
-conda install scikit-learn
-conda install pytables
+
+isoclassify on f6f16ef1f90c57893268f6f9d6da4fddb00142ec
 
 # Copy over the table cache from CKS-Gaia
 
@@ -60,15 +55,27 @@ Then run them in parallel. Running isoclassify takes about 3s per star / core. C
 head `ls isoclassify*tot` | grep mkdir | parallel
 ```
 
-### Run them in batch with
+### Run them in batch on cadence 
 
-cat isoclassify*tot | grep mkdir | parallel
+cat isoclassify*tot | grep mkdir | parallel -j 2
 
+This also applies to cadence. I get a "too many requests" error if I
+run with more than 8 cores. Should take about 1 hour to finish
 
+### Monitor job progress with
+
+```
+find isoclassify/ -name "*.log" | wc -l  ; grep csv `find isoclassify/ -name "*.log" ` | wc -l ; find isoclassify/ -name "*.csv" | wc -l
+```
+
+First number is number of log files, second numbers is how many csv files created.
 
 ```
 run_ckscool.py create-iso-table
 ```
+
+
+Run it on cadence
 
 3. Generate ReaMatch table
 
