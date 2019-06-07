@@ -5,51 +5,12 @@ import ckscool.cuts.occur
 import numpy as np
 import os
 
-def create_iso_batch_frames(source):
-    """Create Isoclassify Batch Jobs
-
-    Creates input parameters for two runs
-    
-       1. The direct method with the following constraints
-          - teff, logg, fe, parallax, kmag
-
-       2. The grid method with the following constraints
-          - teff, logg, met, kmag [and parallax]
-
-       3. The grid method with the following constraints
-          - teff, logg, met, kmag [no parallax]
-
-    We default to the direct method. But if the parallax method from
-    the grid based method is significantly different than the gaia
-    parallax, there is additional flux in the aperture which indicates
-    dilution.
-
-    Args:
-
-        source (string): either
-            cks1
-            smemp
-            smsyn
-
-    """
-
+def load_stellar_parameters(source):
     # Load up stellar properties
     star = ckscool.io.load_table('m17+ber18+gaia2+cdpp')
     plnt = ckscool.io.load_table('koi-thompson18-dr25') # needed for the lookup between id_kic and id_cand
     plnt = plnt.groupby('id_koi',as_index=False).nth(0)[['id_koi','id_kic']]
     star = pd.merge(star,plnt)
-
-    # Direct method with parallax constraints
-    star = star.rename(
-        columns={
-            'gaia2_ra':'ra',
-            'gaia2_dec':'dec',
-            'gaia2_sparallax':'parallax',
-            'gaia2_sparallax_err':'parallax_err',
-            'm17_kmag':'kmag',
-            'm17_kmag_err':'kmag_err',
-        }
-    )
 
     
     kbc = ckscool.io.load_table('kbc')
@@ -105,25 +66,61 @@ def create_iso_batch_frames(source):
         assert False, "invalid mode"
 
     star = pd.merge(star,df)
+    star['m17_kmag_err'] = star['m17_kmag_err'].fillna(0.02)
+    star['feh_err'] = 0.12 # Ditto
+    star = star.sort_values(by='id_koi')
+    star = star.reset_index()
+    star0 = star.copy() 
+    return star0
+
+def create_iso_batch_frames(source):
+    """Create Isoclassify Batch Jobs
+
+    Creates input parameters for two runs
+    
+       1. The direct method with the following constraints
+          - teff, logg, fe, parallax, kmag
+
+       2. The grid method with the following constraints
+          - teff, logg, met, kmag [and parallax]
+
+       3. The grid method with the following constraints
+          - teff, logg, met, kmag [no parallax]
+
+    We default to the direct method. But if the parallax method from
+    the grid based method is significantly different than the gaia
+    parallax, there is additional flux in the aperture which indicates
+    dilution.
+
+    Args:
+
+        source (string): either
+            cks1
+            smemp
+            smsyn
+
+    """
+
+    star = load_stellar_parameters(source)
+    star['id_starname'] = star.id_koi.apply(lambda x : "K{:05d}".format(x))
+    star['band'] = 'kmag'
+    star['dust'] = 'allsky'
     namemap = {
+        'gaia2_ra':'ra',
+        'gaia2_dec':'dec',
+        'gaia2_sparallax':'parallax',
+        'gaia2_sparallax_err':'parallax_err',
+        'm17_kmag':'kmag',
+        'm17_kmag_err':'kmag_err',
         'cks_steff':'teff',
         'cks_steff_err':'teff_err',
         'cks_smet':'feh',
         'cks_smet_err':'feh_err',
     }
-
     star = star.rename(columns=namemap)
-
-    star['id_starname'] = star.id_koi.apply(lambda x : "K{:05d}".format(x))
-    star['kmag_err'] = star['kmag_err'].fillna(0.02)
-    star['band'] = 'kmag'
-    star['dust'] = 'allsky'
     star['parallax'] /= 1e3 # Convert microarcsec to arcsec
     star['parallax_err'] /= 1e3 
-    star['feh_err'] = 0.12 # Ditto
-    star = star.sort_values(by='id_koi')
-    star = star.reset_index()
-    star0 = star.copy() 
+    star0 = star.copy()
 
     cols = [
         'id_starname','teff','teff_err','logg','logg_err','feh','feh_err',

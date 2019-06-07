@@ -68,7 +68,7 @@ def create_iso_batch(args):
         stars = ckscool._isoclassify.create_iso_batch_frames(source)
         for i,mode in enumerate(modes):
             fn = 'data/isoclassify-{}-{}.csv'.format(source,mode)
-            stars[0].to_csv(fn)
+            stars[i].to_csv(fn)
             print "created {}".format(fn)
 
 def create_iso_table(args):
