@@ -116,7 +116,7 @@ def create_iso_batch_frames(source):
     star['id_starname'] = star.id_koi.apply(lambda x : "K{:05d}".format(x))
     star['kmag_err'] = star['kmag_err'].fillna(0.02)
     star['band'] = 'kmag'
-    star['dust'] = 'green18'
+    star['dust'] = 'allsky'
     star['parallax'] /= 1e3 # Convert microarcsec to arcsec
     star['parallax_err'] /= 1e3 
     star['feh_err'] = 0.12 # Ditto
