@@ -57,7 +57,7 @@ head `ls isoclassify*tot` | grep mkdir | parallel
 
 ### Run them in batch on cadence 
 
-cat isoclassify*tot | grep mkdir | parallel -j 2
+cat isoclassify*tot | grep mkdir | parallel -j 96
 
 This also applies to cadence. I get a "too many requests" error if I
 run with more than 8 cores. Should take about 1 hour to finish
