@@ -157,15 +157,22 @@ def create_iso_batch_frames(source):
     return star_direct, star_grid_yes, star_grid_no 
 
 
-def create_iso_table(args):
+def create_iso_table(inpdir,outcsv):
     """
     Read in isochrones csvfiles 
+
     Args:
         outdir (str): where to look for isochrones.csv files
     """
-    dfd = scrape_direct()
-    dfg = scrape_grid_parallax_yes()
-    dfg2 = scrape_grid_parallax_no()
+
+    fn = os.path.join(inpdir,'direct/*/*.csv')
+    dfd = scrape_direct(fn)
+
+    fn = os.path.join(inpdir,'grid-parallax-yes/*/*.csv')
+    dfg = scrape_grid_parallax_yes(fn)
+
+    fn = os.path.join(inpdir,'grid-parallax-no/*/*.csv')
+    dfg2 = scrape_grid_parallax_no(fn)
 
     dfm = pd.merge(dfd,dfg,on='id_starname', how='left')
     dfm = pd.merge(dfm,dfg2,on='id_starname', how='left')
@@ -175,15 +182,15 @@ def create_iso_table(args):
     dfm['id_starname'] = temp.astype(str)
     #dfm = ckscool.io.order_columns(dfm)
     
-    fn = 'data/isoclassify_gaia2.csv'
-    dfm.to_csv(fn)
+    dfm.to_csv(outcsv)
     print "created {}".format(fn)
 
 def func(x):
     return x.split('.')[0]
 
-def scrape_direct():
-    df = isoclassify.pipeline.scrape_csv('isoclassify/direct/*/*.csv')
+def scrape_direct(fn):
+    # isoclassify/direct/*/*.csv
+    df = isoclassify.pipeline.scrape_csv(fn)
     df['id_starname'] = df.id_starname.astype(str).apply(func)
     namemap = {
         'id_starname':'id_starname',
@@ -197,9 +204,8 @@ def scrape_direct():
     df = df.rename(columns=namemap)[namemap.values()]
     return df
 
-def scrape_grid_parallax_yes():
+def scrape_grid_parallax_yes(fn):
     # Grid mode with parallax constraints
-    fn = 'isoclassify/grid-parallax-yes/*/*.csv'
     df = isoclassify.pipeline.scrape_csv(fn)
     namemap = {
         'id_starname':'id_starname',
@@ -220,9 +226,8 @@ def scrape_grid_parallax_yes():
     df['id_starname'] = df.id_starname.astype(str).apply(func)
     return df
 
-def scrape_grid_parallax_no():
+def scrape_grid_parallax_no(fn):
     # Grid mode without parallax constraints
-    fn = 'isoclassify/grid-parallax-no/*/*.csv'
     df = isoclassify.pipeline.scrape_csv(fn)
     temp = df['id_starname'].copy()
     df = df.drop(['id_starname'],axis=1)

@@ -1,5 +1,4 @@
 sources=(cks1 smsyn smemp)
-set -x
 for source in "${sources[@]}"
 do
     isoclassify batch direct data/isoclassify-${source}-direct.csv -o isoclassify/${source}/direct/ > isoclassify-${source}-direct.tot

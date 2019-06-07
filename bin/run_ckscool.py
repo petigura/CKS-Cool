@@ -73,8 +73,12 @@ def create_iso_batch(args):
             print "created {}".format(fn)
 
 def create_iso_table(args):
-    ckscool._isoclassify.create_iso_table(args)
-
+    sources = ['cks1','smsyn','smemp']
+    for source in sources:
+        inpdir = os.path.join('isoclassify/',source)
+        outcsv = os.path.join('data','isoclassify_{}.csv'.format(source))
+        ckscool._isoclassify.create_iso_table(inpdir,outcsv)
+    
 def create_spectra_files(args):
     cut = ckscool.plot.spectra.get_spectra()
     fn = 'data/fig_spectra/fig_spectra-files.txt'
