@@ -11,12 +11,14 @@ source activate ckscool
 conda install scipy matplotlib astropy pandas h5py seaborn scikit-learn pytables
 conda install -c conda-forge healpy # needed for dustmaps also got healpy==1.11 to work
 pip install dustmaps
-pip install mwdust 
+#pip install mwdust 
 pip install pyephem
 pip install lmfit
 pip install ebfpy
 
 isoclassify on f6f16ef1f90c57893268f6f9d6da4fddb00142ec
+
+Note when running on cadence, there was a really weird issue with h5py. Where it was taking 30s to read in the Combined Dustmap
 
 # Copy over the table cache from CKS-Gaia
 
@@ -42,9 +44,9 @@ rsync -av cadence:/data/user/petigura/public_html/smsyn/specmatch_results.csv da
 
 First create the batch processing files. In total there are about 900 stars that pass the photometric only cuts.
 
+export DUST_DIR=/data/user/petigura/dustdir/
 ```
 run_ckscool.py create-iso-batch 
-source bin/create_tot.sh
 ```
 
 Then run them in parallel. Running isoclassify takes about 3s per star / core. Can process in about 7*3 min with six cores.
@@ -57,15 +59,34 @@ head `ls isoclassify*tot` | grep mkdir | parallel
 
 ### Run them in batch on cadence 
 
-cat isoclassify*tot | grep mkdir | parallel -j 96
+Create the tot files. See note about h5py. 
 
-This also applies to cadence. I get a "too many requests" error if I
-run with more than 8 cores. Should take about 1 hour to finish
+```
+source bin/create_tot.sh
+```
+
+Run isoclassify on a screen session. If I run with all the cores on
+cadence I get a seg fault.
+
+```
+cat isoclassify*tot | grep mkdir | parallel -j 48 
+```
+
+I also need to set this environment variable or else I get a resource unavailable error from hdf
+
+export HDF5_USE_FILE_LOCKING=FALSE 
+DUST_DIR=/data/user/petigura/dustdir/
+
+Notes:
+
+I tried to use the bayestar interface, but I got a I get a "too many
+requests" error 
+
 
 ### Monitor job progress with
 
 ```
-find isoclassify/ -name "*.log" | wc -l  ; grep csv `find isoclassify/ -name "*.log" ` | wc -l ; find isoclassify/ -name "*.csv" | wc -l
+ echo "number of log files"; find isoclassify/ -name "*.log" | wc -l  ; echo "number of csv files"; grep csv `find isoclassify/ -name "*.log" ` | grep created | wc -l 
 ```
 
 First number is number of log files, second numbers is how many csv files created.
