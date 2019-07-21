@@ -21,15 +21,18 @@ def tab_planet():
     return lines
 
 def tab_star():
-    df = ckscool.io.load_table('ckscool-stars',cache=1)
-    df = df.groupby('id_starname',as_index=False).nth(0)
-    df = df.sort_values(by='id_starname')
+    df = ckscool.io.load_table('planets-cuts1+iso',cache=2)
+    df['cks_sprov'] = df.cks_sprov.str.replace('smemp','emp').\
+                      str.replace('smsyn','syn')
+
+    df = df.groupby('id_koi',as_index=False).nth(0)
+    df = df.sort_values(by='id_koi')
     lines = []
     for i, row in df.iterrows():
         s = r""
-        s+="{id_starname:s} & "
-        s+="{sm_steff:0.0f} & "
-        s+="{sm_smet:0.2f} & "
+        s+="{id_koi:0.0f} & "
+        s+="{cks_steff:0.0f} & "
+        s+="{cks_smet:0.2f} & "
         s+="{m17_kmag:0.1f} & "
         s+="{gaia2_sparallax:0.2f} & "
         s+="{gdir_srad:0.2f} & "
@@ -37,11 +40,13 @@ def tab_star():
         s+="{giso_smass:0.2f} & "
         s+="{giso_srad:0.2f} & "
         s+="{giso_srho:0.2f} & "
-        #        s+="{giso_slogage:0.2f} & "
+        # s+="{giso_slogage:0.2f} & "
 
         s+="{giso2_sparallax:0.2f} & "
-        s+=r"{gaia2_gflux_ratio:0.2f} & " 
-        #        s+=r"{fur17_rcorr_avg:.3f} \\"
+        s+="{cks_sprov:s} & "
+        s+="{cks_svsini:0.1f} "
+        # s+=r"{gaia2_gflux_ratio:0.2f} & " 
+        # s+=r"{fur17_rcorr_avg:.3f} \\"
         s+=r" \\"
         s = s.format(**row)
         s = s.replace('nan','\\nodata')

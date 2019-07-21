@@ -28,25 +28,25 @@ letter_text_props = dict(size='large', weight='bold')
 import ckscool.cuts
 
 def fig_cuts_kepmag_steff():
-    df = ckscool.io.load_table('ckscool-targets-cuts')
-    cuts(df,'kic_kepmag','m17_steff',nrows=2,ncols=4,plot_func=None,stars=True)
+    df = ckscool.io.load_table('planets-cuts1',cache=2)
+    cuts(df,'m17_kepmag','ber18_steff',nrows=2,ncols=3,plot_func=None,stars=False)
     axL = gcf().get_axes()
-    axL = np.array(axL).reshape(2,4) 
+    axL = np.array(axL).reshape(2,3) 
     setp(axL,ylim=(3000,7000))
     setp(axL[1,:],xlabel='Kp (mag)')
     setp(axL[:,0],ylabel='Teff (K)')
     
 def fig_cuts_period_prad():
-    df = ckscool.io.load_table('ckscool-targets-cuts')
-    cuts(df, 'koi_period','koi_prad',nrows=2,ncols=4,plot_func=loglog)
+    df = ckscool.io.load_table('planets-cuts1')
+    cuts(df, 'koi_period','koi_prad',nrows=2,ncols=3,plot_func=loglog)
     axL = gcf().get_axes()
-    axL = np.array(axL).reshape(2,4) 
+    axL = np.array(axL).reshape(2,3) 
     setp(axL[1,:],xlabel='Orbital Period (days)',xlim=(0.1,1000),ylim=(0.1,100))
     setp(axL[:,0],ylabel='Planet Size (Earth-radii)')
 
 def fig_cuts_smass_steff():
-    df = ckscool.io.load_table('ckscool-targets-cuts')
-    cuts(df, 'm17_smass','m17_steff',nrows=2,ncols=4,plot_func=semilogx,stars=True)
+    df = ckscool.io.load_table('planets-cuts1')
+    cuts(df, 'm17_smass','ber18_steff',nrows=2,ncols=4,plot_func=semilogx)
     axL = gcf().get_axes()
     setp(axL,ylim=(3000,7000))
     setp(
@@ -55,30 +55,32 @@ def fig_cuts_smass_steff():
     )
 
 def fig_cuts_stars_hr():
+    
     df = ckscool.io.load_table('planets-cuts2+iso',cache=2)
     nplots = len(df.cuttypes)
     cuts(
-        df, 'cks_steff', 'gdir_srad', nrows=1, ncols=nplots, stars=True, 
-        plot_func=semilogy
+        df, 'cks_steff', 'gdir_srad', nrows=1, ncols=nplots, plot_func=semilogy
     )
     fig = gcf()
     axL = fig.get_axes()
-    setp(axL,xlabel="{} (K)".format(texteff),xlim=(5000,3500),ylim=(0.4,1))
+    setp(axL,xlabel="{} (K)".format(texteff),xlim=(7000,3500),ylim=(0.4,2))
     setp(axL[0],ylabel='Stellar radius (Solar-radii)')
-
     for ax in axL:
         sca(ax)
-        yt = [0.4,0.5,0.7,1.0,1.5]
+        yt = [0.5,0.7,1.0,1.4,2.0]
         yticks(yt,yt)
         minorticks_off()
+        ylim(0.4,3)
 
 def fig_cuts_planets_per_prad(zoom=False):
     xk = 'koi_period'
     yk = 'gdir_prad'
+    nrows = 2
+    ncols = 5
     df = ckscool.io.load_table('planets-cuts2+iso',cache=2)
-    cuts(df, xk, yk , nrows=2, ncols=3, stars=False, plot_func=loglog)
+    cuts(df, xk, yk , nrows=nrows, ncols=ncols, stars=False, plot_func=loglog)
     axL = gcf().get_axes()
-    axL = np.array(axL).reshape(2,3) 
+    axL = np.array(axL).reshape(nrows,ncols) 
     yt = [0.5,1,2,4,8,16]
     xt = [0.3,1,3,10,30,100,300]
     for ax in axL.flatten():
@@ -119,7 +121,6 @@ def cuts(df, xk,yk,nrows=None,ncols=None,plot_func=None, stars=False):
 
     bpass = np.zeros(len(df))
     iplot = 0
-    
     for cuttype in df.cuttypes:
         ax = axL[iplot] 
         sca(ax)
@@ -127,10 +128,10 @@ def cuts(df, xk,yk,nrows=None,ncols=None,plot_func=None, stars=False):
         key = 'is'+cuttype
         obj = ckscool.cuts.occur.get_cut(cuttype)
         cut = obj(df,table)
-        df[key] = cut.cut()
+        #df[key] = cut.cut()
         bpass += df[key].astype(int)
             
-        plotkw = dict(ms=4,rasterized=True)
+        plotkw = dict(ms=2,rasterized=True)
 
         x = df[xk]
         y = df[yk]
@@ -138,7 +139,7 @@ def cuts(df, xk,yk,nrows=None,ncols=None,plot_func=None, stars=False):
         plot(x, y,'.',color='LightGray',**plotkw)
         dfcut = df[bpass==0]
         
-        plot(dfcut[xk], dfcut[yk],'.', **plotkw)
+        plot(dfcut[xk], dfcut[yk],'.', color='blue',**plotkw)
         _text = cut.plotstr + ' ({})'.format(len(dfcut))
 
         if stars:

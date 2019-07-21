@@ -8,7 +8,7 @@ import pandas as pd
 from matplotlib import pylab as plt
 
 import ckscool.io     # module for reading and writing datasets
-import ckscool.value  # module for computing scalar values for table
+import ckscool.value  # module for computing creating table
 import ckscool.table  # module for computing scalar values for table
 import ckscool._isoclassify
 import ckscool.plot.sample   # submodule for including plots
@@ -175,9 +175,9 @@ def create_workflow():
     w.plot['cuts-planets-per-prad'] = ckscool.plot.sample.fig_cuts_planets_per_prad
     w.plot['cuts-planets-per-prad-zoom'] = lambda : ckscool.plot.sample.fig_cuts_planets_per_prad(zoom=True)
 
-    w.plot['compare-with-cks1'] = ckscool.plot.sample.fig_compare_with_cks1
+    #w.plot['compare-with-cks1'] = ckscool.plot.sample.fig_compare_with_cks1
     w.plot['ferr-hist-star'] = ckscool.plot.hr.fig_ferr_hist_star
-    #w.plot['ferr-hist-planet'] = ckscool.plot.hr.fig_ferr_hist_planet
+    w.plot['ferr-hist-planet'] = ckscool.plot.hr.fig_ferr_hist_planet
     w.plot['star-steff-srad'] = ckscool.plot.hr.fig_hr
     w.plot['star-smet-smass'] = ckscool.plot.hr.fig_smet_smass
     w.plot['compare-ckscool-mann13'] = lambda : fig_compare('ckscool-mann13')
@@ -197,9 +197,12 @@ def create_workflow():
     w.plot['planet-smet-prad-nopoints-zoom'] = lambda : ckscool.plot.planet.fig_smet_prad(nopoints=True,zoom=True)
     w.plot['planet-smet-prad-zoom'] = lambda : ckscool.plot.planet.fig_smet_prad(zoom=True)
 
+    # table
+    w.table['star'] = ckscool.table.tab_star
+    w.table['star-stub'] = lambda: ckscool.table.tab_star()[:10]
+
     # val
     w.val['stat'] = ckscool.value.val_stat
-
     return w
 
 if __name__=="__main__":

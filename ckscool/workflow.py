@@ -13,7 +13,7 @@ class Workflow(object):
     def get_all_dict(self):
         d = OrderedDict()
         d['plot'] = self.plot
-        d['table'] = self.val
+        d['table'] = self.table
         d['val'] = self.val
         return d
         

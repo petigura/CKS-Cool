@@ -6,9 +6,12 @@ import numpy as np
 import os
 
 def load_stellar_parameters(source):
-    # Load up stellar properties
+    """
+    Load up stellar properties
+    """
+    # needed for the lookup between id_kic and id_koi
     star = ckscool.io.load_table('m17+ber18+gaia2+cdpp')
-    plnt = ckscool.io.load_table('koi-thompson18-dr25') # needed for the lookup between id_kic and id_cand
+    plnt = ckscool.io.load_table('koi-thompson18-dr25') 
     plnt = plnt.groupby('id_koi',as_index=False).nth(0)[['id_koi','id_kic']]
     star = pd.merge(star,plnt)
 
@@ -22,7 +25,13 @@ def load_stellar_parameters(source):
         df = df.groupby('id_koi',as_index=False).nth(0)
         df['cks_steff_err'] = 100
         df['cks_smet_err'] = 0.06
+        df['cks_svsini_err'] = df['cks_svsini_err1']
         df['cks_sprov'] = 'cks1'
+        cols = [
+            'id_koi','cks_steff','cks_steff_err','cks_smet','cks_smet_err',
+            'cks_svsini','cks_svsini_err'
+        ]
+        df = df[cols]
 
     elif source=='smsyn':
         # Load up SpecMatch-Syn and set uncertainties 
@@ -105,6 +114,7 @@ def create_iso_batch_frames(source):
     star['id_starname'] = star.id_koi.apply(lambda x : "K{:05d}".format(x))
     star['band'] = 'kmag'
     star['dust'] = 'allsky'
+    star['cks_sprov'] = source
     namemap = {
         'gaia2_ra':'ra',
         'gaia2_dec':'dec',

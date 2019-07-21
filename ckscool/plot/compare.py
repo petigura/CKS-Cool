@@ -29,21 +29,21 @@ def fig_compare(table):
     if table=='ckscool-mann13':
         df = ckscool.io.load_table('ckscool-mann13')
         df = df.groupby('id_koi',as_index=False).first()
-        xk = 'sm_steff'
+        xk = 'cks_steff'
         yk = 'm13_steff'
         label2 = 'M13'
 
     elif table=='ckscool-dressing13':
         df = ckscool.io.load_table('ckscool-dressing13')
         df = df.groupby('id_koi',as_index=False).first()
-        xk = 'sm_steff'
+        xk = 'cks_steff'
         yk = 'd13_steff'
         label2 = 'D13'
 
     elif table=='ckscool-brewer18':
         df = ckscool.io.load_table('ckscool-brewer18')
         df = df.groupby('id_koi',as_index=False).first()
-        xk = 'sm_steff'
+        xk = 'cks_steff'
         yk = 'b18_steff'
         label2 = 'B18'
     else:
@@ -89,7 +89,7 @@ def comparison(key, x1, x2, label1='CKS',label2='Comp',fig0=None, axL0=None):
     fig, axL = subplots_compare(x1, x2, x3, **ebarkw)
     if key=='steff':
         _ylabel0 = '{} (K) [{}]'.format(texdict[key],label2)
-        _xlim0 = (3500,5500) 
+        _xlim0 = (3500,6500) 
         _ylim1 = (-400,400)
         _ylabel1 = '{} - {}'.format(label2,label1)
         _xlabel1 = '{} (K) [{}]'.format(texdict[key],label1)

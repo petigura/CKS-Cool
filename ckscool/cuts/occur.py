@@ -157,8 +157,6 @@ class CutPradPrecision(CutBase):
         b = self.df.eval('gdir_prad_err1/gdir_prad') > 0.2
         return b
 
-
-
 # Not really necessary
 class CutSpecParallax(CutBase):
     """Remove stars the spectroscopic parallax does not agree with the trig parallax
@@ -207,6 +205,7 @@ def add_cuts(df, cuttypes, sample):
         key = 'is'+cuttype
         df[key] = cut.cut()
         isany += df[key].astype(int)
-
+    
     df['isany'] = isany > 0 
+    df.cuttypes=cuttypes
     return df 
