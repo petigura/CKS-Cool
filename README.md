@@ -8,10 +8,13 @@ source activate ckscool
 
 ### had to install the following packages with conda
 
-conda install scipy matplotlib astropy pandas h5py seaborn scikit-learn pytables
+conda install numpy==1.15.4 # this avoids the ValueError: cannot set WRITEABLE flag to True of this array #24839
+conda install scipy matplotlib astropy pandas d seaborn scikit-learn pytables
 conda install -c conda-forge healpy # needed for dustmaps also got healpy==1.11 to work
-pip install dustmaps
-#pip install mwdust 
+
+#
+pip install h5py # conda doesn't seem to work
+pip install mwdust 
 pip install pyephem
 pip install lmfit
 pip install ebfpy
@@ -36,8 +39,8 @@ Repo for the CKS-Cool project includes code to
 1. Download smemp and smsyn catalogs to `data/`
 
 ```
-rsync -av cadence:/data/user/petigura/public_html/smemp/specmatch_results.csv data/specmatch-emp_results.csv
-rsync -av cadence:/data/user/petigura/public_html/smsyn/specmatch_results.csv data/specmatch-syn_results.csv
+rsync -av cadence:/data/user/doppler/public_html/smemp/specmatch_results.csv data/specmatch-emp_results.csv
+rsync -av cadence:/data/user/doppler/public_html/smsyn/specmatch_results.csv data/specmatch-syn_results.csv
 ```
 
 2. Run the isoclassify code
@@ -47,6 +50,10 @@ First create the batch processing files. In total there are about 900 stars that
 export DUST_DIR=/data/user/petigura/dustdir/
 ```
 run_ckscool.py create-iso-batch 
+```
+
+```
+python bin/create_tot.py
 ```
 
 Then run them in parallel. Running isoclassify takes about 3s per star / core. Can process in about 7*3 min with six cores.
@@ -94,7 +101,6 @@ First number is number of log files, second numbers is how many csv files create
 ```
 run_ckscool.py create-iso-table
 ```
-
 
 Run it on cadence
 
