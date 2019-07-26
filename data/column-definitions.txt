@@ -23,6 +23,13 @@ koi_impact            Impact Parameter [float] (bestfit)
 koi_impact_err1       
 koi_impact_err2       
 kic_kepmag            Kepler-band [mag]
+# 
+# Mathur (2017) table
+#
+m17_kmag              2MASS Kmag 
+m17_kmag_err          2MASS Kmag
+m17_ra                RA
+m17_dec               Dec
 #
 # Columns from Gaia DR2
 #
@@ -37,7 +44,6 @@ gaia2_n_1arcsec       Number of sources within 1 arcsec
 gaia2_n_8arcsec       Number of sources within 8 arcsec
 gaia2_astrometric_excess_noise
 gaia2_sparallax_over_err
-
 gaia2_gflux_ratio     Total G-band flux within 8 arcsec of target divided by target G-band flux
 gaia2_gmag            Mean magnitude in Gaia bandpass [mag]
 gaia2_srad            Stellar radius [Solar-radii] 
@@ -46,11 +52,6 @@ gaia2_srad_err2
 gaia2_steff           Stellar effective temperature [Kelvin] 
 gaia2_steff_err1       
 gaia2_steff_err2
-
-m17_kmag              2MASS Kmag 
-m17_kmag_err          2MASS Kmag
-m17_ra                RA
-m17_dec               Dec
 #
 # SpecMatch parameters
 # 
