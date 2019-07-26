@@ -224,7 +224,7 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
                 pass
 
         df = pd.DataFrame(df)
-        df['cks_svsini'] = df.cks_svsini.fillna(smsyn.cks_svsini)
+        #df['cks_svsini'] = df.cks_svsini.fillna(smsyn.cks_svsini)
         df = df.reset_index()
 
 
@@ -235,9 +235,22 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         iso = load_table('iso',cache=1)
         df = pd.merge(plnt, iso, how='left',on=['id_koi','id_kic'])
 
-        # Add in ReaMatch parameters
+        # Add in ReaMatch parameters. If the provenence of the
+        # parameter is CKS-I then in means that the star passed the
+        # reamatch pipeline
         rm = load_table('reamatch')
         df = pd.merge(df, rm, how='left', on='id_koi')
+        idx = df.query('cks_sprov == "cks1"').index
+        df.loc[idx,'rm_sb2'] = 1
+        k15 = pd.read_table('data/kolbl15/table9.tex',sep='&',skiprows=9,header=None,nrows=64)
+        k15 = k15[[0]]
+        k15 = k15.rename(columns={0:'id_koi'})
+        k15['id_koi'] = k15.id_koi.str.replace('\t','').str.strip().replace('',None).astype(int)
+        k15 = k15.drop_duplicates()
+        temp = pd.merge(k15,df[['id_koi']]).drop_duplicates()
+        df.index = df.id_koi
+        for id_koi in temp.id_koi:
+            df.loc[id_koi,'rm_sb2'] = 5
 
         # Add in Furlan parameters
         f17 = load_table('fur17')
@@ -269,10 +282,9 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         df = df[~df.isany]
 
     elif table=='planets-cuts2+iso':
-        df = load_table('planets+iso',cache=1)
-        cuttypes = ['none','faint','giant','rizzuto','notreliable','lowsnr','sb2','badprad','badimpacttau']
+        df = load_table('planets-cuts1+iso',cache=2)
+        cuttypes = ['none','badvsini','sb2','badspecparallax','badprad','badpradprec','badimpacttau']
         df = ckscool.cuts.occur.add_cuts(df, cuttypes, 'koi-thompson18')
-
 
     elif table=='reamatch':
         fn = os.path.join(DATADIR, 'reamatch.csv')

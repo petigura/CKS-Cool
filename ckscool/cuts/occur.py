@@ -150,7 +150,7 @@ class CutImpactTau(CutBase):
 
 class CutPradPrecision(CutBase):
     """Remove planets with large radius uncertainties"""
-    cuttype = 'badpradprecision'
+    cuttype = 'badpradprec'
     texstr = r'$\sigma(R_p) / R_p $ < 0.2'
     plotstr = texstr
     def cut(self):
@@ -162,8 +162,8 @@ class CutSpecParallax(CutBase):
     """Remove stars the spectroscopic parallax does not agree with the trig parallax
     """
     cuttype = 'badspecparallax'
-    texstr = r'Delta Parallax < 3 sigma'
-    plotstr = r'$|\pi_{trig} - \pi_{spec}| < 3 \sigma$'
+    texstr = r'Delta Parallax < 4 sigma'
+    plotstr = r'$|\pi_{trig} - \pi_{spec}| < 4 \sigma$'
     def cut(self):
 
         diff = self.df.gaia2_sparallax - self.df.giso2_sparallax
@@ -172,10 +172,18 @@ class CutSpecParallax(CutBase):
         ) 
         ndiff = diff/sigmadiff
         teff = self.df['m17_steff']
-        b = np.abs(ndiff) > 3
+        b = np.abs(ndiff) > 4
         return b
 
-
+class CutVsinI(CutBase):
+    """Remove stars the spectroscopic parallax does not agree with the trig parallax
+    """
+    cuttype = 'badvsini'
+    texstr = r'VsinI > 10'
+    plotstr = r'$v \sin i > 20$ km/s'
+    def cut(self):
+        b = self.df['cks_svsini'] > 20 
+        return b
 
 
 class CutFPP(CutBase):

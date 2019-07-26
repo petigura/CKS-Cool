@@ -76,7 +76,7 @@ def fig_cuts_planets_per_prad(zoom=False):
     xk = 'koi_period'
     yk = 'gdir_prad'
     nrows = 2
-    ncols = 5
+    ncols = 4
     df = ckscool.io.load_table('planets-cuts2+iso',cache=2)
     cuts(df, xk, yk , nrows=nrows, ncols=ncols, stars=False, plot_func=loglog)
     axL = gcf().get_axes()

@@ -6,6 +6,7 @@ import pandas as pd
 import xarray as xr
 import scipy
 from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
+from astropy import units as u
 
 
 class ContourPlotter(object):
@@ -115,19 +116,20 @@ class ContourPlotter(object):
 def fig_per_prad(**kwargs):
     sns.set_context('paper')
     fig, axL = subplots(figsize=(5,4))
-    df = ckscool.io.load_table('planets-cuts2+iso')
+    df = ckscool.io.load_table('planets-cuts2+iso',cache=2)
     df = df[~df.isany]
     _per_prad(df, **kwargs)
 
-def _per_prad(df,nopoints=False,zoom=False):
+def _per_prad(df,nopoints=False,zoom=False,query="",yerrfac=1,xerrfac=1):
+    df = df.query(query)
     print len(df)
     xk = 'koi_period'
     yk = 'gdir_prad'
     yerrk = 'gdir_prad_err1'
     x = df[xk]
     y = df[yk]
-    xerr = x * 0.5
-    yerr = df[yerrk] 
+    xerr = x * xerrfac
+    yerr = df[yerrk] * yerrfac
 
     p1 = ContourPlotter(x, xerr, y, yerr,xscale='log',yscale='log')
     p1.xmin = 0.3
@@ -153,39 +155,37 @@ def _per_prad(df,nopoints=False,zoom=False):
     tight_layout()
 
 
-def fig_sinc_prad(nopoints=False,zoom=False):
+def fig_sinc_prad(nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1):
+    df = ckscool.io.load_table('planets-cuts2+iso',cache=1)
+    df = df[~df.isany]
+    if query is not None:
+        df = df.query(query)
+
+    print len(df)
     sns.set_context('paper')
     fig, axL = subplots(figsize=(5,4))
     xk = 'giso_sinc'
     yk = 'gdir_prad'
     yerrk = 'gdir_prad_err1'
-    df = ckscool.io.load_table('ckscool-planets-cuts',cache=1)
-    df = df[~df.isany]
-    df2 = ckscool.io.load_table('cksgaia-planets-filtered')
-    namemap = {'giso_insol':'giso_sinc','giso_insol_err1':'giso_sinc_err1','giso_insol_err2':'giso_sinc_err2',}
-    df2 = df2.rename(columns=namemap)
-    df = pd.concat([df,df2])
-    df = df.query('1.1 < giso_smass < 1.4')
-    #df = df.query('giso_smass < 0.8')
 
     x = df[xk]
     y = df[yk]
-    xerr = x * 1
-    yerr = df[yerrk] * 1.5
+    xerr = x * xerrfac
+    yerr = df[yerrk] * yerrfac
 
     p1 = ContourPlotter(x, xerr, y, yerr,xscale='log',yscale='log')
     if zoom:
-        p1.xmin = 0.3
+        p1.xmin = 1
         p1.xmax = 1e4
-        p1.ymin = 0.7
+        p1.ymin = 1.0
         p1.ymax = 4
     else:
-        p1.xmin = 0.3
+        p1.xmin = 1
         p1.xmax = 1e4
         p1.ymin = 0.5
         p1.ymax = 16
 
-    xticks = [0.3,1,3,10,30,100,300,1000,3000,1e4]
+    xticks = [1,3,10,30,100,300,1000,3000,1e4]
     yticks = [0.5,0.7,1.0,1.4,2.0,2.8,4.0,5.6,8.0,11.3,16.0]
 
     p1.compute_density()
@@ -204,7 +204,6 @@ def fig_sinc_prad(nopoints=False,zoom=False):
     tight_layout()
 
 
-from astropy import units as u
 def fig_intfxuv_prad(nopoints=False,zoom=False):
     sns.set_context('paper')
     fig, axL = subplots(figsize=(5,4))
