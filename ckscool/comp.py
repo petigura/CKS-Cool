@@ -6,7 +6,6 @@ import pandas as pd
 from scipy.interpolate import RegularGridInterpolator, RectBivariateSpline
 import scipy.integrate
 from scipy.stats import gamma
-
 from astropy import constants as c
 from astropy import units as u
 
@@ -20,21 +19,46 @@ __STARS_REQUIRED_COLUMNS__ = (
 )
 
 class Completeness(object):
-    """
-    Class for that can compute completeness using the noise properties
-    of a representive ensemble of stars.  
+    """Class that compute completeness using the noise properties of a
+    representive ensemble of stars.
+
+    Examples:
+
+        # 1. Define sample of stars.
+        >>> stars = ckscool.io.load_table('field-cuts',cache=1)
+        >>> stars = stars[~stars.isany]
+        >>> stars = stars.rename(
+               columns={'ber18_srad':'srad','m17_smass':'smass'}
+            )
+        >>> stars = stars.query('smass > 1.3')
+
+        # 2. Define grid to compute completeness
+        comp_per_bins = round(logspace(log10(0.1),log10(1000),33),4)
+        comp_prad_bins = round(logspace(log10(0.25),log10(64),25 ),2)
+        comp_bins_dict = {'per': comp_per_bins,'prad': comp_prad_bins}
+        spacing_dict = {'per':'log','prad':'log'}
+        grid = ckscool.grid.Grid(comp_bins_dict,spacing_dict)
+
+        # 3. Compute completeness grid
+        comp = ckscool.comp.Completeness(stars, grid, method, impact)
+        comp.compute_grid_prob_det(verbose=True)
+        comp.compute_grid_prob_tr(verbose=True)
+
+        # 4. Compute spline interpolation over completeness grid
+        comp.create_splines()
+        comp.mean_prob_trdet(1,10,1,2)
+
     """
 
-    def __init__(self, stars, grid, method, impact):
-        """
-        Args:
+    def __init__(self, stars, grid, method, impact, mesfac=None):
+        """Args:
             stars (pandas.DataFrame): Sample of stars from which planets 
                 are detected. Must be as close as possible to be sample of 
                 of stars used in the planet search. Must contain the following
                 keys.
-                - logcdpp3: three hour CDPP
-                - logcdpp6: six
-                - logcdpp12: twelve
+                - logcdpp3: three-hour CDPP noise
+                - logcdpp6: six-hour CDPP noise
+                - logcdpp12: twelve-hour CDPP noise
                 - tobs: days in which target was observed
                 - smass: Stellar mass (solar masses) 
                 - srad: Stellar radius (solar-radii) 
@@ -43,6 +67,25 @@ class Completeness(object):
                 - mes-step
                 - fulton-gamma: Fulton et al. fit to gamma function.
             impact: maximum impact parameter considered for our sample
+            mesfactor: conversion between theoretical SNR and actual MES
+
+        Notes:
+
+            The Kepler pipeline detects planets by computing the
+            multiple event statistic (MES) over a range of periods and
+            epochs. The MES is like a signal to noise ratio, but
+            beacuse the pipeline computes MES over a finite grid, the
+            MES usually lower than the SNR computed after fitting a
+            model to the light curve. When we compute what the SNR
+            would be of a putative planet at (per,prad), we are
+            implicitly assuming that we would have computed it at the
+            correct period, epoch. So to convert the SNR to an
+            expected MES we have to apply a correction of ~20%. Note
+            this is only relevant to the mes-step method of converting
+            computing the completeness. The Fulton-gamma perscription
+            fit the recovered planets as a function of the theoretical
+            SNR so it already incorporates this bias.
+
         """
         
         for col in __STARS_REQUIRED_COLUMNS__:
@@ -73,6 +116,7 @@ class Completeness(object):
         self.grid = grid
         self.method = method
         self.impact = impact
+        self.mesfac = mesfac
 
     def snr(self, per, prad):
         """
@@ -102,7 +146,6 @@ class Completeness(object):
         """
         return self.mesfac * self.mes(per, prad)
 
-
     def _tdur(self, per):
         """
         Compute duration for a putative transit of a given orbital period
@@ -114,10 +157,9 @@ class Completeness(object):
             pandas.Series: transit duration for each star in the sample.
         """
         per_yrs = per / 365.25
-        tdur = ( 
-            TDUR_EARTH_SUN_HRS * self.stars['srad'] * 
-            (per_yrs / self.stars['smass'] )**(1.0/3.0)
-        )
+        srad = self.stars['srad']
+        smass = self.stars['smass']
+        tdur =  TDUR_EARTH_SUN_HRS * srad * (per_yrs / smass )**0.33
         return tdur
 
     def _smax(self, per):
@@ -147,6 +189,7 @@ class Completeness(object):
             pd.Series: the depth of a `prad` planet around each star
 
         """
+        
         _depth = (prad / self.stars.srad)**2 * DEPTH_EARTH_SUN
         return _depth
 
@@ -185,22 +228,6 @@ class Completeness(object):
         cdpp = pd.Series(index=self.stars.index,data=10**logcdpp)
         return cdpp
 
-    def prob_det_mes(self, mes):
-        """Recovery rate vs. multiple event statistic
-
-        Args:
-            mes (array): Multiple event statistic
-            
-        """
-        out = np.zeros_like(mes) 
-        mes = np.array(mes) 
-        if self.prob_det_mes_name.count('step')==1:
-            min_mes = self.prob_det_mes_name.split('-')[1]
-            min_mes = float(min_mes)
-            out[mes > min_mes] = 1.0
-
-        return out
-
     def prob_det(self, per, prad, interp=False):
         """Probability that a planet would be detectable
 
@@ -224,13 +251,15 @@ class Completeness(object):
         if interp==False:
             if self.method.count('step'):
                 mes = self.mes_scaled(per, prad)
-                _prob_det = 1.0*self.prob_det_mes(mes).sum()
-                _prob_det /= self.nstars
+                _prob_det = 1.0*self.prob_det_mes(mes).sum() / self.nstars
 
             elif self.method.count('fulton-gamma'):
                 snr = self.snr(per, prad)
-                _prob_det = fulton_gamma(snr).sum() 
-                _prob_det/=self.nstars
+                _prob_det = fulton_gamma(snr).sum() / self.nstars
+
+            elif self.method.count('fulton-gamma-clip'):
+                snr = self.snr(per, prad)
+                _prob_det = fulton_gamma_clip(snr).sum() / self.nstars
         else:
             _prob_det = self.prob_det_interp(per, prad)
 
@@ -245,66 +274,10 @@ class Completeness(object):
         _prob_tr = srad * self.impact / a
         return _prob_tr.mean()
 
-    def compute_mes_factor(self, plnt_mes):
-        """
-        Using a simple SNR calculation, we tend to over estimate the MES
-        that the pipeline would have found.
-
-        Args:
-            plnt_mes (pd.DataFrame): Planets used to calibrate MES. Must have 
-                the fllowing keys:
-                - per
-                - prad
-                - id_kic
-                - id_koid
-             
-        """
-        plnt_mes = plnt_mes.copy()
-        self.plnt_mes = plnt_mes
-        self.plnt_mes['mes_pipeline'] = self.plnt_mes.mes
-        self._compute_mes_factor_loop(False)
-
-        logmes_pipeline = np.log10(self.plnt_mes.mes_pipeline)
-        logmes_formula = np.log10(self.plnt_mes.mes_formula)
-        logmes_diff_med = np.nanmedian(logmes_formula - logmes_pipeline)
-        logmes_diff_std = np.nanstd(logmes_formula - logmes_pipeline)
-        print "med(log(mes_formula/mes_pipeline)) {:.2f} (dex)".format(
-            logmes_diff_med
-        )
-        self.logmes_diff_std = logmes_diff_med
-        self.logmes_diff_med = logmes_diff_std 
-        self.mesfac = 10**(-1.0 * logmes_diff_med)
-        self._compute_mes_factor_loop(True)
- 
-    def _compute_mes_factor_loop(self, scaled):
-        i = 0
-        for id_koicand, row in self.plnt_mes.iterrows():
-            try:
-                if scaled:
-                    fmes = self.mes_scaled
-                    key = 'mes_formula_scaled' 
-                else:
-                    fmes = self.mes
-                    key = 'mes_formula' 
-
-                mes_formula = fmes(row.per,row.prad).ix[row.id_kic]
-                mes_pipeline = row.mes
-                self.plnt_mes.ix[id_koicand,key] = mes_formula
-
-                if i< 20:
-                    s =  "{} {:.2f} {:.2f}".format(
-                        id_koicand, mes_pipeline, mes_formula
-                    )
-                    print s
-            except KeyError:
-                pass
-        
-            i+=1
-
     def compute_grid_prob_det(self,verbose=0):
         """Compute a grid of detection probabilities"""
 
-        print "Compute a grid of detection probabilities"
+        print "Computing grid of detection probabilities"
         def rowfunc(row):
             return self.prob_det(row.perc, row.pradc)
 
@@ -318,7 +291,7 @@ class Completeness(object):
     def compute_grid_prob_tr(self,verbose=0):
         """Compute a grid of transit probabilities"""
 
-        print "Compute a grid of transit probabilities"
+        print "Computing  grid of transit probabilities"
         def rowfunc(row):
             return self.prob_tr(row.perc)
 
@@ -379,5 +352,7 @@ def fulton_gamma(snr):
     theta = 0.49
     return gamma.cdf(snr, k, l, theta)
 
+def fulton_gamma_clip(snr):
+    return fulton_gamma(snr) * (snr > 10)
 
 
