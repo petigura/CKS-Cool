@@ -7,6 +7,7 @@ class Workflow(object):
         self.plot = OrderedDict()
         self.table = OrderedDict()
         self.val = OrderedDict()
+        self.csv = OrderedDict()
         self.build_dir = "./build"
         self.paper_dir = "./paper"
 
@@ -15,6 +16,7 @@ class Workflow(object):
         d['plot'] = self.plot
         d['table'] = self.table
         d['val'] = self.val
+        d['csv'] = self.csv
         return d
         
     def key2fn(self, key, kind):
@@ -22,6 +24,8 @@ class Workflow(object):
             fn = 'fig_'+key+'.pdf'
         elif kind=='table':
             fn = 'tab_'+key+'.tex'
+        elif kind=='csv':
+            fn = 'tab_'+key+'.csv'
         elif kind=='val':
             fn = 'val_'+key+'.tex'
             
@@ -54,6 +58,19 @@ class Workflow(object):
                     
                 # Remove last \\
                 fn = self.key2fn(key, 'table')
+                with open(fn,'w') as f:
+                    f.writelines("\n".join(lines))
+
+            elif kind=='csv':
+                if name=='all':
+                    lines = func()
+                elif key.count(name)==1:
+                    lines = func()
+                else:
+                    continue
+                    
+                # Remove last \\
+                fn = self.key2fn(key, 'csv')
                 with open(fn,'w') as f:
                     f.writelines("\n".join(lines))
 

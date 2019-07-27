@@ -194,10 +194,6 @@ def create_workflow():
     w.plot['planet-per-prad-smass-mi-zoom'] = lambda : ckscool.plot.planet.fig_per_prad(query='0.75 < giso_smass < 0.95',**kw)
     w.plot['planet-per-prad-smass-hi-zoom'] = lambda : ckscool.plot.planet.fig_per_prad(query='0.95 < giso_smass',**kw)
 
-
-
-
-
     w.plot['planet-smass-prad'] = ckscool.plot.planet.fig_smass_prad
     w.plot['planet-smass-prad-nopoints'] = lambda : ckscool.plot.planet.fig_smass_prad(nopoints=True)
     w.plot['planet-smass-prad-nopoints-zoom'] = lambda : ckscool.plot.planet.fig_smass_prad(nopoints=True,zoom=True)
@@ -220,12 +216,23 @@ def create_workflow():
     w.plot['planet-smet-prad-zoom'] = lambda : ckscool.plot.planet.fig_smet_prad(zoom=True)
 
     # table
-    f = ckscool.table.tab_star
-    w.table['star'] = f
-    w.table['star-stub'] = lambda: f()[:10] + f()[-10:]
+    f1 = ckscool.table.tab_star
+    w.table['star'] = f1
+    w.table['star-stub'] = lambda: f1()[:5] + f1()[-5:]
+
+    f2 = ckscool.table.tab_planet
+    w.table['planet'] = f2
+    w.table['planet-stub'] = lambda: f2()[:5] + f2()[-5:]
 
     # val
     w.val['stat'] = ckscool.value.val_stat
+
+    # planet
+    w.csv['star'] = ckscool.table.tab_star_csv
+    w.csv['planet'] = ckscool.table.tab_planet_csv
+    w.csv['planet-cuts2+iso'] = ckscool.table.tab_planet_full_csv
+    w.csv['field-cuts'] = ckscool.table.tab_field_full_csv
+
     return w
 
 if __name__=="__main__":
