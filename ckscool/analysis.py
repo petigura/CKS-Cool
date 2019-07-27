@@ -13,10 +13,13 @@ import cksmet.occur
 import cksmet.fit
 from matplotlib import pylab as plt
 
+from numpy import log10, logspace, arange, round
+
+
 # Some nice, convenient grids
 per_bins_dict = {
     # sqrt2 
-    'xfine': np.round(np.logspace(np.log10(0.1),np.log10(1000),33),4),
+    'xfine': np.round(logspace(log10(0.1),log10(1000),33),4),
     # sqrt2 
     'fine': [ 
         1.00, 1.41, 2.00,  2.83,  4.00, 5.66, 8.00,  
@@ -25,16 +28,16 @@ per_bins_dict = {
     'coarse': [ 
         1.00, 2.00,  4.00, 8.00,  
         16., 32.0, 64.0, 128., 256 ],
-    'four-per-decade': 10**np.arange(-0.5,3.001,0.25)    
+    'four-per-decade': 10**arange(-0.5,3.001,0.25)    
 }    
 
 # Neceassary to overshoot edge oc completeness zone so that spline
 # interpolation works so eventhough we only go up to 32 Re, we compute
 # completeness out to 64
 prad_bins_dict = {
-    'xfine': np.round(np.logspace(np.log10(0.25),np.log10(64),49 ),2),
-    'fine': np.round(np.logspace(np.log10(0.25),np.log10(64),25 ),2),
-    'two-per-octave': 2**np.arange(-2,6.001,0.5),
+    'xfine': np.round(logspace(log10(0.25),log10(64),49 ),2),
+    'fine': np.round(logspace(log10(0.25),log10(64),25 ),2),
+    'two-per-octave': 2**arange(-2,6.001,0.5),
     'physical': [1.0,1.7,4.0,8.0,24.0],
     'coarse': [ 
          0.5,  0.71, 1.00, 1.41, 2.0, 2.83, 4.00, 5.66, 8.0, 11.31, 16.0
@@ -162,7 +165,7 @@ def load_occur(key):
     def _per_bins(per):
         per = per.replace('per=','')
         per = float(per)
-        per_bins = 10**(np.arange(np.log10(1),np.log10(350)+eps,per))
+        per_bins = 10**(arange(log10(1),log10(350)+eps,per))
         return per_bins
 
     def _smet_bins(smet):
@@ -175,7 +178,7 @@ def load_occur(key):
             smet_bins=[0,0.5]
         else:
             smet = float(smet)
-            smet_bins = np.arange(-0.4,0.4+eps,smet)
+            smet_bins = arange(-0.4,0.4+eps,smet)
         return smet_bins
 
     # Same as above but with indexes for the period grid (hot, warm)
