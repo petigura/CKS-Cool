@@ -104,9 +104,9 @@ gdir_prad_err2
 giso_sma            Semi-major axis [AU], incorporates giso_smass
 giso_sma_err1
 giso_sma_err2
-giso_insol          Incident flux [Earth units]
-giso_insol_err1
-giso_insol_err2
+giso_sinc          Incident flux [Earth units]
+giso_sinc_err1
+giso_sinc_err2
 giso_teq            Planet equilibrium temperature (bond albedo = 0.3)
 giso_teq_err1
 giso_teq_err2
