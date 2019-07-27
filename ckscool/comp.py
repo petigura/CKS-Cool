@@ -21,8 +21,8 @@ __STARS_REQUIRED_COLUMNS__ = (
 
 class Completeness(object):
     """
-    Class for that can compute completeness using the noise properties
-    of a representive ensemble of stars.  
+    Class that compute completeness using the noise properties of a
+    representive ensemble of stars.
     """
 
     def __init__(self, stars, grid, method, impact):
