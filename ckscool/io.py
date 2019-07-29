@@ -154,15 +154,15 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
 
     elif table=='field-cuts':
         df = load_table('m17+ber18+gaia2+cdpp',cache=1)
-        cuttypes = ['none','faint','giant','rizzuto']
+        cuttypes = ['none','faint','giant','ruwe','diluted']
         df = ckscool.cuts.occur.add_cuts(df, cuttypes, 'field')
 
     elif table=='planets-cuts1':
-        star = load_table('m17+ber18+gaia2+cdpp')
+        star = load_table('m17+ber18+gaia2+cdpp',cache=1)
         plnt = load_table('koi-thompson18-dr25')
         df = pd.merge(star,plnt)
 
-        cuttypes = ['none','faint','giant','rizzuto','notreliable','lowsnr']
+        cuttypes = ['none','faint','giant','ruwe','diluted','notreliable','lowsnr',]
         df.sample = 'koi-thompson18'
         df = ckscool.cuts.occur.add_cuts(df, cuttypes, 'koi-thompson18')
 

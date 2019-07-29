@@ -52,12 +52,28 @@ class CutNone(CutBase):
 # Cuts applied to both parent stellar population and planets #
 ##############################################################
 
+class CutDiluted(CutBase):
+    cuttype = 'diluted'
+    plotstr = 'Not diluted'
+    texstr = 'Not diluted'
+    def cut(self):
+        b = (self.df['gaia2_gflux_ratio'] > 2) | (self.df['gaia2_kflux_ratio'] > 2)
+        return b
+
 class CutRizzuto(CutBase):
     cuttype = 'rizzuto'
     plotstr = 'No excess astrometric noise'
     texstr = plotstr
     def cut(self):
         b = self.df['gaia2_astrometric_excess_noise_sig'] > 10
+        return b
+
+class CutRUWE(CutBase):
+    cuttype = 'ruwe'
+    plotstr = 'RUWE < 2'
+    texstr = plotstr
+    def cut(self):
+        b = self.df['gaia2_ruwe'] > 2
         return b
 
 class CutGiant(CutBase):
