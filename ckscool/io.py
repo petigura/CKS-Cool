@@ -6,17 +6,18 @@ import numpy as np
 from astropy.io import ascii
 from scipy.io import idl
 
-import cpsutils.io
-import cksspec.io
-
 import ckscool.cuts.occur
 import ckscool.cuts.ckscool
 import ckscool.calc
-import ckscool.pdplus
 import ckscool.comp
 import ckscool._isoclassify
-
 from ckscool.pdplus import LittleEndian
+
+try:
+    import cpsutils.io
+except ImportError:
+    print "Could not import cpsutils.io"
+    print "load_table('kbc') will not work"
 
 # Pulled from Kepler data characteristics
 lc_per_quarter = {
@@ -40,10 +41,7 @@ lc_per_quarter = {
     17:1556,
 }
 long_cadence_day = 29.7 / 60.0 / 24.0 # long cadence measurement in days
-
-
 DATADIR = os.path.join(os.path.dirname(__file__),'../data/')
-CKSGAIA_CACHEFN = os.path.join(DATADIR,'cksgaia_cache.hdf')
 
 def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
     """Load tables used in cksmet
@@ -96,24 +94,20 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         tablefn = os.path.join(DATADIR, 'kepler_stellar17.csv.gz')
         df = pd.read_csv(tablefn,sep='|',dtype={'st_quarters':'str'})
         namemap = {
-            'kepid':'id_kic','kepmag':'kic_kepmag', 'teff': 'kic_steff',
-            'st_quarters':'st_quarters','mass':'kic_smass',
-            'st_radius':'kic_srad', 'jmag':'kic_jmag',
-            'jmag_err':'kic_jmag_err','hmag':'kic_hmag',
-            'hmag_err':'kic_hmag_err','kmag':'kic_kmag',
-            'kmag_err':'kic_kmag_err',
-            'degree_ra':'kic_ra', 'degree_dec':'kic_dec'
+            'kepid':'id_kic','kepmag':'m17_kepmag', 'teff': 'm17_steff',
+            'st_quarters':'st_quarters','mass':'m17_smass',
+            'st_radius':'m17_srad', 'jmag':'m17_jmag',
+            'jmag_err':'m17_jmag_err','hmag':'m17_hmag',
+            'hmag_err':'m17_hmag_err','kmag':'m17_kmag',
+            'kmag_err':'m17_kmag_err',
+            'degree_ra':'m17_ra', 'degree_dec':'m17_dec'
         }
         df = df.rename(columns=namemap)[namemap.values()]
-        namemap = {}
-        for col in list(df.columns):
-            if col[:3]=='kic':
-                namemap[col] = col.replace('kic','m17')
-        df = df.rename(columns=namemap)
 
     # Gaia DR2
     elif table=='gaia2':
-        fn = os.path.join('../CKS-Gaia/data/xmatch_m17_gaiadr2-result.csv')
+        #fn = os.path.join(DATADIR,'xmatch_m17_gaiadr2-result.csv')
+        fn = os.path.join(DATADIR,'xmatch_gaia2_m17_ruwe-result.csv')
         df = read_xmatch_gaia2(fn)
         # Systematic offset from Zinn et al. (2018)
         df['gaia2_sparallax'] += 0.053 
@@ -145,33 +139,29 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         lc = lc.reshape(1,17) 
         days = lc * long_cadence_day
         df['tobs'] = (observed * days).sum(axis=1)
-        
+
     elif table=='m17+ber18+gaia2+cdpp':
         # Needed fro kmag
-        #m17 = pd.rcuead_hdf(CKSGAIA_CACHEFN,'m17')
-        #import pdb;pdb.set_trace()
-        #m17 = m17.rename(columns={'m17_kepmag':'kic_kepmag'})
-        #m17 = load_table('ber18+gaia2',cache=1)
         m17 = load_table('m17',cache=1)
         cdpp = load_table('cdpp',cache=1)        
         ber18 = load_table('berger18',cache=1)
         gaia = load_table('gaia2',cache=1)
-        df = pd.merge(m17,ber18,on=['id_kic'])
-        df = pd.merge(df,gaia,on=['id_gaia2','id_kic'])
+        df,m = ckscool.io.xmatch_gaia2(m17,gaia)
+        df = pd.merge(df,ber18,on=['id_kic','id_gaia2'])
         df = pd.merge(df,cdpp)
-
 
     elif table=='field-cuts':
         df = load_table('m17+ber18+gaia2+cdpp',cache=1)
-        cuttypes = ['none','faint','giant','rizzuto']
+        cuttypes = ['none','faint','giant','rizutto']
+        #cuttypes = ['none','faint','giant','ruwe','diluted']
         df = ckscool.cuts.occur.add_cuts(df, cuttypes, 'field')
 
     elif table=='planets-cuts1':
-        star = load_table('m17+ber18+gaia2+cdpp')
+        star = load_table('m17+ber18+gaia2+cdpp',cache=1)
         plnt = load_table('koi-thompson18-dr25')
         df = pd.merge(star,plnt)
-
-        cuttypes = ['none','faint','giant','rizzuto','notreliable','lowsnr']
+        cuttypes = ['none','faint','giant','rizutto','notreliable','lowsnr']
+        #cuttypes = ['none','faint','giant','ruwe','diluted','notreliable','lowsnr']
         df.sample = 'koi-thompson18'
         df = ckscool.cuts.occur.add_cuts(df, cuttypes, 'koi-thompson18')
 
@@ -198,7 +188,6 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         iso['id_koi'] = iso.id_starname.str.slice(start=-5).astype(int)
         smsyn = pd.merge(star0,iso)
         smsyn.index = smsyn.id_koi
-
 
         df = []
         smemplimit = 4800
@@ -227,7 +216,6 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         #df['cks_svsini'] = df.cks_svsini.fillna(smsyn.cks_svsini)
         df = df.reset_index()
 
-
     # Stellar sample
     elif table=='planets+iso':
         #star = load_table('m17+ber18+gaia2+cdpp')
@@ -242,7 +230,9 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         df = pd.merge(df, rm, how='left', on='id_koi')
         idx = df.query('cks_sprov == "cks1"').index
         df.loc[idx,'rm_sb2'] = 1
-        k15 = pd.read_table('data/kolbl15/table9.tex',sep='&',skiprows=9,header=None,nrows=64)
+
+        fn = os.path.join(DATADIR,'kolbl15/table9.tex')
+        k15 = pd.read_table(fn,sep='&',skiprows=9,header=None,nrows=64)
         k15 = k15[[0]]
         k15 = k15.rename(columns={0:'id_koi'})
         k15['id_koi'] = k15.id_koi.str.replace('\t','').str.strip().replace('',None).astype(int)
@@ -290,10 +280,7 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         fn = os.path.join(DATADIR, 'reamatch.csv')
         df = pd.read_csv(fn,index_col=None, usecols=range(6))
         df['id_koi'] = df.name.str.slice(start=-5).astype(int)
-        namemap = {
-            'id_koi':'id_koi',
-            'is_sb2':'rm_sb2',
-        }
+        namemap = {'id_koi':'id_koi','is_sb2':'rm_sb2'}
         df = df.rename(columns=namemap)[namemap.values()]
 
     # Spectroscopic parameters
@@ -320,9 +307,7 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         df['id_koi'] = df.name.str.slice(start=-5).astype(int)
         df = df['obs name id_koi'.split()]
         namemap = {'obs':'id_obs','name':'id_name'}
-
         df = df.rename(columns=namemap)
-
 
     elif table=='nrm-previous':
         # File is from an email that Adam sent me in 2017-11-02
@@ -498,12 +483,6 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         df = df['id_koi steff'.split()]
         df = add_prefix(df,'b18_')
 
-    # CKS-VII
-    elif table=='cksgaia-planets-filtered':
-        df = pd.read_hdf(CKSGAIA_CACHEFN,'cksgaia-planets-filtered')
-    elif table=='cksgaia-planets':
-        df = pd.read_hdf(CKSGAIA_CACHEFN,'cksgaia-planets')
-
     else:
         assert False, "table {} not valid table name".format(table)
     return df
@@ -658,7 +637,6 @@ def load_iso_batch_table(mode='isoclassify'):
     idxsmemp = sme.query('cks_steff < 4700').index
     idxsmsyn = sme.query('cks_steff > 4700').index
 
-
     star.fillna(value=sme.loc[idxsmemp],inplace=True) # Cool plnts fill in with emp
     star.fillna(value=cks1,inplace=True) # Stars that are in CKS-I fill, also take vsini for everythinh
     star.fillna(value=sms.loc[idxsmsyn],inplace=True) #
@@ -667,8 +645,6 @@ def load_iso_batch_table(mode='isoclassify'):
     star = star.sort_values(by='id_koi')
 
     return plntc
-
-
 
 def add_prefix(df,prefix,ignore=['id']):
     namemap = {}
@@ -736,6 +712,7 @@ def read_xmatch_gaia2(fn):
         'astrometric_excess_noise_sig':'astrometric_excess_noise_sig',
         'id_kic':'id_kic',
         'dist':'angdist',
+        'ruwe':'ruwe',
     }
     
     df['steff'] = df['teff_val']
@@ -752,51 +729,97 @@ def read_xmatch_gaia2(fn):
     return df
 
 
-def xmatch_gaia2(df, gaia, key, gaiadr):
+def xmatch_gaia2(df, gaia):
     """
     Crossmatch the sources in Gaia 2
 
     Args:
         df (pandas.DataFrame): Target catalog 
         gaia (pandas.DataFrame): Gaia DR2 table
-        key (str): key to join on
-        gaiadr (str): {'gaiadr1','gaiadr2'}
     """
 
-    id_gaia = 'id_{}'.format(gaiadr)
     assert len(df.id_kic)==len(df.id_kic.drop_duplicates()), "No duplicate stars"
-    gaia[id_gaia]= gaia[id_gaia].astype(str)  # handle nans
+    gaia['id_gaia2'] = gaia['id_gaia2'].astype(str)
+
+    # Estimate Kmag and kmag flux from gaia
+    p = [1.7,0]
+    bp_rp = gaia.eval('gaia2_bpmag-gaia2_rpmag')
+    g_k = np.polyval(p,bp_rp)
+    gaia['gaia2_kmag'] = gaia['gaia2_gmag'] - g_k
+    gaia['gaia2_kflux'] = 2e10*10**(-0.4*gaia.eval('gaia2_kmag'))
 
     # just want the stars
-    m = pd.merge(df,gaia,on=key,how='left')
-    m[id_gaia]= m[id_gaia].fillna('-99')
-    m[id_gaia]= m[id_gaia].astype(np.int64)
+    m = pd.merge(df,gaia,on='id_kic',how='left')
+    m['id_gaia2']= m['id_gaia2'].fillna('-99').astype(np.int64)
     ndf = len(df)
-    print "max(gaia_angdist) = {} (arcsec)".format(m[gaiadr+'_angdist'].max())
+    print "max(gaia_angdist) = {} (arcsec)".format(m['gaia2_angdist'].max())
     print "{} gaia sources within 8 arcsec of {} target sources".format(
         len(m),ndf
     )
 
+
     # count the number of stars within 8 arcsec
-    #m.index = m.id_kic
+    m = m.set_index('id_kic')
     g = m.groupby('id_kic')
-    m[gaiadr+'_gflux_sum'] = g[gaiadr+'_gflux'].sum()
-    m['absdiff_gmag_kepmag'] = np.abs(m['gaia2_gmag'] - m['kic_kepmag'])
+    m['gaia2_gflux_sum'] = g['gaia2_gflux'].sum()
+    m['gaia2_kflux_sum'] = g['gaia2_kflux'].sum()
+    m['gaia2_absdiff_gkep'] = np.abs(m['gaia2_gmag'] - m['m17_kepmag'])
     m['gaia2_n_8arcsec'] = g.size()
+    m = m.reset_index()
 
     # Match candidate
-    mbest = m.query('gaia2_angdist < 1 and abs(kic_kepmag - gaia2_gmag) < 0.5') # within 1 arcsec
+    mbest = m.query('gaia2_angdist < 0.5 and -0.1 < m17_kepmag - gaia2_gmag < 0.15')
     mbest['gaia2_n_1arcsec'] = mbest.groupby('id_kic').size()
 
     print "{} gaia sources within 1 arcsec of {} target sources".format(
         len(mbest),mbest.id_kic.drop_duplicates().count()
     )
 
-    mbest = mbest.sort_values(by=['id_kic','absdiff_gmag_kepmag'])
+    mbest = mbest.sort_values(by=['id_kic','gaia2_absdiff_gkep'])
     g = mbest.groupby('id_kic',as_index=False)
     mbest['gaia2_n_1arcsec'] = g.size()
     mbest = g.nth(0) 
     mbest['gaia2_gflux_ratio'] = mbest.eval('gaia2_gflux_sum / gaia2_gflux')
+    mbest['gaia2_kflux_ratio'] = mbest.eval('gaia2_kflux_sum / gaia2_kflux')
     return mbest, m 
 
+import ckscool.occur
+
+def load_occur(key, cache=1):
+    bits = key.split('_')
+    for bit in bits:
+        if bit.count('smass'):
+            smass1, smass2 = bit.replace('smass=','').split('-')
+            smass1 = float(smass1)
+            smass2 = float(smass2)
+
+    pklfn = os.path.join(DATADIR,key+'.pkl')
+    if cache==1:
+        with open(pklfn,'r') as f:
+            occ = pickle.load(f)
+            return occ
+
+    elif cache==2:
+        occ = ckscool.occur.load_occur(smass1,smass2)
+        occ.comp.__delattr__('stars')
+        with open(pklfn,'w') as f:
+            pickle.dump(occ,f)
+            
+    return occ
+
+def load_contour_plotter(key, cache=2):
+    occurkey = key.replace('cp','occur')
+    occ = ckscool.io.load_occur(occurkey,cache=1)
+    pklfn = os.path.join(DATADIR,key+'.pkl')
+    if cache==1:
+        with open(pklfn,'r') as f:
+            occ = pickle.load(f)
+            return occ
+
+    elif cache==2:
+        cp = ckscool.plot.occur.load_contour_plotter(occ)
+        with open(pklfn,'w') as f:
+            pickle.dump(cp,f)
+            
+    return cp
 
