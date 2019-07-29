@@ -6,17 +6,18 @@ import numpy as np
 from astropy.io import ascii
 from scipy.io import idl
 
-import cpsutils.io
-import cksspec.io
-
 import ckscool.cuts.occur
 import ckscool.cuts.ckscool
 import ckscool.calc
-import ckscool.pdplus
 import ckscool.comp
 import ckscool._isoclassify
-
 from ckscool.pdplus import LittleEndian
+
+try:
+    import cpsutils.io
+except ImportError:
+    print "Could not import cpsutils.io"
+    print "load_table('kbc') will not work"
 
 # Pulled from Kepler data characteristics
 lc_per_quarter = {
@@ -40,10 +41,7 @@ lc_per_quarter = {
     17:1556,
 }
 long_cadence_day = 29.7 / 60.0 / 24.0 # long cadence measurement in days
-
-
 DATADIR = os.path.join(os.path.dirname(__file__),'../data/')
-CKSGAIA_CACHEFN = os.path.join(DATADIR,'cksgaia_cache.hdf')
 
 def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
     """Load tables used in cksmet
@@ -154,15 +152,16 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
 
     elif table=='field-cuts':
         df = load_table('m17+ber18+gaia2+cdpp',cache=1)
-        cuttypes = ['none','faint','giant','ruwe','diluted']
+        cuttypes = ['none','faint','giant','rizutto']
+        #cuttypes = ['none','faint','giant','ruwe','diluted']
         df = ckscool.cuts.occur.add_cuts(df, cuttypes, 'field')
 
     elif table=='planets-cuts1':
         star = load_table('m17+ber18+gaia2+cdpp',cache=1)
         plnt = load_table('koi-thompson18-dr25')
         df = pd.merge(star,plnt)
-
-        cuttypes = ['none','faint','giant','ruwe','diluted','notreliable','lowsnr',]
+        cuttypes = ['none','faint','giant','rizutto','notreliable','lowsnr']
+        #cuttypes = ['none','faint','giant','ruwe','diluted','notreliable','lowsnr']
         df.sample = 'koi-thompson18'
         df = ckscool.cuts.occur.add_cuts(df, cuttypes, 'koi-thompson18')
 
@@ -189,7 +188,6 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         iso['id_koi'] = iso.id_starname.str.slice(start=-5).astype(int)
         smsyn = pd.merge(star0,iso)
         smsyn.index = smsyn.id_koi
-
 
         df = []
         smemplimit = 4800
@@ -218,7 +216,6 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         #df['cks_svsini'] = df.cks_svsini.fillna(smsyn.cks_svsini)
         df = df.reset_index()
 
-
     # Stellar sample
     elif table=='planets+iso':
         #star = load_table('m17+ber18+gaia2+cdpp')
@@ -233,7 +230,9 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         df = pd.merge(df, rm, how='left', on='id_koi')
         idx = df.query('cks_sprov == "cks1"').index
         df.loc[idx,'rm_sb2'] = 1
-        k15 = pd.read_table('data/kolbl15/table9.tex',sep='&',skiprows=9,header=None,nrows=64)
+
+        fn = os.path.join(DATADIR,'kolbl15/table9.tex')
+        k15 = pd.read_table(fn,sep='&',skiprows=9,header=None,nrows=64)
         k15 = k15[[0]]
         k15 = k15.rename(columns={0:'id_koi'})
         k15['id_koi'] = k15.id_koi.str.replace('\t','').str.strip().replace('',None).astype(int)
@@ -281,10 +280,7 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         fn = os.path.join(DATADIR, 'reamatch.csv')
         df = pd.read_csv(fn,index_col=None, usecols=range(6))
         df['id_koi'] = df.name.str.slice(start=-5).astype(int)
-        namemap = {
-            'id_koi':'id_koi',
-            'is_sb2':'rm_sb2',
-        }
+        namemap = {'id_koi':'id_koi','is_sb2':'rm_sb2'}
         df = df.rename(columns=namemap)[namemap.values()]
 
     # Spectroscopic parameters
@@ -311,9 +307,7 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         df['id_koi'] = df.name.str.slice(start=-5).astype(int)
         df = df['obs name id_koi'.split()]
         namemap = {'obs':'id_obs','name':'id_name'}
-
         df = df.rename(columns=namemap)
-
 
     elif table=='nrm-previous':
         # File is from an email that Adam sent me in 2017-11-02
@@ -488,12 +482,6 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         df['steff'] = df['Teff']
         df = df['id_koi steff'.split()]
         df = add_prefix(df,'b18_')
-
-    # CKS-VII
-    elif table=='cksgaia-planets-filtered':
-        df = pd.read_hdf(CKSGAIA_CACHEFN,'cksgaia-planets-filtered')
-    elif table=='cksgaia-planets':
-        df = pd.read_hdf(CKSGAIA_CACHEFN,'cksgaia-planets')
 
     else:
         assert False, "table {} not valid table name".format(table)
