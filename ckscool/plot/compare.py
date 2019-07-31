@@ -4,22 +4,32 @@ from matplotlib.pylab import *
 import seaborn as sns
 import pandas as pd
 from astropy import constants as c
-from ckscool.plot.config import *
 import ckscool.io
 
 sns.set_style('ticks')
 sns.set_color_codes()
 
-from matplotlib.pylab import *
-import seaborn as sns
-import pandas as pd
 from astropy.io import ascii 
 import seaborn as sns
-import cksspec.io
+from ckscool.plot.config import *
 
 from matplotlib.ticker import MaxNLocator
 from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
-from cksspec.plotting import texdict
+
+texdict = {
+    'steff':'$\mathregular{T}_\mathregular{eff}$',
+    'slogg':'$\log g$',
+    'smet':'[Fe/H]',
+    'svsini':'$V \sin i$',
+    'sx-raw':'$\mathregular{{SX}}_\mathregular{{raw}}$'
+}
+
+texudict = {
+    'steff':'$\mathregular{T}_\mathregular{eff}$ (K)',
+    'slogg':'$\log g$ (dex)',
+    'smet':'[Fe/H] (dex)',
+    'svsini':'$V \sin i$ (km/s)'
+}
 
 errorbar_kw = dict(fmt='.',markersize=6,color='b')
 

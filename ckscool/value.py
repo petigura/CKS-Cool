@@ -1,11 +1,11 @@
 from collections import OrderedDict
 
 import ckscool.io
-import ckscool.observe
 import ckscool.cuts
 import numpy as np
 from time import gmtime, strftime
 import pandas as pd
+
 def val_stat(return_dict=False):
     """
     Statistics of sample
@@ -50,11 +50,8 @@ def val_stat(return_dict=False):
     d['n-star-pass1-lt4700'] = len(m.query('ber18_steff < 4700'))
     
     df[df[["is"+c for c in cuttypes1]].sum(axis=1)==0]
- 
-
     d['sparallax-med'] = "{:.1f}".format(star.eval('gaia2_sparallax').median())
     d['sparallax-ferr-med'] = "{:.1f}".format(star.eval('gaia2_sparallax_err / gaia2_sparallax').median() * 100)
-
     d['sdistance-med'] = "{:.0f}".format(star.eval('1000 / gaia2_sparallax').median())
 
     d['kmag-med'] = "{:.2f}".format(star.m17_kmag.median())
@@ -63,7 +60,6 @@ def val_stat(return_dict=False):
     d['kepmag-err-med'] = "{:.1f}".format(star.m17_kepmag.median())
     
     av_to_ak = (0.161+0.063)/(2.9197679+0.063) # extinction law
-
 
     df = ckscool.io.load_table('planets+iso',cache=1)
     d['av-med'] = "{:.03f}".format(df.gdir_avs.median())

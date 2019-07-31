@@ -13,7 +13,6 @@ TDUR_EARTH_SUN_HRS = (
     ((4 * c.R_sun**3 * 1.0*u.yr / np.pi / c.G / (1.0*c.M_sun))**(1.0/3.0)).to(u.hr)).value
 DEPTH_EARTH_SUN = ((c.R_earth / c.R_sun)**2).cgs.value
 
-
 __STARS_REQUIRED_COLUMNS__ = (
     "logcdpp3 logcdpp6 logcdpp12 tobs smass srad".split()
 )
@@ -253,11 +252,11 @@ class Completeness(object):
                 mes = self.mes_scaled(per, prad)
                 _prob_det = 1.0*self.prob_det_mes(mes).sum() / self.nstars
 
-            elif self.method.count('fulton-gamma'):
+            elif self.method=='fulton-gamma':
                 snr = self.snr(per, prad)
                 _prob_det = fulton_gamma(snr).sum() / self.nstars
 
-            elif self.method.count('fulton-gamma-clip'):
+            elif self.method=='fulton-gamma-clip':
                 snr = self.snr(per, prad)
                 _prob_det = fulton_gamma_clip(snr).sum() / self.nstars
         else:

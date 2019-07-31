@@ -34,6 +34,10 @@ Repo for the CKS-Cool project includes code to
 - Compute stellar/planet parameters
 - Access the CKS-Cool dataset
 
+## Cross-match the CKS stars with Gaia IDs.
+
+Follow instructions [here](docs/gaia-xmatch.md)
+
 ## Compute Stellar/Planetary Properties
 
 1. Download smemp and smsyn catalogs to `data/`

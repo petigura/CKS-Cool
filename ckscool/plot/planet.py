@@ -110,18 +110,16 @@ class ContourPlotter(object):
     def plot_points(self):
         errorbar(self.x,self.y,yerr=self.yerr,fmt='.',elinewidth=0.5,ms=4)
 
-
-
-
 def fig_per_prad(**kwargs):
-    sns.set_context('paper')
+    sns.set_context('paper',font_scale=1.1)
     fig, axL = subplots(figsize=(5,4))
     df = ckscool.io.load_table('planets-cuts2+iso',cache=2)
     df = df[~df.isany]
     _per_prad(df, **kwargs)
 
-def _per_prad(df,nopoints=False,zoom=False,query="",yerrfac=1,xerrfac=1):
-    df = df.query(query)
+def _per_prad(df,nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1):
+    if query is not None:
+        df = df.query(query)
     print len(df)
     xk = 'koi_period'
     yk = 'gdir_prad'
@@ -325,14 +323,14 @@ def fig_smass_prad(nopoints=False,zoom=False, boost=True):
 
 
 def fig_smet_prad(nopoints=False,zoom=False):
+    sns.set_context('paper',font_scale=1.1)
     fig, axL = subplots(figsize=(5,4))
-    xk = 'sm_smet'
+    xk = 'cks_smet'
     yk = 'gdir_prad'
     yerrk = 'gdir_prad_err1'
-    df = ckscool.io.load_table('ckscool-planets-cuts',cache=1)
+    df = ckscool.io.load_table('planets-cuts2+iso',cache=1)
     df = df[~df.isany]
     df = df.dropna(subset=[xk,yk,yerrk])
-    sns.set_context('talk')
     
     x = df[xk] 
     y = df[yk]
@@ -342,7 +340,7 @@ def fig_smet_prad(nopoints=False,zoom=False):
     p1 = ContourPlotter(x, xerr, y, yerr, xscale='lin', yscale='log')
     if zoom:
         p1.xmin = -0.4
-        p1.xmax = 0.3
+        p1.xmax = 0.5
         p1.ymin = 1
         p1.ymax = 4
     else:
@@ -370,7 +368,7 @@ def fig_smet_prad(nopoints=False,zoom=False):
         p1.xlim(-0.5,0.5)
         p1.ylim(1,4)
 
-    tight_layout()
+    #tight_layout()
 
 
 def add_anchored(*args,**kwargs):
