@@ -4,15 +4,20 @@
 
 ### Mathur17
 
-1. Generate VOTables and upload to Gaia Archive
-2. Log into Gaia archive as `epetigur`
-3. Perform the following joins that query all gaia sources within 8 arcsec of each CKS source, or stellar17 source.
-4. Give the job a sensible name like `xmatch_cks_gaiadr2`
-5. Run the query
-6. Download results as a votable
-7. Move into data
+1. Save following keys to a csv file
+   id_kic
+   id_tmass
+   ra
+   dec
 
-Same as CKS, but with this query
+2. Log into Gaia archive as `epetigur`
+
+
+
+3. Perform the cross match following joins that query all gaia sources within 8
+   arcsec of each CKS source, or stellar17 source.
+
+Merge based on distance
 
 ```
 SELECT *,distance(
@@ -27,11 +32,13 @@ WHERE 1=CONTAINS(
 )
 ```
 
+Merge based on gaia-tmass-kic crossmatch
+
 Run with top 1000 to verify that it works 
 
 Should take about 3min to run 
 
-
+```
 SELECT TOP 10
 m17.id_kic as id_kic,
 m17.id_tmass as id_tmass,
@@ -62,6 +69,7 @@ ruwe.ruwe as gaia2_ruwe,
 xmatch.number_of_neighbours as xm_number_of_neighbours,
 xmatch.number_of_mates as xm_number_of_mates,
 xmatch.best_neighbour_multiplicity as xm_best_neighbour_multiplicity
+xmatch.best_neighbour_multiplicity as xm_best_neighbour_multiplicity
 FROM gaiadr2.gaia_source AS gaia
 INNER JOIN gaiadr2.ruwe AS ruwe 
 ON gaia.source_id = ruwe.source_id
@@ -71,6 +79,15 @@ INNER JOIN gaiadr1.tmass_original_valid AS tmass
 ON tmass.tmass_oid = xmatch.tmass_oid
 INNER JOIN user_epetigur.m17_tmass as m17
 ON tmass.designation=m17.id_tmass
+INNER JOIN external.gaiadr2_geometric_distance as bj
+ON gaia.source_id = bj.source_id
+```
+
+4. Give the job a sensible name like `xmatch_cks_gaiadr2`
+5. Run the query
+6. Download results as votable (because they zip it server side)
+7. Move into data
+
 
 
 

@@ -13,9 +13,11 @@ import ckscool.comp
 import ckscool._isoclassify
 from ckscool.pdplus import LittleEndian
 import ckscool.gaia 
+from astropy.table import Table
 
 try:
     import cpsutils.io
+    import cpsutils.kbc
 except ImportError:
     print "Could not import cpsutils.io"
     print "load_table('kbc') will not work"
@@ -108,8 +110,9 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
     # Gaia DR2
     elif table=='gaia2':
         #fn = os.path.join(DATADIR,'xmatch_m17_gaiadr2-result.csv')
-        fn = os.path.join(DATADIR,'xmatch_gaia2_m17_ruwe-result.csv')
-        df = read_xmatch_gaia2(fn)
+        fn = os.path.join(DATADIR,'xmatch_gaia2_m17_ruwe_tmass-result.vot.gz')
+        tab = Table.read(fn,format='votable')
+        df = tab.to_pandas()
         # Systematic offset from Zinn et al. (2018)
         df['gaia2_sparallax'] += 0.053 
 
@@ -141,28 +144,29 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         days = lc * long_cadence_day
         df['tobs'] = (observed * days).sum(axis=1)
 
-    elif table=='m17+ber18+gaia2+cdpp':
+    elif table=='m17+gaia2+cdpp':
         # Needed fro kmag
         m17 = load_table('m17',cache=1)
         cdpp = load_table('cdpp',cache=1)        
-        ber18 = load_table('berger18',cache=1)
+        #ber18 = load_table('berger18',cache=1)
         gaia = load_table('gaia2',cache=1)
-        df,m = ckscool.gaia.xmatch_gaia2(m17,gaia)
-        df = pd.merge(df,ber18,on=['id_kic','id_gaia2'])
-        df = pd.merge(df,cdpp)
+        #df,m = ckscool.gaia.xmatch_gaia2(m17,gaia)
+        #df = pd.merge(df,ber18,on=['id_kic','id_gaia2'])
+        df = pd.merge(m17,cdpp)
+        df = pd.merge(df,gaia)
 
     elif table=='field-cuts':
-        df = load_table('m17+ber18+gaia2+cdpp',cache=1)
-        #cuttypes = ['none','faint','giant','rizzuto']
-        cuttypes = ['none','faint','giant','ruwe','diluted']
+        df = load_table('m17+gaia2+cdpp',cache=1)
+        cuttypes = ['none','faint','giant','rizzuto']
+        #cuttypes = ['none','faint','giant','ruwe']
         df = ckscool.cuts.occur.add_cuts(df, cuttypes, 'field')
 
     elif table=='planets-cuts1':
-        star = load_table('m17+ber18+gaia2+cdpp',cache=1)
+        star = load_table('m17+gaia2+cdpp',cache=1)
         plnt = load_table('koi-thompson18-dr25')
         df = pd.merge(star,plnt)
-        #cuttypes = ['none','faint','giant','rizzuto','notreliable','lowsnr']
-        cuttypes = ['none','faint','giant','ruwe','diluted','notreliable','lowsnr']
+        cuttypes = ['none','faint','giant','rizzuto','notreliable','lowsnr']
+        #cuttypes = ['none','faint','giant','ruwe','notreliable','lowsnr']
         df.sample = 'koi-thompson18'
         df = ckscool.cuts.occur.add_cuts(df, cuttypes, 'koi-thompson18')
 
@@ -219,7 +223,7 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
 
     # Stellar sample
     elif table=='planets+iso':
-        #star = load_table('m17+ber18+gaia2+cdpp')
+        #star = load_table('m17+gaia2+cdpp')
         plnt = load_table('koi-thompson18-dr25')
         iso = load_table('iso',cache=1)
         df = pd.merge(plnt, iso, how='left',on=['id_koi','id_kic'])
@@ -239,11 +243,12 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         k15['id_koi'] = k15.id_koi.str.replace('\t','').str.strip().replace('',None).astype(int)
         k15 = k15.drop_duplicates()
         temp = pd.merge(k15,df[['id_koi']]).drop_duplicates()
-        df.index = df.id_koi
+        df = df.set_index('id_koi')
         for id_koi in temp.id_koi:
             df.loc[id_koi,'rm_sb2'] = 5
 
         # Add in Furlan parameters
+        df = df.reset_index()
         f17 = load_table('fur17')
         df = pd.merge(df, f17, how='left',on=['id_kic','id_koi'])
 
