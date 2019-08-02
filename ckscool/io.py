@@ -46,9 +46,8 @@ lc_per_quarter = {
 long_cadence_day = 29.7 / 60.0 / 24.0 # long cadence measurement in days
 DATADIR = os.path.join(os.path.dirname(__file__),'../data/')
 cachedir = 'cache/gaia-kic-tmass/'
-cachefn = os.path.join(cachedir,'load_table_cache.hdf')
 
-def load_table(table, cache=0, verbose=False):
+def load_table(table, cache=0, verbose=False, cachefn=None):
     """Load tables used in ckscool
 
     Args:
@@ -65,6 +64,8 @@ def load_table(table, cache=0, verbose=False):
         pandas.DataFrame: table
 
     """
+    if cachefn is None:
+        cachefn = os.path.join(cachedir,'load_table_cache.hdf')
 
     if cache==1:
         try:
@@ -147,25 +148,28 @@ def load_table(table, cache=0, verbose=False):
         days = lc * long_cadence_day
         df['tobs'] = (observed * days).sum(axis=1)
 
-    elif table=='m17+gaia2+cdpp':
+    elif table=='m17+cdpp+gaia2+ber18':
         # Needed fro kmag
         m17 = load_table('m17',cache=1)
-        cdpp = load_table('cdpp',cache=1)        
-        #ber18 = load_table('berger18',cache=1)
+
+        # Store to separate cache to prevent long reload times
+        cachefn = os.path.join(DATADIR,'cdpp.hdf') 
+        cdpp = load_table('cdpp',cache=1, cachefn=cachefn)        
+        ber18 = load_table('berger18',cache=1)
         gaia = load_table('gaia2',cache=1)
         #df,m = ckscool.gaia.xmatch_gaia2(m17,gaia)
-        #df = pd.merge(df,ber18,on=['id_kic','id_gaia2'])
         df = pd.merge(m17,cdpp)
         df = pd.merge(df,gaia)
+        df = pd.merge(df,ber18,on=['id_kic','id_gaia2'],how='left')
 
     elif table=='field-cuts':
-        df = load_table('m17+gaia2+cdpp',cache=1)
+        df = load_table('m17+cdpp+gaia2+ber18',cache=1)
         cuttypes = ['none','faint','giant','rizzuto']
         #cuttypes = ['none','faint','giant','ruwe']
         df = ckscool.cuts.occur.add_cuts(df, cuttypes, 'field')
 
     elif table=='planets-cuts1':
-        star = load_table('m17+gaia2+cdpp',cache=1)
+        star = load_table('m17+cdpp+gaia2+ber18',cache=1)
         plnt = load_table('koi-thompson18-dr25')
         df = pd.merge(star,plnt)
         cuttypes = ['none','faint','giant','rizzuto','notreliable','lowsnr']
@@ -226,7 +230,7 @@ def load_table(table, cache=0, verbose=False):
 
     # Stellar sample
     elif table=='planets+iso':
-        #star = load_table('m17+gaia2+cdpp')
+        #star = load_table('m17+cdpp+gaia2+ber18')
         plnt = load_table('koi-thompson18-dr25')
         iso = load_table('iso',cache=1)
         df = pd.merge(plnt, iso, how='left',on=['id_koi','id_kic'])
@@ -703,11 +707,17 @@ import ckscool.occur
 
 def load_occur(key, cache=1):
     bits = key.split('_')
+    limits = {}
     for bit in bits:
         if bit.count('smass'):
             smass1, smass2 = bit.replace('smass=','').split('-')
-            smass1 = float(smass1)
-            smass2 = float(smass2)
+            limits['smass1'] = float(smass1)
+            limits['smass2'] = float(smass2)
+
+        if bit.count('bmr'):
+            bmr1, bmr2 = bit.replace('bmr=','').split('-')
+            limits['bmr1'] = float(bmr1)
+            limits['bmr2'] = float(bmr2)
 
     pklfn = os.path.join(cachedir,key+'.pkl')
     if cache==1:
@@ -716,7 +726,7 @@ def load_occur(key, cache=1):
             return occ
 
     elif cache==2:
-        occ = ckscool.occur.load_occur(smass1,smass2)
+        occ = ckscool.occur.load_occur(limits)
         occ.comp.__delattr__('stars')
         with open(pklfn,'w') as f:
             pickle.dump(occ,f)

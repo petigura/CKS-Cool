@@ -56,7 +56,7 @@ class Occurrence(object):
         out = dict(out,**rate)
         return out
 
-def load_occur(smass1,smass2):
+def load_occur(limits):
     """
     Constructs occurrence object
     """
@@ -68,7 +68,27 @@ def load_occur(smass1,smass2):
     field = ckscool.io.load_table('field-cuts',cache=1)
     field = field[~field.isany]
     field = field.rename(columns={'ber18_srad':'srad','m17_smass':'smass'})
-    field = field[field.smass.between(smass1,smass2)]
+
+    plnt = ckscool.io.load_table('planets-cuts2+iso')
+    plnt = plnt[~plnt.isany]
+    namemap = {'gdir_prad':'prad','koi_period':'per','giso_smass':'smass'}
+    plnt = plnt.rename(columns=namemap)
+
+    if limits.has_key('smass1'):
+        smass1 = limits['smass1']  
+        smass2 = limits['smass2']
+        field = field[field.smass.between(smass1,smass2)]
+        plnt = plnt[plnt.smass.between(smass1,smass2)]
+
+    elif limits.has_key('bmr1'):
+        bmr1 = limits['bmr1']  
+        bmr2 = limits['bmr2']
+        xs = 'gaia2_bpmag - gaia2_rpmag'
+        field = field[field.eval(xs).between(bmr1,bmr2)]
+        plnt = plnt[plnt.eval(xs).between(bmr1,bmr2)]
+
+
+
     n1 = len(field)
     field = field.dropna(subset=ckscool.comp.__STARS_REQUIRED_COLUMNS__)
     n2 = len(field)
@@ -93,11 +113,6 @@ def load_occur(smass1,smass2):
     comp.compute_grid_prob_tr(verbose=True)
     comp.create_splines()
     
-    plnt = ckscool.io.load_table('planets-cuts2+iso')
-    plnt = plnt[~plnt.isany]
-    namemap = {'gdir_prad':'prad','koi_period':'per','giso_smass':'smass'}
-    plnt = plnt.rename(columns=namemap)
-    plnt = plnt[plnt.smass.between(smass1,smass2)]
     nstars = len(field)
     occ = ckscool.occur.Occurrence(plnt, comp, nstars)
     return occ
