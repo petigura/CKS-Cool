@@ -45,9 +45,11 @@ lc_per_quarter = {
 }
 long_cadence_day = 29.7 / 60.0 / 24.0 # long cadence measurement in days
 DATADIR = os.path.join(os.path.dirname(__file__),'../data/')
+cachedir = 'cache/gaia-kic-tmass/'
+cachefn = os.path.join(cachedir,'load_table_cache.hdf')
 
-def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
-    """Load tables used in cksmet
+def load_table(table, cache=0, verbose=False):
+    """Load tables used in ckscool
 
     Args:
         table (str): name of table. must be one of
@@ -63,6 +65,7 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         pandas.DataFrame: table
 
     """
+
     if cache==1:
         try:
             df = pd.read_hdf(cachefn,table, mode='a')
@@ -706,7 +709,7 @@ def load_occur(key, cache=1):
             smass1 = float(smass1)
             smass2 = float(smass2)
 
-    pklfn = os.path.join(DATADIR,key+'.pkl')
+    pklfn = os.path.join(cachedir,key+'.pkl')
     if cache==1:
         with open(pklfn,'r') as f:
             occ = pickle.load(f)

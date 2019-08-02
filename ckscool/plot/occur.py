@@ -83,9 +83,6 @@ def contour(cp,scale='linear', plot_planetpoints=True, plot_interval=False,
     
     """
 
-
-
-    
     ax = gca()
     tax = gca().transAxes
 
@@ -207,7 +204,6 @@ $\Delta \log R_P$ = {:.2f} dex
     yticks([log10(_yt) for _yt in yt],yt)
     xlim(log10(1),log10(300))
     ylim(log10(0.5),log10(32))
-
     xlabel('Orbital Period (days)')
     ylabel('Planet Size (Earth-radii)')
     
