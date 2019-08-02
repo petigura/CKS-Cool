@@ -1,9 +1,13 @@
 import ckscool.io
 import pandas as pd
-import isoclassify.pipeline
 import ckscool.cuts.occur
 import numpy as np
 import os
+
+try:
+    import isoclassify.pipeline
+except ImportError:
+    print "Could not import isoclassify.pipeline"                             
 
 def load_stellar_parameters(source):
     """
