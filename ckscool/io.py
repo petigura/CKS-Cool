@@ -16,6 +16,7 @@ import ckscool.gaia
 
 try:
     import cpsutils.io
+    import cpsutils.kbc
 except ImportError:
     print "Could not import cpsutils.io"
     print "load_table('kbc') will not work"
@@ -43,9 +44,11 @@ lc_per_quarter = {
 }
 long_cadence_day = 29.7 / 60.0 / 24.0 # long cadence measurement in days
 DATADIR = os.path.join(os.path.dirname(__file__),'../data/')
+cachedir = 'cache/master/'
+cachefn = os.path.join(cachedir,'load_table_cache.hdf')
 
-def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
-    """Load tables used in cksmet
+def load_table(table, cache=0, verbose=False):
+    """Load tables used in ckscool
 
     Args:
         table (str): name of table. must be one of
@@ -61,6 +64,7 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         pandas.DataFrame: table
 
     """
+
     if cache==1:
         try:
             df = pd.read_hdf(cachefn,table, mode='a')
@@ -109,7 +113,7 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
     elif table=='gaia2':
         #fn = os.path.join(DATADIR,'xmatch_m17_gaiadr2-result.csv')
         fn = os.path.join(DATADIR,'xmatch_gaia2_m17_ruwe-result.csv')
-        df = read_xmatch_gaia2(fn)
+        df = ckscool.gaia.read_xmatch_gaia2(fn)
         # Systematic offset from Zinn et al. (2018)
         df['gaia2_sparallax'] += 0.053 
 
@@ -239,11 +243,12 @@ def load_table(table, cache=0, cachefn='load_table_cache.hdf', verbose=False):
         k15['id_koi'] = k15.id_koi.str.replace('\t','').str.strip().replace('',None).astype(int)
         k15 = k15.drop_duplicates()
         temp = pd.merge(k15,df[['id_koi']]).drop_duplicates()
-        df.index = df.id_koi
+        df = df.set_index('id_koi')
         for id_koi in temp.id_koi:
             df.loc[id_koi,'rm_sb2'] = 5
 
         # Add in Furlan parameters
+        df = df.reset_index()
         f17 = load_table('fur17')
         df = pd.merge(df, f17, how='left',on=['id_kic','id_koi'])
 
@@ -701,7 +706,7 @@ def load_occur(key, cache=1):
             smass1 = float(smass1)
             smass2 = float(smass2)
 
-    pklfn = os.path.join(DATADIR,key+'.pkl')
+    pklfn = os.path.join(cachedir,key+'.pkl')
     if cache==1:
         with open(pklfn,'r') as f:
             occ = pickle.load(f)

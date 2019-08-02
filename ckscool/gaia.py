@@ -4,6 +4,7 @@ Module for the reading and writing of gaia data
 
 import numpy as np
 import pandas as pd
+import ckscool.io
 
 def foverlap(x0):
     step = 0.02
@@ -59,7 +60,7 @@ def read_xmatch_gaia2(fn):
     df['angdist'] *= 60*60
     cols = namemap.values() + 'steff steff_err1 steff_err2 srad srad_err1 srad_err2 '.split()
     df = df[cols]
-    df = add_prefix(df, 'gaia2_')
+    df = ckscool.io.add_prefix(df, 'gaia2_')
     return df
 
 
