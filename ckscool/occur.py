@@ -163,7 +163,7 @@ def samples_to_rate(samples, uplim=False):
         d['rate_str'] = "{rate:.4f} +/- {rate_err1:.4f}/{rate_err2:.4f}".format(**d)
     return d
 
-def load_occur(smass1,smass2):
+def load_occur(limits, debug=False):
     """
     Constructs occurrence object
     """
@@ -194,8 +194,6 @@ def load_occur(smass1,smass2):
         field = field[field.eval(xs).between(bmr1,bmr2)]
         plnt = plnt[plnt.eval(xs).between(bmr1,bmr2)]
 
-
-
     n1 = len(field)
     field = field.dropna(subset=ckscool.comp.__STARS_REQUIRED_COLUMNS__)
     n2 = len(field)
@@ -206,7 +204,7 @@ def load_occur(smass1,smass2):
     comp_prad_bins = np.round(logspace(log10(0.25),log10(64),51 ),2)
     
     # debugging
-    if False:
+    if debug:
         comp_per_bins = comp_per_bins[:6]
         comp_prad_bins = comp_prad_bins[:6]
         
@@ -215,8 +213,8 @@ def load_occur(smass1,smass2):
     grid = ckscool.grid.Grid(comp_bins_dict,spacing_dict)
 
     comp = ckscool.comp.Completeness(field, grid, method, impact)
-    comp.compute_grid_prob_det(verbose=True)
-    comp.compute_grid_prob_tr(verbose=True)
+    comp.compute_grid_prob_det(verbose=False)
+    comp.compute_grid_prob_tr(verbose=False)
     comp.create_splines()
     
     nstars = len(field)

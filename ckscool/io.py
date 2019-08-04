@@ -20,6 +20,7 @@ import ckscool.comp
 from ckscool.pdplus import LittleEndian
 import ckscool.gaia
 import ckscool.occur
+import ckscool.plot.occur
 import ckscool._isoclassify
 
 # Ignore the Natural name warning
@@ -103,9 +104,9 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
     # Gaia DR2
     elif table=='gaia2':
         #fn = os.path.join(DATADIR,'xmatch_m17_gaiadr2-result.csv')
-        fn = os.path.join(DATADIR,'xmatch_gaia2_m17_ruwe_tmass-result.vot.gz')
-        tab = Table.read(fn,format='votable')
-        df = tab.to_pandas()
+        #fn = os.path.join(DATADIR,'xmatch_gaia2_m17_ruwe_tmass-result.vot.gz')
+        fn = os.path.join(DATADIR,'xmatch_gaia2_m17_ruwe_tmass-result.csv')
+        df = pd.read_csv(fn)
         # Systematic offset from Zinn et al. (2018)
         df['gaia2_sparallax'] += 0.053
 
@@ -615,48 +616,47 @@ def order_columns(df, verbose=False, drop=False):
         df = pd.concat([df,df0[mcols]],axis=1)
     return df
 
-def load_occur(key, cache=1):
-    bits = key.split('_')
-    limits = {}
-    for bit in bits:
-        if bit.count('smass'):
-            smass1, smass2 = bit.replace('smass=','').split('-')
-            limits['smass1'] = float(smass1)
-            limits['smass2'] = float(smass2)
-
-        if bit.count('bmr'):
-            bmr1, bmr2 = bit.replace('bmr=','').split('-')
-            limits['bmr1'] = float(bmr1)
-            limits['bmr2'] = float(bmr2)
-
+def load_object(key,cache=0):
     pklfn = os.path.join(CACHEDIR,key+'.pkl')
-    if cache==1:
-        with open(pklfn,'r') as f:
-            occ = pickle.load(f)
-            return occ
+    if cache == 1:
+        try:
+            with open(pklfn,'r') as f:
+                obj = pickle.load(f)
+                print "read {} from {}".format(obj,pklfn)
+                return obj
 
-    elif cache==2:
-        occ = ckscool.occur.load_occur(limits)
-        occ.comp.__delattr__('stars')
+        except IOError:
+            print "Could not find cache file: %s" % pklfn
+            print "Building cache..."
+            cache = 2
+
+    if cache == 2:
+        obj = load_object(key, cache=0)
+        print "writing {} to {}".format(obj,pklfn)
         with open(pklfn,'w') as f:
-            pickle.dump(occ,f)
-            
-    return occ
+            pickle.dump(obj,f)
+        return obj
+        
+    if key.count('cp') == 1:
+        occurkey = key.replace('cp','occur')
+        occ = load_object(occurkey, cache=1)
+        obj = ckscool.plot.occur.load_contour_plotter(occ)
 
-def load_contour_plotter(key, cache=2):
-    occurkey = key.replace('cp','occur')
-    occ = ckscool.io.load_occur(occurkey,cache=1)
-    pklfn = os.path.join(DATADIR,key+'.pkl')
-    if cache==1:
-        with open(pklfn,'r') as f:
-            occ = pickle.load(f)
-            return occ
+    elif key.count('occur') == 1:
+        bits = key.split('_')
+        limits = {}
+        for bit in bits:
+            if bit.count('smass'):
+                smass1, smass2 = bit.replace('smass=','').split('-')
+                limits['smass1'] = float(smass1)
+                limits['smass2'] = float(smass2)
 
-    elif cache==2:
-        cp = ckscool.plot.occur.load_contour_plotter(occ)
-        with open(pklfn,'w') as f:
-            pickle.dump(cp,f)
-            
-    return cp
+            if bit.count('bmr'):
+                bmr1, bmr2 = bit.replace('bmr=','').split('-')
+                limits['bmr1'] = float(bmr1)
+                limits['bmr2'] = float(bmr2)
 
+        obj = ckscool.occur.load_occur(limits)
+        obj.comp.__delattr__('stars')
 
+    return obj

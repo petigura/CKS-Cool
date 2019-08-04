@@ -787,7 +787,6 @@ def load_contour_plotter(occ):
             df.append(d)
 
     df = pd.DataFrame(df)
-
     cp = obj()
     cp.rate = df
     cp.perwid = perwid
