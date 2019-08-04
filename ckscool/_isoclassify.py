@@ -5,20 +5,6 @@ import pandas as pd
 
 import ckscool.io
 
-import isoclassify.pipeline
-import cpsutils.kbc
-
-def loadkbc():
-    df = cpsutils.kbc.loadkbc()
-    b = ( df.type.str.contains('t') 
-          & df.name.str.contains(r'^K\d{5}$|^CK\d{5}$') )
-    df = df[b]
-    df['id_koi'] = df.name.str.slice(start=-5).astype(int)
-    df = df['obs name id_koi'.split()]
-    namemap = {'obs':'id_obs','name':'id_name'}
-    df = df.rename(columns=namemap)
-    return df
-
 def load_stellar_parameters(source):
     """
     Load up stellar properties
@@ -28,7 +14,8 @@ def load_stellar_parameters(source):
     plnt = ckscool.io.load_table('koi-thompson18-dr25') 
     plnt = plnt.groupby('id_koi',as_index=False).nth(0)[['id_koi','id_kic']]
     star = pd.merge(star,plnt)
-    kbc = ckscool.io.load_table('kbc')
+
+    kbc = pd.read_csv(ckscool.io.KBCFN)
     kbc = kbc.groupby('id_koi', as_index=False).nth(-1)
 
     if source=='cks1':
@@ -208,7 +195,7 @@ def func(x):
 
 def scrape_direct(fn):
     # isoclassify/direct/*/*.csv
-    df = isoclassify.pipeline.scrape_csv(fn)
+    df = scrape_csv(fn)
     df['id_starname'] = df.id_starname.astype(str).apply(func)
     namemap = {
         'id_starname':'id_starname',
@@ -224,7 +211,7 @@ def scrape_direct(fn):
 
 def scrape_grid_parallax_yes(fn):
     # Grid mode with parallax constraints
-    df = isoclassify.pipeline.scrape_csv(fn)
+    df = scrape_csv(fn)
     namemap = {
         'id_starname':'id_starname',
         'iso_mass':'giso_smass',
@@ -246,7 +233,7 @@ def scrape_grid_parallax_yes(fn):
 
 def scrape_grid_parallax_no(fn):
     # Grid mode without parallax constraints
-    df = isoclassify.pipeline.scrape_csv(fn)
+    df = scrape_csv(fn)
     temp = df['id_starname'].copy()
     df = df.drop(['id_starname'],axis=1)
     df = df.convert_objects(convert_numeric=True)
@@ -266,4 +253,31 @@ def _rename(df, namemap):
         return pd.DataFrame(columns=namemap.values())
 
     df = df.rename(columns=namemap)[namemap.values()]
+    return df
+
+# Lifted from isoclassify module to remove dependence
+def _csv_reader(f):
+    row = pd.read_csv(f,header=None,squeeze=True, index_col=0)
+    return row
+
+def scrape_csv(path):
+    """
+    Read in isochrones csvfiles 
+    Args:
+        outdir (str): where to look for isochrones.csv files
+    """
+    fL = glob.glob(path)
+    df = []
+
+    for i, f in enumerate(fL):
+        if i%100==0:
+            print(i)
+        try:
+            df.append(_csv_reader(f))
+        except ValueError:
+            print("{} failed".format(f))
+
+
+    df = pd.DataFrame(df)
+    df = df.reset_index()
     return df

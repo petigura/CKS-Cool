@@ -35,8 +35,10 @@ FILE = os.path.dirname(__file__)
 DATADIR = os.path.join(FILE, '../data/')
 CACHEDIR = os.path.join(FILE, '../cache/removing-imports/')
 CACHEFN = os.path.join(CACHEDIR, 'load_table_cache.hdf')
+os.system('mkdir -p {}'.format(CACHEDIR)) # creates CACHEDIR if doesn't exist
+KBCFN = os.path.join(DATADIR,'kbcvel.csv')
 
-def load_table(table, cache=0, verbose=False):
+def load_table(table, cache=0, verbose=False, cachefn=None):
     """Load tables used in ckscool
 
     Args:
@@ -53,6 +55,9 @@ def load_table(table, cache=0, verbose=False):
         pandas.DataFrame: table
 
     """
+
+    if cachefn is None:
+        cachefn = CACHEFN
 
     if cache == 1:
         try:
@@ -156,7 +161,9 @@ def load_table(table, cache=0, verbose=False):
 
     elif table == 'm17+ber18+gaia2+cdpp':
         m17 = load_table('m17', cache=1)
-        cdpp = load_table('cdpp', cache=1)        
+        # Store to separate cache to prevent long reload times
+        cachefn = os.path.join(DATADIR,'cdpp.hdf') 
+        cdpp = load_table('cdpp',cache=1, cachefn=cachefn)        
         ber18 = load_table('berger18', cache=1)
         gaia = load_table('gaia2', cache=1)
         df,m = ckscool.gaia.xmatch_gaia2(m17, gaia)
@@ -183,7 +190,6 @@ def load_table(table, cache=0, verbose=False):
 
     # Results from isoclassify table
     elif table == 'iso':
-        import pdb;pdb.set_trace()
         source = 'cks1'
         star0 = ckscool._isoclassify.load_stellar_parameters(source)
         iso = pd.read_csv('data/isoclassify_{}.csv'.format(source),index_col=0)
@@ -206,7 +212,6 @@ def load_table(table, cache=0, verbose=False):
         smsyn = pd.merge(star0,iso)
         smsyn.index = smsyn.id_koi
         
-
         df = []
         smemplimit = 4800
         for id_koi in smemp.id_koi.drop_duplicates():
@@ -653,4 +658,5 @@ def load_contour_plotter(key, cache=2):
             pickle.dump(cp,f)
             
     return cp
+
 
