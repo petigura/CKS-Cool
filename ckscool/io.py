@@ -1,3 +1,9 @@
+"""
+Module for CKS-Cool I/O
+
+
+"""
+
 import os
 import cPickle as pickle
 
@@ -7,12 +13,12 @@ from astropy.io import ascii
 from scipy.io import idl
 
 import ckscool.cuts.occur
-import ckscool.cuts.ckscool
 import ckscool.calc
 import ckscool.comp
 import ckscool._isoclassify
 from ckscool.pdplus import LittleEndian
-import ckscool.gaia 
+import ckscool.gaia
+import ckscool.occur
 
 try:
     import cpsutils.io
@@ -21,38 +27,21 @@ except ImportError:
     print "Could not import cpsutils.io"
     print "load_table('kbc') will not work"
 
-# Pulled from Kepler data characteristics
-lc_per_quarter = {
-    0:476,
-    1:1639,
-    2:4354,
-    3:4370,
-    4:4397,
-    5:4634,
-    6:4398,
-    7:4375,
-    8:3279,
-    9:4768,
-    10:4573,
-    11:4754,
-    12:4044,
-    13:4421,
-    14:4757,
-    15:4780,
-    16:4203,
-    17:1556,
-}
-long_cadence_day = 29.7 / 60.0 / 24.0 # long cadence measurement in days
-DATADIR = os.path.join(os.path.dirname(__file__),'../data/')
-cachedir = 'cache/master/'
-cachefn = os.path.join(cachedir,'load_table_cache.hdf')
+# Define paths to various cache files. DATADIR stores data tables that
+# should not change with different code runs. CACHEDIR stores
+# temporary files that should be cleared out when the analysis
+# changes. The CACHEDIR can be set for different git branches
+FILE = os.path.dirname(__file__)
+DATADIR = os.path.join(FILE, '../data/')
+CACHEDIR = os.path.join(FILE, '../cache/removing-imports/')
+CACHEFN = os.path.join(CACHEDIR, 'load_table_cache.hdf')
 
 def load_table(table, cache=0, verbose=False):
     """Load tables used in ckscool
 
     Args:
         table (str): name of table. must be one of
-            - nea 
+            - nea
 
 
         cache (Optional[int]): whether or not to use the cache
@@ -65,113 +54,136 @@ def load_table(table, cache=0, verbose=False):
 
     """
 
-    if cache==1:
+    if cache == 1:
         try:
-            df = pd.read_hdf(cachefn,table, mode='a')
-            print "read table {} from {}".format(table,cachefn)
+            df = pd.read_hdf(CACHEFN, table, mode='a')
+            print "read table {} from {}".format(table, CACHEFN)
             return df
         except IOError:
-            print "Could not find cache file: %s" % cachefn
+            print "Could not find cache file: %s" % CACHEFN
             print "Building cache..."
-            cache=2
+            cache = 2
         except KeyError:
             print "Cache not built for table: %s" % table
             print "Building cache..."
-            cache=2
+            cache = 2
 
-    if cache==2:
+    if cache == 2:
         df = load_table(table, cache=False)
         print "writing table {} to cache".format(table)
-        df.to_hdf(cachefn,table)
+        df.to_hdf(CACHEFN, table)
         return df
 
-    if table=='coldefs':
-        tablefn = os.path.join(DATADIR,'column-definitions.txt')
-        colspecs = [(0,1),(3,4)]
+    if table == 'coldefs':
+        tablefn = os.path.join(DATADIR, 'column-definitions.txt')
+        colspecs = [(0, 1), (3, 4)]
         df = pd.read_fwf(
-            tablefn, comment='#', widths=[20,100],
-            names=['column','description']
+            tablefn, comment='#', widths=[20, 100],
+            names=['column', 'description']
         )
 
-
     # Mathur 2017
-    elif table=='m17':
+    elif table == 'm17':
         tablefn = os.path.join(DATADIR, 'kepler_stellar17.csv.gz')
-        df = pd.read_csv(tablefn,sep='|',dtype={'st_quarters':'str'})
+        df = pd.read_csv(tablefn, sep='|', dtype={'st_quarters':'str'})
         namemap = {
-            'kepid':'id_kic','kepmag':'m17_kepmag', 'teff': 'm17_steff',
-            'st_quarters':'st_quarters','mass':'m17_smass',
+            'kepid':'id_kic', 'kepmag':'m17_kepmag', 'teff': 'm17_steff',
+            'st_quarters':'st_quarters', 'mass':'m17_smass',
             'st_radius':'m17_srad', 'jmag':'m17_jmag',
-            'jmag_err':'m17_jmag_err','hmag':'m17_hmag',
-            'hmag_err':'m17_hmag_err','kmag':'m17_kmag',
+            'jmag_err':'m17_jmag_err', 'hmag':'m17_hmag',
+            'hmag_err':'m17_hmag_err', 'kmag':'m17_kmag',
             'kmag_err':'m17_kmag_err',
             'degree_ra':'m17_ra', 'degree_dec':'m17_dec'
         }
         df = df.rename(columns=namemap)[namemap.values()]
 
     # Gaia DR2
-    elif table=='gaia2':
-        #fn = os.path.join(DATADIR,'xmatch_m17_gaiadr2-result.csv')
-        fn = os.path.join(DATADIR,'xmatch_gaia2_m17_ruwe-result.csv')
+    elif table == 'gaia2':
+        #fn = os.path.join(DATADIR, 'xmatch_m17_gaiadr2-result.csv')
+        fn = os.path.join(DATADIR, 'xmatch_gaia2_m17_ruwe-result.csv')
         df = ckscool.gaia.read_xmatch_gaia2(fn)
         # Systematic offset from Zinn et al. (2018)
-        df['gaia2_sparallax'] += 0.053 
+        df['gaia2_sparallax'] += 0.053
 
-    # CDPP table 
-    elif table=='cdpp':
-        fn = os.path.join(DATADIR,'kic_q0_q17.dat')
-        df = idl.readsav(fn) 
+    # CDPP table
+    elif table == 'cdpp':
+        # Pulled from Kepler data characteristics
+        lc_per_quarter = {
+            0:476,
+            1:1639,
+            2:4354,
+            3:4370,
+            4:4397,
+            5:4634,
+            6:4398,
+            7:4375,
+            8:3279,
+            9:4768,
+            10:4573,
+            11:4754,
+            12:4044,
+            13:4421,
+            14:4757,
+            15:4780,
+            16:4203,
+            17:1556,
+        }
+        fn = os.path.join(DATADIR, 'kic_q0_q17.dat')
+        df = idl.readsav(fn)
         df = df['kic']
         df = LittleEndian(df) # Deals with the byte order
         df = pd.DataFrame(df)
         df = df.rename(columns={
-            'KEPMAG':'kepmag','KICID':'id_kic','CDPP3':'cdpp3','CDPP6':'cdpp6',
-            'CDPP12':'cdpp12'}
+            'KEPMAG':'kepmag', 'KICID':'id_kic',
+            'CDPP3':'cdpp3', 'CDPP6':'cdpp6', 'CDPP12':'cdpp12'}
         )
         df = df['id_kic kepmag cdpp3 cdpp6 cdpp12'.split()]
         for col in 'cdpp3 cdpp6 cdpp12'.split():
-            cdpp = np.vstack(df.ix[:,col])
-            cdpp = cdpp[:,1:18] # cut out q 0 which was't used
+            cdpp = np.vstack(df.ix[:, col])
+            cdpp = cdpp[:, 1:18] # cut out q 0 which was't used
             observed = (cdpp > 0.0).astype(float) # True if observed 
-            cdpp[cdpp==0.0] = np.nan
-            
-            cdppmed = np.nanmedian(cdpp,axis=1)
+            cdpp[cdpp == 0.0] = np.nan
+            cdppmed = np.nanmedian(cdpp, axis=1)
             df[col] = cdppmed
             df['log'+col] = np.log10(cdppmed)
 
         # calculate days that target was observed
-        lc = np.array([lc_per_quarter[i] for i in range(1,18)])
-        lc = lc.reshape(1,17) 
+        lc = np.array([lc_per_quarter[i] for i in range(1, 18)])
+        lc = lc.reshape(1, 17) 
+        long_cadence_day = 29.7 / 60.0 / 24.0 # long cadence length in days
         days = lc * long_cadence_day
         df['tobs'] = (observed * days).sum(axis=1)
 
-    elif table=='m17+ber18+gaia2+cdpp':
+    elif table == 'm17+ber18+gaia2+cdpp':
         # Needed fro kmag
-        m17 = load_table('m17',cache=1)
-        cdpp = load_table('cdpp',cache=1)        
-        ber18 = load_table('berger18',cache=1)
-        gaia = load_table('gaia2',cache=1)
-        df,m = ckscool.gaia.xmatch_gaia2(m17,gaia)
-        df = pd.merge(df,ber18,on=['id_kic','id_gaia2'])
+        m17 = load_table('m17', cache=1)
+        cdpp = load_table('cdpp', cache=1)        
+        ber18 = load_table('berger18', cache=1)
+        gaia = load_table('gaia2', cache=1)
+        df,m = ckscool.gaia.xmatch_gaia2(m17, gaia)
+        df = pd.merge(df,ber18,on=['id_kic', 'id_gaia2'])
         df = pd.merge(df,cdpp)
 
-    elif table=='field-cuts':
+    elif table == 'field-cuts':
         df = load_table('m17+ber18+gaia2+cdpp',cache=1)
-        #cuttypes = ['none','faint','giant','rizzuto']
-        cuttypes = ['none','faint','giant','ruwe','diluted']
+        #cuttypes = ['none', 'faint', 'giant', 'rizzuto']
+        cuttypes = ['none', 'faint', 'giant', 'ruwe', 'diluted']
         df = ckscool.cuts.occur.add_cuts(df, cuttypes, 'field')
 
-    elif table=='planets-cuts1':
+    elif table == 'planets-cuts1':
         star = load_table('m17+ber18+gaia2+cdpp',cache=1)
         plnt = load_table('koi-thompson18-dr25')
         df = pd.merge(star,plnt)
-        #cuttypes = ['none','faint','giant','rizzuto','notreliable','lowsnr']
-        cuttypes = ['none','faint','giant','ruwe','diluted','notreliable','lowsnr']
+        #cuttypes = ['none', 'faint', 'giant', 'rizzuto', 'notreliable','lowsnr']
+        cuttypes = [
+            'none', 'faint', 'giant', 'ruwe', 'diluted', 'notreliable', 
+            'lowsnr'
+        ]
         df.sample = 'koi-thompson18'
         df = ckscool.cuts.occur.add_cuts(df, cuttypes, 'koi-thompson18')
 
     # Results from isoclassify table
-    elif table=='iso':
+    elif table == 'iso':
         source = 'cks1'
         star0 = ckscool._isoclassify.load_stellar_parameters(source)
         iso = pd.read_csv('data/isoclassify_{}.csv'.format(source),index_col=0)
@@ -222,7 +234,7 @@ def load_table(table, cache=0, verbose=False):
         df = df.reset_index()
 
     # Stellar sample
-    elif table=='planets+iso':
+    elif table == 'planets+iso':
         #star = load_table('m17+ber18+gaia2+cdpp')
         plnt = load_table('koi-thompson18-dr25')
         iso = load_table('iso',cache=1)
@@ -271,18 +283,18 @@ def load_table(table, cache=0, verbose=False):
         df = df.dropna(subset=['cks_steff'])
         print "number of planets after after removing missing CKS {}".format(len(df))
         
-    elif table=='planets-cuts1+iso':
+    elif table == 'planets-cuts1+iso':
         df = load_table('planets+iso',cache=1)
         planets1 = load_table('planets-cuts1',cache=2)
         df = ckscool.cuts.occur.add_cuts(df, planets1.cuttypes, 'koi-thompson18')
         df = df[~df.isany]
 
-    elif table=='planets-cuts2+iso':
+    elif table == 'planets-cuts2+iso':
         df = load_table('planets-cuts1+iso',cache=2)
         cuttypes = ['none','badvsini','sb2','badspecparallax','badprad','badpradprec','badimpacttau']
         df = ckscool.cuts.occur.add_cuts(df, cuttypes, 'koi-thompson18')
 
-    elif table=='reamatch':
+    elif table == 'reamatch':
         fn = os.path.join(DATADIR, 'reamatch.csv')
         df = pd.read_csv(fn,index_col=None, usecols=range(6))
         df['id_koi'] = df.name.str.slice(start=-5).astype(int)
@@ -290,7 +302,7 @@ def load_table(table, cache=0, verbose=False):
         df = df.rename(columns=namemap)[namemap.values()]
 
     # Spectroscopic parameters
-    elif table=='smemp':
+    elif table == 'smemp':
         df = pd.read_csv('data/specmatch-emp_results.csv')
         df = df.dropna(subset=['name'])
         namemap = {
@@ -305,17 +317,17 @@ def load_table(table, cache=0, verbose=False):
         }
         df = df.rename(columns=namemap)[namemap.values()]
 
-    elif table=='kbc':
+    elif table == 'kbc':
         df = cpsutils.kbc.loadkbc()
         b = ( df.type.str.contains('t') 
-              & df.name.str.contains('^K\d{5}$|^CK\d{5}$') )
+              & df.name.str.contains(r'^K\d{5}$|^CK\d{5}$') )
         df = df[b]
         df['id_koi'] = df.name.str.slice(start=-5).astype(int)
         df = df['obs name id_koi'.split()]
         namemap = {'obs':'id_obs','name':'id_name'}
         df = df.rename(columns=namemap)
 
-    elif table=='nrm-previous':
+    elif table == 'nrm-previous':
         # File is from an email that Adam sent me in 2017-11-02
         fn = os.path.join(DATADIR,'kraus/KOIours.txt')
         df = pd.read_table(fn,header=None,names=['name'])
@@ -325,7 +337,7 @@ def load_table(table, cache=0, verbose=False):
     ############################
     # Tables from other papers #
     ############################
-    elif table=='fpp':
+    elif table == 'fpp':
         df = pd.read_csv('data/q1_q17_dr25_koifpp.csv',comment='#')
         namemap = {'kepoi_name':'id_koicand','fpp_prob':'fpp_prob'}
         df = df.rename(columns=namemap)[namemap.values()]
@@ -335,7 +347,7 @@ def load_table(table, cache=0, verbose=False):
         df = load_table_koi(table)
 
     # KOI tables
-    elif table=='koi-thompson18-dr25-chains':
+    elif table == 'koi-thompson18-dr25-chains':
         df = load_table_koi(table)
         t18.index = t18.id_koicand
         df = pd.read_csv('data/dr25-mcmc-chains_missing.txt',sep=' ',names=['s','x'])
@@ -343,7 +355,7 @@ def load_table(table, cache=0, verbose=False):
         t18 = t18.drop(df.id_koicand)
         df = t18
         
-    elif table=='koi-thompson18-dr25':
+    elif table == 'koi-thompson18-dr25':
         df = load_table_koi('koi-thompson18')
         dr25 = pd.read_hdf('data/dr25-mcmc-summary.hdf','dr25',)
         namemap = {
@@ -364,14 +376,14 @@ def load_table(table, cache=0, verbose=False):
         dr25 = dr25.rename(columns=namemap)[cols]
         df = pd.merge(df,dr25)
 
-    elif table=='koi-coughlin16':
+    elif table == 'koi-coughlin16':
         df = load_table_koi(table)
 
-    elif table=='koi-mullally15':
+    elif table == 'koi-mullally15':
         df = load_table_koi(table)
 
     # Furlan 2017
-    elif table=='furlan17-tab2':
+    elif table == 'furlan17-tab2':
         fn = os.path.join(DATADIR,'furlan17/Table2.txt')
         df = read_furlan17_table2(fn)
 
@@ -379,13 +391,13 @@ def load_table(table, cache=0, verbose=False):
         fn = os.path.join(DATADIR,'furlan17/Table9.txt')
         df = read_furlan17_table9(fn)
 
-    elif table=='fur17':
+    elif table == 'fur17':
         tab2 = load_table('furlan17-tab2')
         tab9 = load_table('furlan17-tab9')
         cols = 'id_koi f17_rcf_avg f17_rcf_avg_err'.split()
         df = pd.merge(tab2,tab9[cols],how='left',on='id_koi')
 
-    elif table=='kraus16':
+    elif table == 'kraus16':
         fn = os.path.join(DATADIR,'kraus16/table7.dat')
         readme = os.path.join(DATADIR,'kraus16/ReadMe')
         df = ascii.read(fn,readme=readme)
@@ -405,7 +417,7 @@ def load_table(table, cache=0, verbose=False):
         df = add_prefix(df,'k16_')
 
     # Mann et al. (2013)
-    elif table=='mann13':
+    elif table == 'mann13':
         fn = os.path.join(DATADIR,'mann13/table3.dat') 
         readme = os.path.join(DATADIR,'mann13/ReadMe') 
         df = ascii.read(fn,readme=readme)
@@ -431,7 +443,7 @@ def load_table(table, cache=0, verbose=False):
         df = pd.merge(cks,m13,on='id_koi')
 
     # Dressing et al (2013)
-    elif table=='dressing13':
+    elif table == 'dressing13':
         fn = os.path.join(DATADIR,'dressing13/table1.dat') 
         readme = os.path.join(DATADIR,'dressing13/ReadMe') 
         df = ascii.read(fn,readme=readme)
@@ -452,14 +464,13 @@ def load_table(table, cache=0, verbose=False):
                 df[c] *= -1 
         df = add_prefix(df,'d13_')
 
-    elif table=='ckscool-dressing13':
+    elif table == 'ckscool-dressing13':
         cks = load_table('planets-cuts2+iso').groupby('id_koi',as_index=False).nth(0)
         d13 = load_table('dressing13')
         df = pd.merge(cks,d13,on='id_kic')
 
-
     # Berger al. (2018)
-    elif table=='berger18':
+    elif table == 'berger18':
         tab = ascii.read('data/berger18/apjaada83t1_mrt.txt')
         df = tab.to_pandas()
         namemap = {
@@ -473,17 +484,17 @@ def load_table(table, cache=0, verbose=False):
         df = df.rename(columns=namemap)[namemap.values()]
         df = add_prefix(df,'ber18_')
 
-    elif table=='ckscool-brewer18':
+    elif table == 'ckscool-brewer18':
         cks = load_table('planets-cuts2+iso').groupby('id_koi',as_index=False).nth(0)
         m13 = load_table('brewer18')
         df = pd.merge(cks,m13,on='id_koi')
 
 
     # Brewer et al. (2018)
-    elif table=='brewer18':
+    elif table == 'brewer18':
         tab = ascii.read('data/brewer18/apjsaad501t3_mrt.txt')
         df = tab.to_pandas()
-        df = df[df.Name.str.contains('KOI-.*\d$')]
+        df = df[df.Name.str.contains(r'KOI-.*\d$')]
         df['id_koi']  = df.Name.apply(lambda x : x.split('-')[1]).astype(int)
         df['steff'] = df['Teff']
         df = df['id_koi steff'.split()]
@@ -494,7 +505,7 @@ def load_table(table, cache=0, verbose=False):
     return df
 
 def read_furlan17_table2(fn):
-    df = pd.read_csv(fn,sep='\s+')
+    df = pd.read_csv(fn,sep=r'\s+')
     namemap = {'KOI':'id_koi','KICID':'id_kic','Observatories':'ao_obs'}
     df = df.rename(columns=namemap)[namemap.values()]
     df['id_starname'] = ['K'+str(x).rjust(5, '0') for x in df.id_koi] 
@@ -508,7 +519,7 @@ def read_furlan17_table9(fn):
     avg avg_err
     """.split()
 
-    df = pd.read_csv(fn,sep='\s+',skiprows=2,names=names)
+    df = pd.read_csv(fn,sep=r'\s+',skiprows=2,names=names)
     df['id_starname'] = ['K'+str(x).rjust(5, '0') for x in df.id_koi] 
     df = add_prefix(df,'f17_rcf_')
     return df 
@@ -609,7 +620,6 @@ def load_iso_batch_table(mode='isoclassify'):
     sme = pd.merge(star[['id_koi']],sme) # only retain values in planet list
     sme.index = sme.id_koi
 
-
     # Load up CKS-I and set uncertainties
     cks1 = pd.read_csv('data/cks_physical_merged.csv')
     cks1['id_koi'] = cks1.id_koicand.str.slice(start=1,stop=6).astype(int)
@@ -696,7 +706,6 @@ def order_columns(df, verbose=False, drop=False):
     return df
 
 
-import ckscool.occur
 
 def load_occur(key, cache=1):
     bits = key.split('_')
@@ -706,7 +715,7 @@ def load_occur(key, cache=1):
             smass1 = float(smass1)
             smass2 = float(smass2)
 
-    pklfn = os.path.join(cachedir,key+'.pkl')
+    pklfn = os.path.join(CACHEDIR,key+'.pkl')
     if cache==1:
         with open(pklfn,'r') as f:
             occ = pickle.load(f)

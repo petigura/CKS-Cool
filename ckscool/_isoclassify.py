@@ -1,8 +1,9 @@
+import os
+
 import ckscool.io
 import pandas as pd
 import ckscool.cuts.occur
 import numpy as np
-import os
 
 try:
     import isoclassify.pipeline
@@ -18,8 +19,6 @@ def load_stellar_parameters(source):
     plnt = ckscool.io.load_table('koi-thompson18-dr25') 
     plnt = plnt.groupby('id_koi',as_index=False).nth(0)[['id_koi','id_kic']]
     star = pd.merge(star,plnt)
-
-    
     kbc = ckscool.io.load_table('kbc')
     kbc = kbc.groupby('id_koi', as_index=False).nth(-1)
 
@@ -37,8 +36,8 @@ def load_stellar_parameters(source):
         ]
         df = df[cols]
 
+    # Load up SpecMatch-Syn and set uncertainties 
     elif source=='smsyn':
-        # Load up SpecMatch-Syn and set uncertainties 
         df = pd.read_csv('data/specmatch-syn_results.csv')
         namemap = {
             'obs':'id_obs',
@@ -55,9 +54,8 @@ def load_stellar_parameters(source):
         df['cks_sprov'] = 'smsyn'
         df['cks_steff_err'] = 100
 
+    # Load SpecMatch-Emp and set uncertainties
     elif source=='smemp':
-
-        # Load SpecMatch-Emp and set uncertainties
         df = pd.read_csv('data/specmatch-emp_results.csv')
         df = df.dropna(subset=['name'])
         namemap = {
@@ -167,7 +165,6 @@ def create_iso_batch_frames(source):
     star['parallax_err'] = 0
     star_grid_no = star.copy()
     return star_direct, star_grid_yes, star_grid_no 
-
 
 def create_iso_table(inpdir,outcsv):
     """
