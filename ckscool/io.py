@@ -20,13 +20,6 @@ from ckscool.pdplus import LittleEndian
 import ckscool.gaia
 import ckscool.occur
 
-try:
-    import cpsutils.io
-    import cpsutils.kbc
-except ImportError:
-    print "Could not import cpsutils.io"
-    print "load_table('kbc') will not work"
-
 # Define paths to various cache files. DATADIR stores data tables that
 # should not change with different code runs. CACHEDIR stores
 # temporary files that should be cleared out when the analysis
