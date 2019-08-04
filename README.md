@@ -47,6 +47,15 @@ rsync -av cadence:/data/user/doppler/public_html/smemp/specmatch_results.csv dat
 rsync -av cadence:/data/user/doppler/public_html/smsyn/specmatch_results.csv data/specmatch-syn_results.csv
 ```
 
+
+2. Create kbc table
+
+A list of all Kepler templates from HIRES
+
+```
+run_ckscool.py create-kbc
+```
+
 2. Run the isoclassify code
 
 First create the batch processing files. In total there are about 900 stars that pass the photometric only cuts.
