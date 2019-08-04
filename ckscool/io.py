@@ -155,7 +155,6 @@ def load_table(table, cache=0, verbose=False):
         df['tobs'] = (observed * days).sum(axis=1)
 
     elif table == 'm17+ber18+gaia2+cdpp':
-        # Needed fro kmag
         m17 = load_table('m17', cache=1)
         cdpp = load_table('cdpp', cache=1)        
         ber18 = load_table('berger18', cache=1)
@@ -184,6 +183,7 @@ def load_table(table, cache=0, verbose=False):
 
     # Results from isoclassify table
     elif table == 'iso':
+        import pdb;pdb.set_trace()
         source = 'cks1'
         star0 = ckscool._isoclassify.load_stellar_parameters(source)
         iso = pd.read_csv('data/isoclassify_{}.csv'.format(source),index_col=0)
@@ -205,6 +205,7 @@ def load_table(table, cache=0, verbose=False):
         iso['id_koi'] = iso.id_starname.str.slice(start=-5).astype(int)
         smsyn = pd.merge(star0,iso)
         smsyn.index = smsyn.id_koi
+        
 
         df = []
         smemplimit = 4800
@@ -316,16 +317,6 @@ def load_table(table, cache=0, verbose=False):
             'fe_err':'sm_smet_err',
         }
         df = df.rename(columns=namemap)[namemap.values()]
-
-    elif table == 'kbc':
-        df = cpsutils.kbc.loadkbc()
-        b = ( df.type.str.contains('t') 
-              & df.name.str.contains(r'^K\d{5}$|^CK\d{5}$') )
-        df = df[b]
-        df['id_koi'] = df.name.str.slice(start=-5).astype(int)
-        df = df['obs name id_koi'.split()]
-        namemap = {'obs':'id_obs','name':'id_name'}
-        df = df.rename(columns=namemap)
 
     elif table == 'nrm-previous':
         # File is from an email that Adam sent me in 2017-11-02
@@ -624,8 +615,6 @@ def order_columns(df, verbose=False, drop=False):
     if not drop:
         df = pd.concat([df,df0[mcols]],axis=1)
     return df
-
-
 
 def load_occur(key, cache=1):
     bits = key.split('_')

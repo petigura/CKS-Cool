@@ -1,14 +1,23 @@
 import os
 
-import ckscool.io
-import pandas as pd
-import ckscool.cuts.occur
 import numpy as np
+import pandas as pd
 
-try:
-    import isoclassify.pipeline
-except ImportError:
-    print "Could not import isoclassify.pipeline"                             
+import ckscool.io
+
+import isoclassify.pipeline
+import cpsutils.kbc
+
+def loadkbc():
+    df = cpsutils.kbc.loadkbc()
+    b = ( df.type.str.contains('t') 
+          & df.name.str.contains(r'^K\d{5}$|^CK\d{5}$') )
+    df = df[b]
+    df['id_koi'] = df.name.str.slice(start=-5).astype(int)
+    df = df['obs name id_koi'.split()]
+    namemap = {'obs':'id_obs','name':'id_name'}
+    df = df.rename(columns=namemap)
+    return df
 
 def load_stellar_parameters(source):
     """
