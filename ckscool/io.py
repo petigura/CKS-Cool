@@ -33,7 +33,7 @@ warnings.simplefilter('ignore', pd.errors.PerformanceWarning)
 # changes. The CACHEDIR can be set for different git branches
 FILE = os.path.dirname(__file__)
 DATADIR = os.path.join(FILE, '../data/')
-CACHEDIR = os.path.join(FILE, '../cache/fast-update-planet-parameters/')
+CACHEDIR = os.path.join(FILE, '../cache/gaia-kic-tmass/')
 CACHEFN = os.path.join(CACHEDIR, 'load_table_cache.hdf')
 os.system('mkdir -p {}'.format(CACHEDIR)) # creates CACHEDIR if doesn't exist
 KBCFN = os.path.join(DATADIR,'kbcvel.csv')
@@ -616,13 +616,14 @@ def order_columns(df, verbose=False, drop=False):
         df = pd.concat([df,df0[mcols]],axis=1)
     return df
 
-def load_object(key,cache=0):
+def load_object(key,cache=0,verbose=1):
     pklfn = os.path.join(CACHEDIR,key+'.pkl')
     if cache == 1:
         try:
             with open(pklfn,'r') as f:
                 obj = pickle.load(f)
-                print "read {} from {}".format(obj,pklfn)
+                if verbose:
+                    print "read {} from {}".format(obj,pklfn)
                 return obj
 
         except IOError:
