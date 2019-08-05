@@ -8,6 +8,7 @@ from scipy import special
 from statsmodels.distributions.empirical_distribution import ECDF
 
 import ckscool.io
+import ckscool.grid
 
 class Occurrence(object):
     def __init__(self, plnt, comp, nstars, smet_field=None):
