@@ -33,7 +33,7 @@ warnings.simplefilter('ignore', pd.errors.PerformanceWarning)
 # changes. The CACHEDIR can be set for different git branches
 FILE = os.path.dirname(__file__)
 DATADIR = os.path.join(FILE, '../data/')
-CACHEDIR = os.path.join(FILE, '../cache/gaia-kic-tmass/')
+CACHEDIR = os.path.join(FILE, '../cache/gaia-kic-tmass-notau/')
 CACHEFN = os.path.join(CACHEDIR, 'load_table_cache.hdf')
 os.system('mkdir -p {}'.format(CACHEDIR)) # creates CACHEDIR if doesn't exist
 KBCFN = os.path.join(DATADIR,'kbcvel.csv')
@@ -292,7 +292,7 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
 
     elif table == 'planets-cuts2+iso':
         df = load_table('planets-cuts1+iso',cache=2)
-        cuttypes = ['none','badvsini','sb2','badspecparallax','badprad','badpradprec','badimpacttau']
+        cuttypes = ['none','badvsini','sb2','badspecparallax','badprad','badpradprec']
         df = ckscool.cuts.occur.add_cuts(df, cuttypes, 'koi-thompson18')
 
     elif table == 'reamatch':

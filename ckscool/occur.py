@@ -8,6 +8,7 @@ from scipy import special
 from statsmodels.distributions.empirical_distribution import ECDF
 
 import ckscool.io
+import ckscool.grid
 
 class Occurrence(object):
     def __init__(self, plnt, comp, nstars, smet_field=None):
@@ -170,7 +171,7 @@ def load_occur(limits, debug=False):
     
     # Derive completeness object
     method = 'fulton-gamma-clip' # treatment for planet detectability
-    impact = 0.7 # maximum impact parameter considered.
+    impact = 1 # maximum impact parameter considered.
 
     field = ckscool.io.load_table('field-cuts',cache=1)
     field = field[~field.isany]
