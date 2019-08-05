@@ -15,13 +15,12 @@ def update_planet_parameters(df):
     ]
 
     n = len(df)
-    nsamp = 10000
-    size = (n,nsamp)
+    nsamp = 1000
 
     def sample(loc, scale):
         loc = np.array(loc).reshape(-1,1)
         scale = np.array(scale).reshape(-1,1)
-        return rand.normal(loc, scale, size=size)
+        return loc + scale * np.random.randn(1,nsamp)
 
     # stellar radius direct method
     loc = df.gdir_srad
@@ -46,7 +45,10 @@ def update_planet_parameters(df):
     # Radius ratio
     loc = df.dr25_ror
     scale = df.eval('0.5 * (dr25_ror_err1 - dr25_ror_err2)')
+    empty = scale.isnull()
+    scale = scale.fillna(0)
     ror_samp = sample(loc, scale)
+    ror_samp[empty,:] = np.nan # fill with null
 
     # Planet radius
     gdir_prad_samp = ror_samp * gdir_srad_samp * 109.245
@@ -54,10 +56,10 @@ def update_planet_parameters(df):
 
     # Semi-major axis
     period = np.array(df.koi_period).reshape(-1,1)
-    sma_samp = (smass_samp * (period / 365.) ** 2.) ** (1. / 3.)
+    sma_samp = (smass_samp * (period/365)**2) ** 0.33
 
     # insolation flux
-    sinc_samp = (steff_samp / 5778.) ** 4.0 * (giso_srad_samp / sma_samp) ** 2.0
+    sinc_samp = (steff_samp/5778)**4 * (giso_srad_samp/sma_samp)**2
 
     df['gdir_prad'] = np.median(gdir_prad_samp,axis=1)
     df['gdir_prad_err1'] = np.std(gdir_prad_samp,axis=1)
