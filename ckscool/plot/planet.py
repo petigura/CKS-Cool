@@ -70,7 +70,7 @@ class ContourPlotter(object):
         self.ds['Z'] /= frac
 
     def plot_contour(self):
-        self.ds.Z.plot.contourf(x='kx', cmap=plt.cm.afmhot_r, levels=20)
+        self.ds.Z.plot.contourf(x='kx', cmap=plt.cm.afmhot_r, levels=20,zorder=0)
         add_anchored('$N_p$ = {}'.format(len(self.x)),2,prop=dict(size='small'))
         self.xlim(self.xmin,self.xmax)
         self.ylim(self.ymin,self.ymax)
