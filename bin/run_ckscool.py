@@ -233,6 +233,8 @@ def create_workflow():
     w.plot['planet-smet-prad-zoom'] = lambda : ckscool.plot.planet.fig_smet_prad(zoom=True)
     w.plot['occur-contour-three'] = ckscool.plot.occur.fig_contour_three
 
+    w.plot['occur-contour-three'] = ckscool.plot.occur.fig_contour_three
+
     # table
     f1 = ckscool.table.tab_star
     w.table['star'] = f1

@@ -171,7 +171,7 @@ def load_occur(limits, debug=False):
     
     # Derive completeness object
     method = 'fulton-gamma-clip' # treatment for planet detectability
-    impact = 0.7 # maximum impact parameter considered.
+    impact = 1 # maximum impact parameter considered.
 
     field = ckscool.io.load_table('field-cuts',cache=1)
     field = field[~field.isany]
@@ -179,7 +179,7 @@ def load_occur(limits, debug=False):
 
     plnt = ckscool.io.load_table('planets-cuts2+iso')
     plnt = plnt[~plnt.isany]
-    namemap = {'gdir_prad':'prad','koi_period':'per','giso_smass':'smass'}
+    namemap = {'gdir_prad':'prad','koi_period':'per','m17_smass':'smass'}
     plnt = plnt.rename(columns=namemap)
 
     if limits.has_key('smass1'):
