@@ -11,11 +11,21 @@ import ckscool.io
 import ckscool.grid
 
 class Occurrence(object):
-    def __init__(self, plnt, comp, nstars, smet_field=None):
+    """Occurrence
+    
+    Args:
+        plnt (pandas DataFrame): table with planet parameters must contain 
+            following keys: 
+            - prad: planet radius
+            - per: planet period
+        comp (ckscool.comp.Completeness): see docs
+        nstars (int): number of stars in parent stellar population
+
+    """
+    def __init__(self, plnt, comp, nstars):
         self.plnt = plnt
         self.comp = comp
         self.nstars = nstars
-        self.plnt = plnt
 
     def occurence_box(self, limits):
         """Compute occurrence in a little box
@@ -37,12 +47,11 @@ class Occurrence(object):
         cut = self.plnt.copy()
         cut = cut[cut.prad.between(prad1,prad2)]
         cut = cut[cut.per.between(per1,per2)]
-        nstars = self.nstars
         nplnt = len(cut)
         prob_trdet_mean, prob_det_mean = self.comp.mean_prob_trdet(
             per1, per2, prad1, prad2
         )
-        ntrial = nstars * prob_trdet_mean
+        ntrial = self.nstars * prob_trdet_mean
         rate = nplnt / ntrial
 
         nsample = int(1e4)
@@ -59,12 +68,14 @@ class Occurrence(object):
         return out
 
 class Binomial(object):
+    """Class that computes binomial statistics
+
+    Args:
+        n (float): number of trials
+        k (float): number of sucesses
+    """
+    
     def __init__(self, n, k):
-        """
-        Args:
-            n: number of trials
-            k: number of sucesses
-        """
         self.n = float(n)
         self.k = float(k)
         self.npdf = 10000
@@ -221,5 +232,3 @@ def load_occur(limits, debug=False):
     nstars = len(field)
     occ = ckscool.occur.Occurrence(plnt, comp, nstars)
     return occ
-
-
