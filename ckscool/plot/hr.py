@@ -6,6 +6,7 @@ import pandas as pd
 from astropy import constants as c
 from ckscool.plot.config import *
 import ckscool.io
+
 sns.set_style('ticks')
 sns.set_color_codes()
 texteff = '$\mathregular{T}_{\mathregular{eff}}$'
@@ -50,42 +51,7 @@ def fig_smet_smass():
     minorticks_off()
     fig.set_tight_layout(True)
 
-def fig_compare():
-    sns.set(
-        style='ticks',
-        rc={'ytick.major.size':3.0,
-            'xtick.major.size':3.0,
-            'xtick.direction': u'in',
-            'ytick.direction': u'in',}
-    )
-    sns.set_context('paper',font_scale=1.1)
-    df = cksmet.io.load_table('lamost-cks-calibration-sample')
 
-    dfcal = df.copy()
-    calfn  = 'cal_lamo-to-cks.fits'
-    namemap = {'teff_new':'teff','logg_new':'logg','fe_new':'fe'}
-    dfcal = dfcal.rename(columns=namemap)
-
-    dfcal = cksmet._calibrate.calibrate(dfcal, calfn, mode='uncal')
-    dfcal = dfcal.drop(['delta'],axis=1)
-
-    fig = figure(figsize=(7,3.5))
-    shape = (10,2)
-    ax1 = subplot2grid(shape, (0,0), rowspan=8)
-    ax2 = subplot2grid(shape, (8,0), rowspan=2, sharex=ax1)
-    ax3 = subplot2grid(shape, (0,1), rowspan=8)
-    ax4 = subplot2grid(shape, (8,1), rowspan=2, sharex=ax3)
-
-    kw = dict(label1='CKS',label2='LAMOST',fig0=fig)
-    comparison('smet',df.fe_lib,df.fe_new, axL0=[ax1,ax2],**kw)
-    comparison('smet',dfcal.fe_lib,dfcal.fe, axL0=[ax3,ax4],**kw)
-    fig.set_tight_layout(True)
-    fig.set_tight_layout(False)
-    fig.subplots_adjust(
-        hspace=0.001,left=0.12,top=0.96,right=0.98,wspace=0.4,bottom=0.14
-    )
-
-import ckscool.io
 def fig_ferr_hist_star():
     fig = subplots(figsize=(4,3))
     df = ckscool.io.load_table('planets-cuts2+iso')
