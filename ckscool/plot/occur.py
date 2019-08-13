@@ -12,7 +12,7 @@ import ckscool.io
 sns.set_style('ticks')
 sns.set_color_codes()
 
-def contour(cp,plot_planetpoints=True, plot_interval=False,
+def contour(cp, plot_interval=False,
             draw_colorbar=True,cax=None,plot_completeness=True,label=False,
             normalize=False):
     """
@@ -70,12 +70,6 @@ def contour(cp,plot_planetpoints=True, plot_interval=False,
         t = cbar.ax.set_yticklabels(cbarticklabels) 
         setp(t,size='x-small')
         cbar.set_label(cbarlabel,size='small')
-
-    if plot_planetpoints:
-        cks = cksmet.io.load_table('cks-cuts',cache=1)
-        cks = cks[~cks.isany]
-        x,y = log10(cks.koi_period),log10(cks.iso_prad)
-        plot(x,y,'.',mfc='none',mec='red',mew=0.3,ms=5)
 
     # Completeness
     if plot_completeness:
@@ -201,17 +195,6 @@ def fig_contour_six():
     setp(axL[:-1,:],xlabel='')
     tight_layout(True)
 
-
-def sum_cells_per(df0):
-    df2 = []
-    for smetc in df0.smetc.drop_duplicates():
-        df = df0[df0.smetc==smetc] 
-        rate = cksmet.stats.sum_cells(df.ntrial,df.nplnt)
-        rate['smetc'] = smetc
-        df2.append(rate)
-    
-    df2 = pd.DataFrame(df2)
-    return df2
 
 class obj(object):
     def __init__(self):
