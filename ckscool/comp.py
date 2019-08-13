@@ -290,7 +290,7 @@ class Completeness(object):
     def compute_grid_prob_tr(self,verbose=0):
         """Compute a grid of transit probabilities"""
 
-        print "Computing  grid of transit probabilities"
+        print "Computing grid of transit probabilities"
         def rowfunc(row):
             return self.prob_tr(row.perc)
 

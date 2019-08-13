@@ -171,7 +171,7 @@ def load_occur(limits, debug=False):
     
     # Derive completeness object
     method = 'fulton-gamma-clip' # treatment for planet detectability
-    impact = 1 # maximum impact parameter considered.
+    impact = 0.8 # maximum impact parameter considered.
 
     field = ckscool.io.load_table('field-cuts',cache=1)
     field = field[~field.isany]
