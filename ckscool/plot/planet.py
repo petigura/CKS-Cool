@@ -7,6 +7,8 @@ import xarray as xr
 import scipy
 from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
 from astropy import units as u
+from sklearn.utils import resample
+
 
 
 class ContourPlotter(object):
@@ -23,15 +25,15 @@ class ContourPlotter(object):
         if yscale=='log':
             yerr = log10(1 + yerr / y)
             y = log10(y)
-        
+
         self.x = x
         self.y = y
         self.xerr = xerr
         self.yerr = yerr
         self.n = len(self.x)
-        
-    def compute_density(self):
-        ndim = 2 
+
+    def compute_density(self, for_gradient=False):
+        ndim = 2
         kx = np.linspace(self.xmin, self.xmax, self._kde_nx)
         ky = np.linspace(self.ymin, self.ymax, self._kde_ny)
         if self.xscale=='log':
@@ -46,7 +48,7 @@ class ContourPlotter(object):
             'kyc': (['kx', 'ky'], _ky),
         }
         ds = xr.Dataset(data,coords=coords)
-        
+
         # midpoints
         mu = np.zeros((self.n,ndim))
         mu[:,0] = self.x
@@ -56,7 +58,7 @@ class ContourPlotter(object):
         cov = zeros((self.n,ndim,ndim))
         cov[:,0,0] = self.xerr**2
         cov[:,1,1] = self.yerr**2
-        
+
         pos = np.empty(_kx.shape + (2,))
         pos[:, :, 0] = _kx
         pos[:, :, 1] = _ky
@@ -64,13 +66,16 @@ class ContourPlotter(object):
         ds['Z'] = (['kx','ky'],Z)
         self.ds = ds
 
+        if for_gradient:
+            return kx, ky, Z
+
     def normalize_density(self):
         frac = self.ds['Z'].sum(dim='ky')
         frac = frac / frac.mean()
         self.ds['Z'] /= frac
 
     def plot_contour(self):
-        self.ds.Z.plot.contourf(x='kx', cmap=plt.cm.afmhot_r, levels=20)
+        self.ds.Z.plot.contourf(x='kx', cmap=plt.cm.afmhot_r, levels=20,zorder=0)
         add_anchored('$N_p$ = {}'.format(len(self.x)),2,prop=dict(size='small'))
         self.xlim(self.xmin,self.xmax)
         self.ylim(self.ymin,self.ymax)
@@ -117,7 +122,16 @@ def fig_per_prad(**kwargs):
     df = df[~df.isany]
     _per_prad(df, **kwargs)
 
-def _per_prad(df,nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1):
+def gradient_per_prad(plnt, bootstrap=False, **kwargs):
+
+    if bootstrap:
+        resample_indices = resample(np.arange(len(plnt)))
+        plnt =  plnt.iloc[resample_indices, :]
+
+    X, Y, Z = _per_prad(plnt, **kwargs)
+    return X, Y, Z
+
+def _per_prad(df,nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1,for_gradient=False):
     if query is not None:
         df = df.query(query)
     print len(df)
@@ -137,7 +151,12 @@ def _per_prad(df,nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1):
     xticks = [0.3,1,3,10,30,100,300]
     yticks = [0.5,0.7,1.0,1.4,2.0,2.8,4.0,5.6,8.0,11.3,16.0]
 
-    p1.compute_density()
+    if for_gradient:
+        X, Y, Z = p1.compute_density(for_gradient=True)
+        return X, Y, Z
+    else:
+        p1.compute_density()
+
     p1.plot_contour()
     xlabel('Orbital Period (days)')
     ylabel('Planet Size (Earth-radii)')
@@ -331,8 +350,8 @@ def fig_smet_prad(nopoints=False,zoom=False):
     df = ckscool.io.load_table('planets-cuts2+iso',cache=1)
     df = df[~df.isany]
     df = df.dropna(subset=[xk,yk,yerrk])
-    
-    x = df[xk] 
+
+    x = df[xk]
     y = df[yk]
     yerr = df[yerrk] * 1.5
     xerr = 0.1
@@ -379,7 +398,7 @@ def add_anchored(*args,**kwargs):
 def gaussian(pos, mu, cov):
 
     """
-    Compute the sum of 2D gaussians 
+    Compute the sum of 2D gaussians
 
     last dimension of x must equal len(mu)
     """
@@ -390,7 +409,7 @@ def gaussian(pos, mu, cov):
     for i in range(mu.shape[0]):
         _out = scipy.stats.multivariate_normal(mu[i], cov[i]).pdf(pos)
         out.append(_out)
-    
+
     out = np.array(out)
     out = np.sum(out,axis=0)
     return out
