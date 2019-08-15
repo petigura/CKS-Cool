@@ -159,24 +159,24 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         days = lc * long_cadence_day
         df['tobs'] = (observed * days).sum(axis=1)
 
-    elif table == 'm17+cdpp+gaia2+ber18':
+    elif table == 'm17+cdpp+gaia2+ber19':
         m17 = load_table('m17', cache=1)
         # Store to separate cache to prevent long reload times
         cachefn = os.path.join(DATADIR,'cdpp.hdf') 
         cdpp = load_table('cdpp',cache=1, cachefn=cachefn)        
-        ber18 = load_table('berger18', cache=1)
+        ber = load_table('berger19', cache=1)
         gaia = load_table('gaia2', cache=1)
         df = pd.merge(m17,cdpp)
         df = pd.merge(df,gaia)
-        df = pd.merge(df,ber18,on=['id_kic', 'id_gaia2'])
+        df = pd.merge(df,ber,on=['id_kic', 'id_gaia2'])
 
     elif table == 'field-cuts':
-        df = load_table('m17+cdpp+gaia2+ber18',cache=1)
+        df = load_table('m17+cdpp+gaia2+ber19',cache=1)
         cuttypes = ['none','faint','giant','rizzuto']
         df = ckscool.cuts.occur.add_cuts(df, cuttypes, 'field')
 
     elif table == 'planets-cuts1':
-        star = load_table('m17+cdpp+gaia2+ber18',cache=1)
+        star = load_table('m17+cdpp+gaia2+ber19',cache=1)
         plnt = load_table('koi-thompson18-dr25')
         df = pd.merge(star,plnt)
         cuttypes = ['none','faint','giant','rizzuto','notreliable','lowsnr']
@@ -475,6 +475,24 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         df = df.rename(columns=namemap)[namemap.values()]
         df = add_prefix(df,'ber18_')
 
+    # Berger al. (2019)
+    elif table == 'berger19':
+        df = df.rename(columns={'KIC':'id_kic'})
+        namemap = {
+            'KIC':'id_kic',
+            'iso_teff':'steff',
+            'iso_teff_err1':'steff_err1',
+            'iso_teff_err2':'steff_err2',
+            'iso_rad':'srad',
+            'iso_rad_err1':'srad_err1',
+            'iso_rad_err2':'srad_err2',
+            'iso_mass':'smass',
+            'iso_mass_err1':'smass_err1',
+            'iso_mass_err2':'smass_err2',
+        }
+
+        df = df.rename(columns=namemap)[namemap.values()]
+        df = add_prefix(df,'ber19_')
     elif table == 'ckscool-brewer18':
         cks = load_table('planets-cuts2+iso').groupby('id_koi',as_index=False).nth(0)
         m13 = load_table('brewer18')
