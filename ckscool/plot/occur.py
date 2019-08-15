@@ -139,15 +139,15 @@ def fig_contour_three():
     cp2 = ckscool.io.load_object('cp_smass=1.0-1.4',cache=1)
     fig, axL = subplots(ncols=3,figsize=(8,3))
     sca(axL[0])
-    contour(cp0,plot_planetpoints=False,plot_interval=True,draw_colorbar=False)
+    contour(cp0,plot_interval=True,draw_colorbar=False)
     title('$M_\star = 0.5-0.7\, M_\odot$ ')
 
     sca(axL[1])
-    contour(cp1,plot_planetpoints=False,plot_interval=True,draw_colorbar=False)
+    contour(cp1,plot_interval=True,draw_colorbar=False)
     title('$M_\star = 0.7-1.0\, M_\odot$ ')
 
     sca(axL[2])
-    contour(cp2,plot_planetpoints=False,plot_interval=True,draw_colorbar=False)
+    contour(cp2,plot_interval=True,draw_colorbar=False)
     title('$M_\star = 1.0-1.4\, M_\odot$ ')
     
     xlim=log10(1),log10(300)
@@ -175,7 +175,7 @@ def fig_contour_six():
         ckscool.plot.planet._per_prad(df,nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1)
 
         sca(axL[i,1])
-        contour(cp,plot_planetpoints=False,plot_interval=True,draw_colorbar=True,normalize=True)
+        contour(cp,plot_interval=True,draw_colorbar=True,normalize=True)
         title('$M_\star = {}-{}\, M_\odot$ '.format(_mass1,_mass2))
         i+=1
 
