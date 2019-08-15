@@ -33,7 +33,7 @@ warnings.simplefilter('ignore', pd.errors.PerformanceWarning)
 # changes. The CACHEDIR can be set for different git branches
 FILE = os.path.dirname(__file__)
 DATADIR = os.path.join(FILE, '../data/')
-CACHEDIR = os.path.join(FILE, '../cache/gaia-kic-tmass/')
+CACHEDIR = os.path.join(FILE, '../cache/berger/')
 CACHEFN = os.path.join(CACHEDIR, 'load_table_cache.hdf')
 os.system('mkdir -p {}'.format(CACHEDIR)) # creates CACHEDIR if doesn't exist
 KBCFN = os.path.join(DATADIR,'kbcvel.csv')
@@ -168,7 +168,7 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         gaia = load_table('gaia2', cache=1)
         df = pd.merge(m17,cdpp)
         df = pd.merge(df,gaia)
-        df = pd.merge(df,ber,on=['id_kic', 'id_gaia2'])
+        df = pd.merge(df,ber,on=['id_kic'])
 
     elif table == 'field-cuts':
         df = load_table('m17+cdpp+gaia2+ber19',cache=1)
@@ -477,6 +477,7 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
 
     # Berger al. (2019)
     elif table == 'berger19':
+        df = pd.read_csv('data/GKSPC_InOut_V1.csv')
         df = df.rename(columns={'KIC':'id_kic'})
         namemap = {
             'KIC':'id_kic',
