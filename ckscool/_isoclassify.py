@@ -10,7 +10,7 @@ def load_stellar_parameters(source):
     Load up stellar properties
     """
     # needed for the lookup between id_kic and id_koi
-    star = ckscool.io.load_table('m17+cdpp+gaia2+ber18')
+    star = ckscool.io.load_table('m17+cdpp+gaia2+ber19')
     plnt = ckscool.io.load_table('koi-thompson18-dr25') 
     plnt = plnt.groupby('id_koi',as_index=False).nth(0)[['id_koi','id_kic']]
     star = pd.merge(star,plnt)
