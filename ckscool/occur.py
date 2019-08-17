@@ -186,7 +186,7 @@ def load_occur(limits, debug=False):
 
     field = ckscool.io.load_table('field-cuts',cache=1)
     field = field[~field.isany]
-    field = field.rename(columns={'ber18_srad':'srad','m17_smass':'smass'})
+    field = field.rename(columns={'ber19_srad':'srad','m17_smass':'smass'})
 
     plnt = ckscool.io.load_table('planets-cuts2+iso')
     plnt = plnt[~plnt.isany]
