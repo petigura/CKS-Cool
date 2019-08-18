@@ -189,7 +189,7 @@ def load_occur(limits, debug=False):
     field = field.rename(columns={'ber19_srad':'srad','ber19_smass':'smass'})
     plnt = ckscool.io.load_table('planets-cuts2+iso')
     plnt = plnt[~plnt.isany]
-    namemap = {'gdir_prad':'prad','koi_period':'per','ber19_smass':'smass'}
+    namemap = {'gdir_prad':'prad','koi_period':'per','giso_smass':'smass'}
     plnt = plnt.rename(columns=namemap)
 
     if limits.has_key('smass1'):
