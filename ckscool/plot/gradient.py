@@ -15,21 +15,22 @@ from scipy import interpolate
 import corner
 
 
-def occurence_gradient_plot(smass_bins=[0.5,0.8,1.1,1.4]):
+def occurence_gradient_plot(smass_bins=[0.5,0.8,1.1,1.4], corner_plot=False):
 
     for i in range(len(smass_bins)-1):
 
         smass1, smass2 = smass_bins[i], smass_bins[i+1]
         chain_array = np.loadtxt("./data/chain_occ_{0}-{1}-smass.csv".format(smass1, smass2), delimiter=',')
 
-        plt.figure(i+1)
+        if corner_plot:
+            plt.figure(i+1)
 
-        labels = ["m", r"R$_p$(10)"]
-        figure = corner.corner(chain_array[0:,:],
-                               quantiles=[0.16, 0.5, 0.84],
-                               show_titles=True,
-                               labels=labels,
-                               smooth1d=True)
+            labels = ["m", r"R$_p$(10)"]
+            figure = corner.corner(chain_array[0:,:],
+                                   quantiles=[0.16, 0.5, 0.84],
+                                   show_titles=True,
+                                   labels=labels,
+                                   smooth1d=True)
 
         m, m_std = np.mean(chain_array[:,0]), np.std(chain_array[:,0])
         Rp10, Rp10_std = np.mean(chain_array[:,1]), np.std(chain_array[:,1])
@@ -75,21 +76,22 @@ def occurence_gradient_plot(smass_bins=[0.5,0.8,1.1,1.4]):
 # ---------------------------------------------------------------------------- #
 
 
-def detections_gradient_plot(smass_bins=[0.5,0.8,1.1,1.4]):
+def detections_gradient_plot(smass_bins=[0.5,0.8,1.1,1.4], corner_plot=False):
 
     for i in range(len(smass_bins)-1):
 
         smass1, smass2 = smass_bins[i], smass_bins[i+1]
         chain_array = np.loadtxt("./data/chain_detections_{0}-{1}-smass.csv".format(smass1, smass2), delimiter=',')
 
-        plt.figure(i+1)
+        if corner_plot:
+            plt.figure(i+1)
 
-        labels = ["m", r"R$_p$(10)"]
-        figure = corner.corner(chain_array[0:,:],
-                               quantiles=[0.16, 0.5, 0.84],
-                               show_titles=True,
-                               labels=labels,
-                               smooth1d=True)
+            labels = ["m", r"R$_p$(10)"]
+            figure = corner.corner(chain_array[0:,:],
+                                   quantiles=[0.16, 0.5, 0.84],
+                                   show_titles=True,
+                                   labels=labels,
+                                   smooth1d=True)
 
         m, m_std = np.mean(chain_array[:,0]), np.std(chain_array[:,0])
         Rp10, Rp10_std = np.mean(chain_array[:,1]), np.std(chain_array[:,1])
