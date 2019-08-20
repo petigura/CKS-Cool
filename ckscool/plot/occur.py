@@ -133,6 +133,132 @@ $\Delta \log R_P$ = {:.2f} dex
     xlabel('Orbital Period (days)')
     ylabel('Planet Size (Earth-radii)')
 
+
+# ---------------------------------------------------------------------------- #
+
+def contour_sinc(cp, plot_interval=False,
+                 draw_colorbar=True,cax=None,plot_completeness=True,label=False,
+                 normalize=False, ntrials_min=50):
+    """
+    Args:
+       cp : contour plotter object
+
+    """
+
+    ax = gca()
+    tax = gca().transAxes
+
+    # convert into an x-array for plotting
+    ds = cp.rate.groupby(['sinc1','prad1']).first().to_xarray()
+    norm = cp.rate.query('10 < sincc < 1000 and 2 < pradc < 4').rate.sum()
+    rate = ds.rate
+    rate = rate.fillna(4e-6)
+
+    # Smooth out the contours a bit
+    rate = nd.gaussian_filter(rate,(4,2))
+
+    eps = 1e-10
+    X, Y = np.log10(ds.sincc), np.log10(ds.pradc)
+    cmap = 'YlGn' #,None #'hot_r'
+    levels = None
+    cbarlabel=''
+
+    if normalize:
+        Z = rate / norm
+        levels = linspace(0,Z.max(),20)
+        kw = dict(levels=levels,extend='neither',cmap=cmap,zorder=0)
+        cbarticks = levels[::2]
+        cbarticklabels = ["{:.0f}".format(1e2*_yt) for _yt in cbarticks]
+
+    else:
+        levels = arange(0,5e-2+eps,0.0025)
+        Z = rate
+        cbarticks = levels[::2]
+        cbarticklabels = ["{:.0f}".format(1e2*_yt) for _yt in cbarticks]
+        kw = dict(levels=levels,extend='neither',cmap=cmap,zorder=0)
+
+    cbarlabel = r"""Planets per 100 Stars per $Sinc-R_P$ interval"""
+
+    X = np.array(X)
+    Y = np.array(Y)
+    Z = np.array(Z)
+    qcs = contourf(X,Y,Z, **kw)
+
+    # plot straight contours
+    #kw.pop('cmap')
+    #kw.pop('extend')
+    #qcs = contour(X,Y,Z,)
+    #plt.clabel(qcs, inline=1, fmt='%.3f', colors='w', fontsize=1)
+    if draw_colorbar:
+        cbar = colorbar(qcs,cax=cax,ticks=cbarticks,)
+        t = cbar.ax.set_yticklabels(cbarticklabels)
+        setp(t,size='x-small')
+        cbar.set_label(cbarlabel,size='small')
+
+    # Completeness
+    if plot_completeness:
+        Z = np.array(ds.ntrial)
+        cmap = sns.light_palette("gray",as_cmap=True)
+        contourf(X,Y,Z,[0,ntrials_min],zorder=2.5,cmap=cmap,vmax=1)
+        '''
+        text(
+            0.95,0.15,'Low Completeness',rotation=12,zorder=5,size='small',
+            transform=ax.transAxes,ha='right'
+        )
+        '''
+    if plot_interval:
+        #inv = ax.transAxes.inverted()
+        xyaxes = (0.1,0.9)
+        xy = ax.transLimits.inverted().transform(xyaxes)
+        #xy = ax.transAxes.transform((0.9,0.9))
+        w = cp.sincwid
+        h = cp.pradwid
+        rect = Rectangle(xy, w, h,lw=1,ec='r',fc='none',zorder=4)
+        ax.add_patch(rect)
+        s = """\
+$P-R_P$ Interval
+$\Delta \log Sinc$ = {:.2f} dex
+$\Delta \log R_P$ = {:.2f} dex
+""".format(w,h)
+        kw = dict(
+            size='x-small',zorder=5,va='top',ha='left',transform=ax.transAxes,
+        )
+#        text(xyaxes[0]+0.07,xyaxes[1],s,**kw)
+
+    if label:
+        if scale=='linear':
+            kw = dict(
+                size='x-small',zorder=5,va='center',ha='center',color='red'
+            )
+            text(log10(30),log10(3),'Warm Sub-Neptunes', **kw)
+            text(log10(20),log10(1),'Warm Super-Earths',**kw)
+            text(log10(30),log10(1.7),'Radius Gap',rotation=-10,**kw)
+            text(log10(150),log10(16),'Cool Jupiters',**kw)
+
+        if scale=='log':
+            kw = dict(
+                size='x-small',zorder=5,va='center',ha='center',color='red'
+            )
+            text(log10(3),log10(20),'Hot Jupiters',**kw)
+            x = [1,3.0,15,1]
+            y = [1.7,1.7,10.0,10.0]
+            x = np.log10(np.array(x))
+            y = np.log10(np.array(y))
+            plot(x,y,linestyle='--',color='red',lw=1)
+            kw['va'] = 'top'
+            text(log10(3),log10(10)-0.03,'Hot Planet Desert',**kw)
+
+    xt = [1,3,10,30,100,1000,10000]
+    yt = [0.5,1,2,4,8,16,32]
+    xticks([log10(_xt) for _xt in xt],xt)
+    yticks([log10(_yt) for _yt in yt],yt)
+    xlim(log10(10000),log10(1))
+    ylim(log10(1),log10(4))
+    xlabel('Stellar Incident Flux (Earth Units)')
+    ylabel('Planet Size (Earth-radii)')
+
+
+
 def fig_contour_three():
     cp0 = ckscool.io.load_object('cp_smass=0.5-0.7',cache=1)
     cp1 = ckscool.io.load_object('cp_smass=0.7-1.0',cache=1)
@@ -255,6 +381,40 @@ def load_contour_plotter(occ):
     cp.pradwid = pradwid
     cp.occ = occ
     return cp
+
+def load_contour_plotter_sinc(occ):
+    logsincc = linspace(log10(0.1),log10(30000),80)
+    logpradc = linspace(log10(0.5),log10(4),80)
+    sincwid = 0.25
+    pradwid = 0.05
+    df = []
+    for i in range(len(logsincc)):
+        for j in range(len(logpradc)):
+            d = {}
+            d['logsincc'] = logsincc[i]
+            d['logpradc'] = logpradc[j]
+            d['logsinc1'] = d['logsincc'] - sincwid / 2
+            d['logsinc2'] = d['logsincc'] + sincwid / 2
+            d['logprad1'] = d['logpradc'] - pradwid / 2
+            d['logprad2'] = d['logpradc'] + pradwid / 2
+            d['sinc1'] = 10**d['logsinc1']
+            d['sinc2'] = 10**d['logsinc2']
+            d['sincc'] = 10**d['logsincc']
+            d['prad1'] = 10**d['logprad1']
+            d['prad2'] = 10**d['logprad2']
+            d['pradc'] = 10**d['logpradc']
+            limits = dict([(k,d[k]) for k in 'sinc1 sinc2 prad1 prad2'.split()])
+            d = dict(d,**occ.occurence_box_sinc(limits))
+            df.append(d)
+
+    df = pd.DataFrame(df)
+    cp = obj()
+    cp.rate = df
+    cp.sincwid = sincwid
+    cp.pradwid = pradwid
+    cp.occ = occ
+    return cp
+
 
 def load_surface_smass(per1, per2):
     logsmassc = linspace(log10(0.5),log10(1.4),10)
