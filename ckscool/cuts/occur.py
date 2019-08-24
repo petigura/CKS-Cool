@@ -70,10 +70,10 @@ class CutRizzuto(CutBase):
 
 class CutRUWE(CutBase):
     cuttype = 'ruwe'
-    plotstr = 'RUWE < 2'
+    plotstr = 'RUWE < 1.2'
     texstr = plotstr
     def cut(self):
-        b = self.df['gaia2_ruwe'] > 2
+        b = self.df['gaia2_ruwe'] > 1.2
         return b
 
 class CutGiant(CutBase):
