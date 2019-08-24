@@ -9,12 +9,13 @@ import matplotlib.patheffects as path_effects
 import seaborn as sns
 
 import ckscool.io
+import ckscool.plot.planet
+
 sns.set_style('ticks')
 sns.set_color_codes()
 
-def contour(cp, plot_interval=False,
-            draw_colorbar=True,cax=None,plot_completeness=True,label=False,
-            normalize=False):
+def contour(cp, plot_interval=False, draw_colorbar=True,cax=None,
+            plot_completeness=True,label=False, normalize=False, levels=None):
     """
     Args:
        cp : contour plotter object
@@ -23,42 +24,53 @@ def contour(cp, plot_interval=False,
 
     ax = gca()
     tax = gca().transAxes
+    min_ntrials = 50 # minimum number of N trials to show
+    cmap = 'YlGn' #,None #'hot_r'
 
     # convert into an x-array for plotting
     ds = cp.rate.groupby(['per1','prad1']).first().to_xarray()
     norm = cp.rate.query('10 < perc < 100 and 2 < pradc < 4').rate.sum()
     rate = ds.rate
-    rate = rate.fillna(4e-6)
-
-    # Smooth out the contours a bit
+    rate = rate.fillna(1e-10)
     rate = nd.gaussian_filter(rate,(4,2))
 
+    # Smooth out the contours a bit
     eps = 1e-10
-    X, Y = np.log10(ds.perc), np.log10(ds.pradc)
-    cmap = 'YlGn' #,None #'hot_r'
-    levels = None
-    cbarlabel=''
+    X = np.array(np.log10(ds.perc))
+    Y = np.array(np.log10(ds.pradc))
+    Z = np.array(rate)
+    if levels==None:
+        #levels = arange(0,5e-2+eps,0.0025) 
+        b = (
+            (ds.ntrial > min_ntrials) 
+            & (ds.perc > 1)
+            & (ds.perc < 300)
+            & (ds.pradc > 1.0) 
+            & (ds.pradc < 4.0)
+        )
+        b = array(b)
+        maxz = np.max(rate[b])
+        maxz = np.round(maxz*1.1,3)
+        levels = linspace(0,maxz+eps,20)
 
-    if normalize:
-        Z = rate / norm
-        levels = linspace(0,Z.max(),20)
-        kw = dict(levels=levels,extend='neither',cmap=cmap,zorder=0)
-        cbarticks = levels[::2]
-        cbarticklabels = ["{:.0f}".format(1e2*_yt) for _yt in cbarticks]
-
-    else:
-        levels = arange(0,5e-2+eps,0.0025) 
-        Z = rate
-        cbarticks = levels[::2]
-        cbarticklabels = ["{:.0f}".format(1e2*_yt) for _yt in cbarticks]
-        kw = dict(levels=levels,extend='neither',cmap=cmap,zorder=0)
-
+    cbarticks = levels[::2]
+    cbarticklabels = ["{:.1f}".format(1e2*_yt) for _yt in cbarticks]
+    kw = dict(levels=levels,extend='neither',cmap=cmap,zorder=0)
     cbarlabel = r"""Planets per 100 Stars per $P-R_P$ interval"""
-
-    X = np.array(X)
-    Y = np.array(Y)
-    Z = np.array(Z)
     qcs = contourf(X,Y,Z, **kw)
+
+    # Completeness
+    if plot_completeness:
+        Z = np.array(ds.ntrial)
+        cmap = sns.light_palette("gray",as_cmap=True)
+        contourf(X,Y,Z,[0,min_ntrials],zorder=2.5,cmap=cmap,vmax=1)
+        '''
+        text(
+            0.95,0.15,'Low Completeness',rotation=12,zorder=5,size='small',
+            transform=ax.transAxes,ha='right'
+        )
+        '''
+
 
     # plot straight contours
     #kw.pop('cmap')
@@ -71,25 +83,23 @@ def contour(cp, plot_interval=False,
         setp(t,size='x-small')
         cbar.set_label(cbarlabel,size='small')
 
-    # Completeness
-    if plot_completeness:
-        Z = np.array(ds.ntrial)
-        cmap = sns.light_palette("gray",as_cmap=True)
-        contourf(X,Y,Z,[0,100],zorder=2.5,cmap=cmap,vmax=1)
-        '''
-        text(
-            0.95,0.15,'Low Completeness',rotation=12,zorder=5,size='small',
-            transform=ax.transAxes,ha='right'
-        )
-        '''
+
+    xt = [1,3,10,30,100,300]
+    yt = [0.5,1,2,4,8,16,32]
+    xticks([log10(_xt) for _xt in xt],xt)
+    yticks([log10(_yt) for _yt in yt],yt)
+    xlim(log10(1),log10(300))
+    ylim(log10(1),log10(4))
+    xlabel('Orbital Period (days)')
+    ylabel('Planet Size (Earth-radii)')
+
     if plot_interval:
-        #inv = ax.transAxes.inverted()
-        xyaxes = (0.1,0.9)
-        xy = ax.transLimits.inverted().transform(xyaxes)
-        #xy = ax.transAxes.transform((0.9,0.9))
+        #axis_to_data = ax.transAxes + ax.transData.inverted()
+        #xy = axis_to_data.transform((0.1,0.9))
+        xy = 0.1, 0.52
         w = cp.perwid
         h = cp.pradwid
-        rect = Rectangle(xy, w, h,lw=1,ec='r',fc='none',zorder=4)
+        rect = Rectangle(xy, w, h, lw=1, ec='r', fc='none', zorder=10)
         ax.add_patch(rect)
         s = """\
 $P-R_P$ Interval
@@ -101,37 +111,6 @@ $\Delta \log R_P$ = {:.2f} dex
         )
 #        text(xyaxes[0]+0.07,xyaxes[1],s,**kw)
 
-    if label:
-        if scale=='linear':
-            kw = dict(
-                size='x-small',zorder=5,va='center',ha='center',color='red'
-            )
-            text(log10(30),log10(3),'Warm Sub-Neptunes', **kw)
-            text(log10(20),log10(1),'Warm Super-Earths',**kw)
-            text(log10(30),log10(1.7),'Radius Gap',rotation=-10,**kw)
-            text(log10(150),log10(16),'Cool Jupiters',**kw)
-
-        if scale=='log':
-            kw = dict(
-                size='x-small',zorder=5,va='center',ha='center',color='red'
-            )
-            text(log10(3),log10(20),'Hot Jupiters',**kw)
-            x = [1,3.0,15,1]
-            y = [1.7,1.7,10.0,10.0]
-            x = np.log10(np.array(x))
-            y = np.log10(np.array(y))
-            plot(x,y,linestyle='--',color='red',lw=1)
-            kw['va'] = 'top'
-            text(log10(3),log10(10)-0.03,'Hot Planet Desert',**kw)
-
-    xt = [1,3,10,30,100,300]
-    yt = [0.5,1,2,4,8,16,32]
-    xticks([log10(_xt) for _xt in xt],xt)
-    yticks([log10(_yt) for _yt in yt],yt)
-    xlim(log10(1),log10(300))
-    ylim(log10(0.5),log10(32))
-    xlabel('Orbital Period (days)')
-    ylabel('Planet Size (Earth-radii)')
 
 def fig_contour_three():    
     cp0 = ckscool.io.load_object('cp_smass=0.5-0.7',cache=1)
@@ -155,10 +134,6 @@ def fig_contour_three():
     setp(axL,xlim=xlim,ylim=ylim)
     fig.subplots_adjust(hspace=0.2)
 
-
-import ckscool.plot.planet
-
-
 def fig_contour_six():    
     sns.set_context('paper')
     mass1 = [0.5,0.8,1.1]
@@ -175,7 +150,7 @@ def fig_contour_six():
         ckscool.plot.planet._per_prad(df,nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1)
 
         sca(axL[i,1])
-        contour(cp,plot_interval=True,draw_colorbar=True,normalize=True)
+        contour(cp,plot_interval=True,draw_colorbar=True,normalize=False)
         title('$M_\star = {}-{}\, M_\odot$ '.format(_mass1,_mass2))
         i+=1
 

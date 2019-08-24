@@ -152,16 +152,8 @@ def _per_prad(df,nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1):
 
     tight_layout()
 
-
-def fig_sinc_prad(nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1):
-    df = ckscool.io.load_table('planets-cuts2+iso',cache=1)
-    df = df[~df.isany]
-    if query is not None:
-        df = df.query(query)
-
-    print len(df)
-    sns.set_context('paper')
-    fig, axL = subplots(figsize=(5,4))
+def _sinc_prad(df,nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1):
+    fig, axL = subplots(figsize=(6,4))
     xk = 'giso_sinc'
     yk = 'gdir_prad'
     yerrk = 'gdir_prad_err1'
@@ -173,8 +165,8 @@ def fig_sinc_prad(nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1):
 
     p1 = ContourPlotter(x, xerr, y, yerr,xscale='log',yscale='log')
     if zoom:
-        p1.xmin = 1
-        p1.xmax = 1e4
+        p1.xmin = 1e1
+        p1.xmax = 3e3
         p1.ymin = 1.0
         p1.ymax = 4
     else:
@@ -201,6 +193,11 @@ def fig_sinc_prad(nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1):
 
     tight_layout()
 
+def fig_sinc_prad(nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1):
+    df = ckscool.io.load_table('planets-cuts2+iso',cache=1)
+    df = df[~df.isany]
+    if query is not None:
+        df = df.query(query)
 
 def fig_intfxuv_prad(nopoints=False,zoom=False):
     sns.set_context('paper')
