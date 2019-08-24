@@ -170,6 +170,41 @@ def fig_contour_six():
     setp(axL[:-1,:],xlabel='')
     tight_layout(True)
 
+def fig_contour_six_sinc():
+    sns.set_context('paper')
+    mass1 = [0.5,0.8,1.1]
+    mass2 = [0.8,1.1,1.4]
+    fig, axL = subplots(nrows=3,ncols=2,figsize=(8.5,9))
+
+    i = 0
+    for _mass1, _mass2 in zip(mass1,mass2):
+        key = 'cp_smass={}-{}'.format(_mass1,_mass2)
+        cp = ckscool.io.load_object(key,cache=1)
+
+        sca(axL[i,0])
+        df = cp.occ.plnt.copy().rename(columns={'prad':'gdir_prad','per':'koi_period'})
+        ckscool.plot.planet._sinc_prad(df,nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1)
+
+        sca(axL[i,1])
+        contour(cp,plot_interval=True,draw_colorbar=True,normalize=False)
+        title('$M_\star = {}-{}\, M_\odot$ '.format(_mass1,_mass2))
+        i+=1
+
+
+    for ax in axL.flatten():
+        sca(ax)
+        xt = [1000,300,100,30,10]
+        yt = [1.0,1.4,2.0,2.8,4.0]
+        xticks([log10(_xt) for _xt in xt],xt)
+        yticks([log10(_yt) for _yt in yt],yt)
+        grid()
+
+    xlim=log10(1000),log10(10)
+    ylim=log10(1),log10(4)
+    setp(axL,xlim=xlim,ylim=ylim)
+    setp(axL[:,1:],ylabel='')
+    setp(axL[:-1,:],xlabel='')
+    tight_layout(True)
 
 class obj(object):
     def __init__(self):
