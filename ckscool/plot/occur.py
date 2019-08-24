@@ -190,16 +190,15 @@ def fig_contour_six_sinc():
         title('$M_\star = {}-{}\, M_\odot$ '.format(_mass1,_mass2))
         i+=1
 
-
     for ax in axL.flatten():
         sca(ax)
-        xt = [1000,300,100,30,10]
+        xt = [3000,1000,300,100,30,10,3]
         yt = [1.0,1.4,2.0,2.8,4.0]
         xticks([log10(_xt) for _xt in xt],xt)
         yticks([log10(_yt) for _yt in yt],yt)
         grid()
 
-    xlim=log10(1000),log10(10)
+    xlim=log10(3000),log10(3)
     ylim=log10(1),log10(4)
     setp(axL,xlim=xlim,ylim=ylim)
     setp(axL[:,1:],ylabel='')
