@@ -292,7 +292,7 @@ def fig_contour_six_sinc():
         ckscool.plot.planet._sinc_prad(df,nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1)
 
         sca(axL[i,1])
-        contour(cp,plot_interval=True,draw_colorbar=True,normalize=False)
+        contour_sinc(cp,plot_interval=True,draw_colorbar=True,normalize=False, ntrials_min=100)
         title('$M_\star = {}-{}\, M_\odot$ '.format(_mass1,_mass2))
         i+=1
 

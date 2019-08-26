@@ -26,7 +26,7 @@ import ckscool._isoclassify
 # Ignore the Natural name warning
 warnings.simplefilter('ignore', tables.NaturalNameWarning)
 warnings.simplefilter('ignore', pd.errors.PerformanceWarning)
-warnings.simplefilter('ignore', pd.errors.UserWarning)
+#warnings.simplefilter('ignore', pd.errors.UserWarning)
 
 # Define paths to various cache files. DATADIR stores data tables that
 # should not change with different code runs. CACHEDIR stores
@@ -662,9 +662,9 @@ def load_object(key,cache=0,verbose=1):
         occurkey = key.replace('cp','occur')
         occ = load_object(occurkey, cache=1)
         if key.count('sinc')==1:
-            obj = ckscool.plot.occur.load_contour_plotter(occ)
-        else:
             obj = ckscool.plot.occur.load_contour_plotter_sinc(occ)
+        else:
+            obj = ckscool.plot.occur.load_contour_plotter(occ)
 
     elif key.count('occur') == 1:
         bits = key.split('_')
