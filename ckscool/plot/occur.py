@@ -288,7 +288,7 @@ def fig_contour_six_sinc():
         cp = ckscool.io.load_object(key,cache=1)
 
         sca(axL[i,0])
-        df = cp.occ.plnt.copy().rename(columns={'prad':'gdir_prad','per':'koi_period'})
+        df = cp.occ.plnt.copy().rename(columns={'prad':'gdir_prad','sinc':'giso_sinc'})
         ckscool.plot.planet._sinc_prad(df,nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1)
 
         sca(axL[i,1])

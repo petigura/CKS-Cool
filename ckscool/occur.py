@@ -10,7 +10,7 @@ from sklearn.utils import resample
 import ckscool.io
 #import ckscool.gradient
 
-class Occurence(object):
+class Occurrence(object):
     """Occurrence
 
     Args:
@@ -22,6 +22,8 @@ class Occurence(object):
         nstars (int): number of stars in parent stellar population
 
     """
+
+
     def __init__(self, plnt, comp, nstars):
         self.plnt = plnt
         self.comp = comp
@@ -34,10 +36,9 @@ class Occurence(object):
         within a box.
 
         Args:
-            limits (dict): must contain, per1, per2, prad1, prad2, can
-                optionally contain, smet1, smet2
+            limits (dict): must contain, per1, per2, prad1, prad2
         """
-        out = dict()
+        
         prad1 = limits['prad1']
         prad2 = limits['prad2']
         per1 = limits['per1']
@@ -75,8 +76,7 @@ class Occurence_SincPrad(Occurrence):
         within a box.
 
         Args:
-            limits (dict): must contain, sinc1, sinc2, prad1, prad2, can
-                optionally contain, smet1, smet2
+            limits (dict): must contain, sinc1, sinc2, prad1, prad2
         """
         out = dict()
         prad1 = limits['prad1']
@@ -87,7 +87,7 @@ class Occurence_SincPrad(Occurrence):
         # Get planet sample and number of stars
         cut = self.plnt.copy()
         cut = cut[cut.prad.between(prad1,prad2)]
-        cut = cut[cut.per.between(sinc1,sinc2)]
+        cut = cut[cut.sinc.between(sinc1,sinc2)]
         nplnt = len(cut)
         prob_trdet_mean, prob_det_mean = self.comp.mean_prob_trdet(
             sinc1, sinc2, prad1, prad2
@@ -229,7 +229,7 @@ def load_occur(limits, debug=False, sinc=False):
     field = field.rename(columns={'ber19_srad':'srad','ber19_smass':'smass'})
     plnt = ckscool.io.load_table('planets-cuts2+iso')
     plnt = plnt[~plnt.isany]
-    namemap = {'gdir_prad':'prad','koi_period':'per','giso_smass':'smass'}
+    namemap = {'gdir_prad':'prad','koi_period':'per','giso_smass':'smass','giso_sinc':'sinc'}
     plnt = plnt.rename(columns=namemap)
 
     if limits.has_key('smass1'):
@@ -259,9 +259,9 @@ def load_occur(limits, debug=False, sinc=False):
             comp_sinc_bins = comp_sinc_bins[:6]
             comp_prad_bins = comp_prad_bins[:6]
 
-        comp_bins_dict = {'sinc': comp_sinc_bins,'prad': comp_prad_bins}
+        comp_bins_dict = {'sinc':comp_sinc_bins, 'prad': comp_prad_bins}
         spacing_dict = {'sinc':'log','prad':'log'}
-        grid = ckscool.grid.Grid(comp_bins_dict,spacing_dict)
+        grid = ckscool.grid.Grid(comp_bins_dict, spacing_dict)
         comp = ckscool.comp.Completeness_SincPrad(field, grid, method, impact)
         comp.compute_grid_prob_det_sinc(verbose=False)
         comp.compute_grid_prob_tr_sinc(verbose=False)
