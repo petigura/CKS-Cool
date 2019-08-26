@@ -3,22 +3,30 @@ Module for CKS-Cool I/O
 
 
 """
-
 import os
 import cPickle as pickle
+import warnings
 
 import pandas as pd
 import numpy as np
 from astropy.io import ascii
 from scipy.io import idl
+import tables
+from astropy.table import Table
 
 import ckscool.cuts.occur
 import ckscool.calc
 import ckscool.comp
-import ckscool._isoclassify
 from ckscool.pdplus import LittleEndian
 import ckscool.gaia
 import ckscool.occur
+import ckscool.plot.occur
+import ckscool._isoclassify
+
+# Ignore the Natural name warning
+warnings.simplefilter('ignore', tables.NaturalNameWarning)
+warnings.simplefilter('ignore', pd.errors.PerformanceWarning)
+warnings.simplefilter('ignore', pd.errors.UserWarning)
 
 # Define paths to various cache files. DATADIR stores data tables that
 # should not change with different code runs. CACHEDIR stores
@@ -26,7 +34,7 @@ import ckscool.occur
 # changes. The CACHEDIR can be set for different git branches
 FILE = os.path.dirname(__file__)
 DATADIR = os.path.join(FILE, '../data/')
-CACHEDIR = os.path.join(FILE, '../cache/removing-imports/')
+CACHEDIR = os.path.join(FILE, '../cache/field-ber19-plnt-giso/')
 CACHEFN = os.path.join(CACHEDIR, 'load_table_cache.hdf')
 os.system('mkdir -p {}'.format(CACHEDIR)) # creates CACHEDIR if doesn't exist
 KBCFN = os.path.join(DATADIR,'kbcvel.csv')
@@ -48,17 +56,16 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         pandas.DataFrame: table
 
     """
-
     if cachefn is None:
         cachefn = CACHEFN
 
     if cache == 1:
         try:
-            df = pd.read_hdf(CACHEFN, table, mode='a')
-            print "read table {} from {}".format(table, CACHEFN)
+            df = pd.read_hdf(cachefn, table, mode='a')
+            print "read table {} from {}".format(table, cachefn)
             return df
         except IOError:
-            print "Could not find cache file: %s" % CACHEFN
+            print "Could not find cache file: %s" % cachefn
             print "Building cache..."
             cache = 2
         except KeyError:
@@ -69,7 +76,7 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
     if cache == 2:
         df = load_table(table, cache=False)
         print "writing table {} to cache".format(table)
-        df.to_hdf(CACHEFN, table)
+        df.to_hdf(cachefn, table)
         return df
 
     if table == 'coldefs':
@@ -96,10 +103,11 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         df = df.rename(columns=namemap)[namemap.values()]
 
     # Gaia DR2
-    elif table == 'gaia2':
-        #fn = os.path.join(DATADIR, 'xmatch_m17_gaiadr2-result.csv')
-        fn = os.path.join(DATADIR, 'xmatch_gaia2_m17_ruwe-result.csv')
-        df = ckscool.gaia.read_xmatch_gaia2(fn)
+    elif table=='gaia2':
+        #fn = os.path.join(DATADIR,'xmatch_m17_gaiadr2-result.csv')
+        #fn = os.path.join(DATADIR,'xmatch_gaia2_m17_ruwe_tmass-result.vot.gz')
+        fn = os.path.join(DATADIR,'xmatch_gaia2_m17_ruwe_tmass-result.csv')
+        df = pd.read_csv(fn)
         # Systematic offset from Zinn et al. (2018)
         df['gaia2_sparallax'] += 0.053
 
@@ -152,32 +160,27 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         days = lc * long_cadence_day
         df['tobs'] = (observed * days).sum(axis=1)
 
-    elif table == 'm17+ber18+gaia2+cdpp':
+    elif table == 'm17+cdpp+gaia2+ber19':
         m17 = load_table('m17', cache=1)
         # Store to separate cache to prevent long reload times
         cachefn = os.path.join(DATADIR,'cdpp.hdf') 
         cdpp = load_table('cdpp',cache=1, cachefn=cachefn)        
-        ber18 = load_table('berger18', cache=1)
+        ber = load_table('berger19', cache=1)
         gaia = load_table('gaia2', cache=1)
-        df,m = ckscool.gaia.xmatch_gaia2(m17, gaia)
-        df = pd.merge(df,ber18,on=['id_kic', 'id_gaia2'])
-        df = pd.merge(df,cdpp)
+        df = pd.merge(m17,cdpp)
+        df = pd.merge(df,gaia)
+        df = pd.merge(df,ber,on=['id_kic'])
 
     elif table == 'field-cuts':
-        df = load_table('m17+ber18+gaia2+cdpp',cache=1)
-        #cuttypes = ['none', 'faint', 'giant', 'rizzuto']
-        cuttypes = ['none', 'faint', 'giant', 'ruwe', 'diluted']
+        df = load_table('m17+cdpp+gaia2+ber19',cache=1)
+        cuttypes = ['none','faint','giant','rizzuto']
         df = ckscool.cuts.occur.add_cuts(df, cuttypes, 'field')
 
     elif table == 'planets-cuts1':
-        star = load_table('m17+ber18+gaia2+cdpp',cache=1)
+        star = load_table('m17+cdpp+gaia2+ber19',cache=1)
         plnt = load_table('koi-thompson18-dr25')
         df = pd.merge(star,plnt)
-        #cuttypes = ['none', 'faint', 'giant', 'rizzuto', 'notreliable','lowsnr']
-        cuttypes = [
-            'none', 'faint', 'giant', 'ruwe', 'diluted', 'notreliable', 
-            'lowsnr'
-        ]
+        cuttypes = ['none','faint','giant','rizzuto','notreliable','lowsnr']
         df.sample = 'koi-thompson18'
         df = ckscool.cuts.occur.add_cuts(df, cuttypes, 'koi-thompson18')
 
@@ -233,8 +236,8 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         df = df.reset_index()
 
     # Stellar sample
-    elif table == 'planets+iso':
-        #star = load_table('m17+ber18+gaia2+cdpp')
+    elif table=='planets+iso':
+        #star = load_table('m17+cdpp+gaia2+ber18')
         plnt = load_table('koi-thompson18-dr25')
         iso = load_table('iso',cache=1)
         df = pd.merge(plnt, iso, how='left',on=['id_koi','id_kic'])
@@ -473,6 +476,25 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         df = df.rename(columns=namemap)[namemap.values()]
         df = add_prefix(df,'ber18_')
 
+    # Berger al. (2019)
+    elif table == 'berger19':
+        df = pd.read_csv('data/GKSPC_InOut_V1.csv')
+        df = df.rename(columns={'KIC':'id_kic'})
+        namemap = {
+            'KIC':'id_kic',
+            'iso_teff':'steff',
+            'iso_teff_err1':'steff_err1',
+            'iso_teff_err2':'steff_err2',
+            'iso_rad':'srad',
+            'iso_rad_err1':'srad_err1',
+            'iso_rad_err2':'srad_err2',
+            'iso_mass':'smass',
+            'iso_mass_err1':'smass_err1',
+            'iso_mass_err2':'smass_err2',
+        }
+
+        df = df.rename(columns=namemap)[namemap.values()]
+        df = add_prefix(df,'ber19_')
     elif table == 'ckscool-brewer18':
         cks = load_table('planets-cuts2+iso').groupby('id_koi',as_index=False).nth(0)
         m13 = load_table('brewer18')
@@ -614,42 +636,59 @@ def order_columns(df, verbose=False, drop=False):
         df = pd.concat([df,df0[mcols]],axis=1)
     return df
 
-def load_occur(key, cache=1):
-    bits = key.split('_')
-    for bit in bits:
-        if bit.count('smass'):
-            smass1, smass2 = bit.replace('smass=','').split('-')
-            smass1 = float(smass1)
-            smass2 = float(smass2)
-
+def load_object(key,cache=0,verbose=1):
     pklfn = os.path.join(CACHEDIR,key+'.pkl')
-    if cache==1:
-        with open(pklfn,'r') as f:
-            occ = pickle.load(f)
-            return occ
+    if cache == 1:
+        try:
+            with open(pklfn,'r') as f:
+                obj = pickle.load(f)
+                if verbose:
+                    print "read {} from {}".format(obj,pklfn)
+                return obj
 
-    elif cache==2:
-        occ = ckscool.occur.load_occur(smass1,smass2)
-        occ.comp.__delattr__('stars')
+        except IOError:
+            print "Could not find cache file: %s" % pklfn
+            print "Building cache..."
+            cache = 2
+
+    if cache == 2:
+        obj = load_object(key, cache=0)
+        print "writing {} to {}".format(obj,pklfn)
         with open(pklfn,'w') as f:
-            pickle.dump(occ,f)
-            
-    return occ
+            pickle.dump(obj,f)
+        return obj
+        
+    if key.count('cp') == 1:
+        occurkey = key.replace('cp','occur')
+        occ = load_object(occurkey, cache=1)
+        if key.count('sinc')==1:
+            obj = ckscool.plot.occur.load_contour_plotter(occ)
+        else:
+            obj = ckscool.plot.occur.load_contour_plotter_sinc(occ)
 
-def load_contour_plotter(key, cache=2):
-    occurkey = key.replace('cp','occur')
-    occ = ckscool.io.load_occur(occurkey,cache=1)
-    pklfn = os.path.join(DATADIR,key+'.pkl')
-    if cache==1:
-        with open(pklfn,'r') as f:
-            occ = pickle.load(f)
-            return occ
+    elif key.count('occur') == 1:
+        bits = key.split('_')
+        limits = {}
+        for bit in bits:
+            if bit.count('smass'):
+                smass1, smass2 = bit.replace('smass=','').split('-')
+                limits['smass1'] = float(smass1)
+                limits['smass2'] = float(smass2)
 
-    elif cache==2:
-        cp = ckscool.plot.occur.load_contour_plotter(occ)
-        with open(pklfn,'w') as f:
-            pickle.dump(cp,f)
-            
-    return cp
+            if bit.count('bmr'):
+                bmr1, bmr2 = bit.replace('bmr=','').split('-')
+                limits['bmr1'] = float(bmr1)
+                limits['bmr2'] = float(bmr2)
+
+        if key.count('sinc')==1:
+            obj = ckscool.occur.load_occur(limits,sinc=True)
+        else:
+            obj = ckscool.occur.load_occur(limits)
+
+        obj.comp.__delattr__('stars')
+        limits = dict(smass1=0.9,smass2=1.1)
 
 
+
+
+    return obj

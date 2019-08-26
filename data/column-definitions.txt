@@ -9,9 +9,10 @@ id_koi                Kepler Object of Interest [int]
 id_koicand            Planet Candidate name K?????.?? [str]
 id_tycho2             Tycho-2 identifier [int]
 id_kepler_name        Kepler name [str]
+id_gaia2              Gaia DR2 identfier
 koi_disposition       Exoplanet Archive Disposition [str] 
 #
-# Columns from DR25
+# Columns from Thompson et al. (2018) table
 #
 koi_period            Orbital Period [days] 
 koi_period_err1       Orbital Period Upper Unc. [days]
@@ -22,14 +23,21 @@ koi_ror_err2
 koi_impact            Impact Parameter [float] (bestfit)
 koi_impact_err1       
 koi_impact_err2       
-kic_kepmag            Kepler-band [mag]
 # 
-# Mathur (2017) table
+# Mathur et al. (2017) table
 #
+m17_hmag              2MASS Kmag
+m17_hmag_err
+m17_jmag              2MASS Kmag
+m17_jmag_err          
 m17_kmag              2MASS Kmag 
-m17_kmag_err          2MASS Kmag
-m17_ra                RA
-m17_dec               Dec
+m17_kmag_err          
+m17_ra                RA [decimal degrees]
+m17_dec               Dec [decimal degrees]
+m17_kepmag            Kepler-band [mag]
+m17_steff             Effective temperature [K]
+m17_smass             Stellar mass [Solar masses]
+m17_srad              Stellar size [Solar radii]
 #
 # Columns from Gaia DR2
 #
@@ -49,54 +57,54 @@ gaia2_gmag            Mean magnitude in Gaia bandpass [mag]
 gaia2_srad            Stellar radius [Solar-radii] 
 gaia2_srad_err1       
 gaia2_srad_err2       
-gaia2_steff           Stellar effective temperature [Kelvin] 
+gaia2_steff           Stellar effective temperature [K] 
 gaia2_steff_err1       
 gaia2_steff_err2
 #
-# SpecMatch parameters
+# Adopted CKS parameters
 # 
-sm_steff              SpecMatch teff
-sm_steff_err
-sm_smet               SpecMatch metallicity
-sm_smet_err 
-sm_srad               SpecMatch Stellar Radius 
-sm_srad_err           
+cks_steff             Effective temperature [K]
+cks_steff_err
+cks_smet              Metallicity [dex]
+cks_smet_err 
+cks_svsini            Projected rotational velocity [km/s]
+cks_svsini_err
+cks_sprov
 #
 # Properties from isoclassify analysis (direct mode)
 #
-gdir_srad            CKS+Gaia Stellar radius [Solar Radii]
+gdir_srad             Stellar radius [Solar radii]
 gdir_srad_err1
 gdir_srad_err2
-gdir_avs             CKS+Gaia Stellar radius [Solar Radii]
+gdir_avs              Predicted V-band extinction from dustmap model
 gdir_avs_err1
 gdir_avs_err2
 #
 # Properties from isoclassify analysis (grid mode)
 #
-giso_smass           CKS+Gaia Stellar Mass
+giso_smass           Stellar Mass
 giso_smass_err2
 giso_smass_err1
-giso_srad            CKS+Gaia Stellar radius [Solar Radii]
+giso_srad            Stellar radius [Solar Radii]
 giso_srad_err1
 giso_srad_err2
-giso_srho            CKS+Gaia Stellar Density [g/cc]
+giso_srho            Stellar Density [g/cc]
 giso_srho_err1
 giso_srho_err2
-giso_sage            CKS+Gaia Stellar Age [Gyr]
+giso_sage            Stellar Age [Gyr]
 giso_sage_err1
 giso_sage_err2
-giso_slogage         CKS+Gaia Stellar Age [lgo10(yrs)]
+giso_slogage         Stellar Age [lgo10(yrs)]
 giso_slogage_err1    
 giso_slogage_err2
-giso_tau0            Maximum transit duration (circular orbit)
 #
 # Properties from isoclassify analysis, grid mode, no parallax
 #
-giso2_sparallax         
+giso2_sparallax      Parallax [mas]
 giso2_sparallax_err1    
 giso2_sparallax_err2
 #
-# Rederived planet properties
+# Planet properties
 #
 gdir_prad           Planet Radius [Earth radii]
 gdir_prad_err1 
@@ -104,16 +112,14 @@ gdir_prad_err2
 giso_sma            Semi-major axis [AU], incorporates giso_smass
 giso_sma_err1
 giso_sma_err2
-giso_sinc          Incident flux [Earth units]
+giso_sinc           Incident flux [Earth units]
 giso_sinc_err1
 giso_sinc_err2
-giso_teq            Planet equilibrium temperature (bond albedo = 0.3)
-giso_teq_err1
-giso_teq_err2
+giso_tau0           Maximum transit duration (circular orbit) [hours]
 #
 # Properties from ReaMatch
 #
-rm_sb2                Is star spectroscopic binary?
+rm_sb2              Is star spectroscopic binary?
 #
 # Properties from  Furlan (2017)
 #

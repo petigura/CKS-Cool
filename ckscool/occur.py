@@ -5,14 +5,12 @@ import numpy as np
 from numpy import log10, logspace, arange, round
 from scipy.special import gammaln as gamln
 from scipy import special
-from statsmodels.distributions.empirical_distribution import ECDF
 from sklearn.utils import resample
 
 import ckscool.io
-import ckscool.plot.occur
-import ckscool.gradient
+#import ckscool.gradient
 
-class Occurrence(object):
+class Occurence(object):
     """Occurrence
 
     Args:
@@ -69,10 +67,7 @@ class Occurrence(object):
         out = dict(out,**rate)
         return out
 
-
-
 class Occurence_SincPrad(Occurrence):
-
     def occurence_box_sinc(self, limits):
         """Compute occurrence in a little box
 
@@ -120,7 +115,6 @@ class Binomial(object):
         n (float): number of trials
         k (float): number of sucesses
     """
-
     def __init__(self, n, k):
         self.n = float(n)
         self.k = float(k)
@@ -232,15 +226,14 @@ def load_occur(limits, debug=False, sinc=False):
 
     field = ckscool.io.load_table('field-cuts',cache=1)
     field = field[~field.isany]
-    field = field.rename(columns={'ber18_srad':'srad','m17_smass':'smass'})
-
+    field = field.rename(columns={'ber19_srad':'srad','ber19_smass':'smass'})
     plnt = ckscool.io.load_table('planets-cuts2+iso')
     plnt = plnt[~plnt.isany]
-    namemap = {'gdir_prad':'prad','koi_period':'per','m17_smass':'smass'}
+    namemap = {'gdir_prad':'prad','koi_period':'per','giso_smass':'smass'}
     plnt = plnt.rename(columns=namemap)
 
     if limits.has_key('smass1'):
-        smass1 = limits['smass1']
+        smass1 = limits['smass1']  
         smass2 = limits['smass2']
         field = field[field.smass.between(smass1,smass2)]
         plnt = plnt[plnt.smass.between(smass1,smass2)]
@@ -268,21 +261,15 @@ def load_occur(limits, debug=False, sinc=False):
 
         comp_bins_dict = {'sinc': comp_sinc_bins,'prad': comp_prad_bins}
         spacing_dict = {'sinc':'log','prad':'log'}
-
         grid = ckscool.grid.Grid(comp_bins_dict,spacing_dict)
-
         comp = ckscool.comp.Completeness_SincPrad(field, grid, method, impact)
         comp.compute_grid_prob_det_sinc(verbose=False)
         comp.compute_grid_prob_tr_sinc(verbose=False)
         comp.create_splines_sinc()
-
         nstars = len(field)
-
         occ = ckscool.occur.Occurence_SincPrad(plnt, comp, nstars)
 
-
     else:
-
         # Define grid of period and radius to compute completeness
         comp_per_bins = np.round(logspace(log10(0.1),log10(1000),65),4)
         comp_prad_bins = np.round(logspace(log10(0.25),log10(64),51 ),2)
@@ -301,16 +288,12 @@ def load_occur(limits, debug=False, sinc=False):
         comp.compute_grid_prob_det(verbose=False)
         comp.compute_grid_prob_tr(verbose=False)
         comp.create_splines()
-
         nstars = len(field)
         occ = ckscool.occur.Occurence(plnt, comp, nstars)
-
     return occ
 
 def load_occur_resample(smass1, smass2, plnt, comp, nstars):
-
     resample_indices = resample(np.arange(len(plnt)))
     plnt_resampled =  plnt.iloc[resample_indices, :]
     occ = ckscool.occur.Occurrence(plnt_resampled, comp, nstars)
-
     return occ

@@ -171,16 +171,7 @@ def _per_prad(df,nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1,for_gr
 
     tight_layout()
 
-
-def fig_sinc_prad(nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1):
-    df = ckscool.io.load_table('planets-cuts2+iso',cache=1)
-    df = df[~df.isany]
-    if query is not None:
-        df = df.query(query)
-
-    print len(df)
-    sns.set_context('paper')
-    fig, axL = subplots(figsize=(5,4))
+def _sinc_prad(df,nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1):
     xk = 'giso_sinc'
     yk = 'gdir_prad'
     yerrk = 'gdir_prad_err1'
@@ -192,8 +183,8 @@ def fig_sinc_prad(nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1):
 
     p1 = ContourPlotter(x, xerr, y, yerr,xscale='log',yscale='log')
     if zoom:
-        p1.xmin = 1
-        p1.xmax = 1e4
+        p1.xmin = 1e1
+        p1.xmax = 3e3
         p1.ymin = 1.0
         p1.ymax = 4
     else:
@@ -204,22 +195,24 @@ def fig_sinc_prad(nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1):
 
     xticks = [1,3,10,30,100,300,1000,3000,1e4]
     yticks = [0.5,0.7,1.0,1.4,2.0,2.8,4.0,5.6,8.0,11.3,16.0]
-
     p1.compute_density()
     p1.plot_contour()
     xlabel('Incident Bolometric Flux (Earth-units)')
     ylabel('Planet Size (Earth-radii)')
     p1.xticks(xticks)
     p1.yticks(yticks)
-
     p1.xlim(p1.xmax,p1.xmin)
     p1.ylim(p1.ymin,p1.ymax)
-
     if not nopoints:
         p1.plot_points()
 
     tight_layout()
 
+def fig_sinc_prad(nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1):
+    df = ckscool.io.load_table('planets-cuts2+iso',cache=1)
+    df = df[~df.isany]
+    if query is not None:
+        df = df.query(query)
 
 def fig_intfxuv_prad(nopoints=False,zoom=False):
     sns.set_context('paper')

@@ -11,7 +11,9 @@ from astropy import units as u
 
 TDUR_EARTH_SUN_HRS = (
     ((4 * c.R_sun**3 * 1.0*u.yr / np.pi / c.G / (1.0*c.M_sun))**(1.0/3.0)).to(u.hr)).value
+
 DEPTH_EARTH_SUN = ((c.R_earth / c.R_sun)**2).cgs.value
+
 SINC_EARTH = 1.3608e3
 
 __STARS_REQUIRED_COLUMNS__ = (
@@ -348,14 +350,11 @@ class Completeness(object):
 
 
 class Completeness_SincPrad(Completeness):
-
     def _a(self, sinc, srad, steff, smass):
-        """ Returns semimajor axis for a given incident flux,
+        """Returns semimajor axis for a given incident flux,
         stellar mass, stellar radius and stellar effective temperature
         """
-
         _a = np.sqrt( ( (c.R_sun*srad)**2 * c.sigma_sb * (steff**4) ) / ( SINC_EARTH*sinc ) )
-
         return _a.value
 
     def _per(self, a, smass):
@@ -365,7 +364,6 @@ class Completeness_SincPrad(Completeness):
         _per = 2.0 * np.pi * np.sqrt(a**3 / (c.G * smass * c.M_sun) )
         _per_days = _per / (60.0 * 60.0 * 24.0)
         return _per_days.value
-
 
     def prob_det_sinc(self, sinc, prad, interp=False):
         """Probability that a planet would be detectable
@@ -387,7 +385,6 @@ class Completeness_SincPrad(Completeness):
                 planet
 
         """
-
         srad = self.stars['srad']
         steff = self.stars['gaia2_steff']
         smass = self.stars['smass']
@@ -412,7 +409,6 @@ class Completeness_SincPrad(Completeness):
 
         return _prob_det
 
-
     def compute_grid_prob_det_sinc(self,verbose=0):
         """Compute a grid of detection probabilities"""
 
@@ -426,8 +422,6 @@ class Completeness_SincPrad(Completeness):
                 print s
 
         self.grid.ds['prob_det'] = self._grid_loop(rowfunc, callback)
-
-
 
     def compute_grid_prob_tr_sinc(self,verbose=0):
         """Compute a grid of transit probabilities"""
@@ -449,7 +443,6 @@ class Completeness_SincPrad(Completeness):
 
         self.grid.ds['prob_tr'] = self._grid_loop(rowfunc, callback)
 
-
     def create_splines_sinc(self):
         """Intialize detection probability interpolator
         """
@@ -469,14 +462,12 @@ class Completeness_SincPrad(Completeness):
         assert np.isfinite(_prob_det), " error in computing transit prob"
         return _prob_det
 
-
     def mean_prob_trdet_sinc(self, sinc1, sinc2, prad1, prad2):
         """Mean probability of transiting and being detected"""
         x1 = np.log(sinc1)
         x2 = np.log(sinc2)
         y1 = np.log(prad1)
         y2 = np.log(prad2)
-
         area = (x2-x1) * (y2-y1)
         integral = self._prob_trdet_spline.integral(x1, x2, y1, y2)
         prob_trdet_mean = integral / area
