@@ -70,10 +70,10 @@ class CutRizzuto(CutBase):
 
 class CutRUWE(CutBase):
     cuttype = 'ruwe'
-    plotstr = 'RUWE < 2'
+    plotstr = 'RUWE < 1.2'
     texstr = plotstr
     def cut(self):
-        b = self.df['gaia2_ruwe'] > 2
+        b = self.df['gaia2_ruwe'] > 1.2
         return b
 
 class CutGiant(CutBase):
@@ -81,18 +81,36 @@ class CutGiant(CutBase):
     plotstr = 'Not giant'
     texstr = 'Not giant'
     def cut(self):
-        srad = self.df['ber18_srad']
-        steff = self.df['ber18_steff']
-        b = np.log10(srad) > 0.00015 * (steff - 5500) + 0.20
-        return b
+        m = self.df
+        m['dmod'] = 5 * log10(m.bj_dist/10)
+        xs = 'gaia2_bpmag - gaia2_rpmag'
+        ys =  'gaia2_gmag - dmod'
+        points = np.array(
+                 [[.8,2],
+             [1.25,5.8],
+             [2.5,9.25]
+            ]
+        )
+        points2 = np.array(
+            [[.5,3.25],
+             [0.8,5.4],
+             [2.5,10.4]
+            ]
+        )
+
+        fabove = lambda x : np.interp(x,points[:,0],points[:,1])
+        fbelow = lambda x : np.interp(x,points2[:,0],points2[:,1])
+        babove = m.eval(ys) < fabove(m.eval(xs))
+        bbelow = m.eval(ys) > fbelow(m.eval(xs))
+        return babove | bbelow
 
 class CutFaint(CutBase):
     cuttype = 'faint'
     plotstr = cuttype
     texstr = cuttype
     def cut(self):
-        steff = self.df['ber18_steff']
-        kepmag = self.df['kepmag']
+        steff = self.df['m17_steff']
+        kepmag = self.df['m17_kepmag']
         b1 = steff.between(5000,6500) & kepmag.between(0,14.2)
         b2 = steff.between(3000,5000) & kepmag.between(0,16)
         b = ~(b1 | b2)
@@ -158,10 +176,10 @@ class CutImpact(CutBase):
 class CutImpactTau(CutBase):
     """Remove planets with high impact parameters"""
     cuttype = 'badimpacttau'
-    texstr = r'$\tau / \tau_0$ < 0.7'
+    texstr = r'$\tau / \tau_0$ < 0.5'
     plotstr = texstr
     def cut(self):
-        b = (self.df.dr25_tau / self.df.giso_tau0) < 0.7
+        b = (self.df.dr25_tau / self.df.giso_tau0) < 0.6
         return b
 
 class CutPradPrecision(CutBase):

@@ -5,16 +5,29 @@ import numpy as np
 from numpy import log10, logspace, arange, round
 from scipy.special import gammaln as gamln
 from scipy import special
-from statsmodels.distributions.empirical_distribution import ECDF
+from sklearn.utils import resample
 
 import ckscool.io
+#import ckscool.gradient
 
 class Occurrence(object):
-    def __init__(self, plnt, comp, nstars, smet_field=None):
+    """Occurrence
+
+    Args:
+        plnt (pandas DataFrame): table with planet parameters must contain
+            following keys:
+            - prad: planet radius
+            - per: planet period
+        comp (ckscool.comp.Completeness): see docs
+        nstars (int): number of stars in parent stellar population
+
+    """
+
+
+    def __init__(self, plnt, comp, nstars):
         self.plnt = plnt
         self.comp = comp
         self.nstars = nstars
-        self.plnt = plnt
 
     def occurence_box(self, limits):
         """Compute occurrence in a little box
@@ -23,10 +36,9 @@ class Occurrence(object):
         within a box.
 
         Args:
-            limits (dict): must contain, per1, per2, prad1, prad2, can
-                optionally contain, smet1, smet2
+            limits (dict): must contain, per1, per2, prad1, prad2
         """
-        out = dict()
+        
         prad1 = limits['prad1']
         prad2 = limits['prad2']
         per1 = limits['per1']
@@ -36,17 +48,16 @@ class Occurrence(object):
         cut = self.plnt.copy()
         cut = cut[cut.prad.between(prad1,prad2)]
         cut = cut[cut.per.between(per1,per2)]
-        nstars = self.nstars
         nplnt = len(cut)
         prob_trdet_mean, prob_det_mean = self.comp.mean_prob_trdet(
             per1, per2, prad1, prad2
         )
-        ntrial = nstars * prob_trdet_mean
+        ntrial = self.nstars * prob_trdet_mean
         rate = nplnt / ntrial
 
         nsample = int(1e4)
         binom = Binomial(ntrial, nplnt)
-        samples = binom.sample(nsample) 
+        samples = binom.sample(nsample)
 
         uplim = nplnt==0
         rate = samples_to_rate(samples,uplim=uplim)
@@ -57,14 +68,54 @@ class Occurrence(object):
         out = dict(out,**rate)
         return out
 
+class Occurence_SincPrad(Occurrence):
+    def occurence_box_sinc(self, limits):
+        """Compute occurrence in a little box
+
+        We make the assumption that the dN/dlogSinc and dN/lopRp is constant
+        within a box.
+
+        Args:
+            limits (dict): must contain, sinc1, sinc2, prad1, prad2
+        """
+        out = dict()
+        prad1 = limits['prad1']
+        prad2 = limits['prad2']
+        sinc1 = limits['sinc1']
+        sinc2 = limits['sinc2']
+
+        # Get planet sample and number of stars
+        cut = self.plnt.copy()
+        cut = cut[cut.prad.between(prad1,prad2)]
+        cut = cut[cut.sinc.between(sinc1,sinc2)]
+        nplnt = len(cut)
+        prob_trdet_mean, prob_det_mean = self.comp.mean_prob_trdet(
+            sinc1, sinc2, prad1, prad2
+        )
+        ntrial = self.nstars * prob_trdet_mean
+        rate = nplnt / ntrial
+
+        nsample = int(1e4)
+        binom = Binomial(ntrial, nplnt)
+        samples = binom.sample(nsample)
+
+        uplim = nplnt==0
+        rate = samples_to_rate(samples,uplim=uplim)
+        out['ntrial'] = ntrial
+        out['nplnt'] = nplnt
+        out['prob_trdet_mean'] = prob_trdet_mean
+        out['prob_det_mean'] = prob_det_mean
+        out = dict(out,**rate)
+        return out
 
 class Binomial(object):
+    """Class that computes binomial statistics
+
+    Args:
+        n (float): number of trials
+        k (float): number of sucesses
+    """
     def __init__(self, n, k):
-        """
-        Args:
-            n: number of trials
-            k: number of sucesses
-        """
         self.n = float(n)
         self.k = float(k)
         self.npdf = 10000
@@ -96,7 +147,7 @@ class Binomial(object):
         """
         Verify that the sampling working
         """
-        
+
         rate, pdf = self.pdf()
         samples = self.sample(nsamp)
         weights = ones_like(samples)/nsamp # normalize histogram
@@ -164,52 +215,85 @@ def samples_to_rate(samples, uplim=False):
         d['rate_str'] = "{rate:.4f} +/- {rate_err1:.4f}/{rate_err2:.4f}".format(**d)
     return d
 
-
-
-
-def load_occur(smass1,smass2):
+def load_occur(limits, debug=False, sinc=False):
     """
     Constructs occurrence object
     """
-    
+
     # Derive completeness object
     method = 'fulton-gamma-clip' # treatment for planet detectability
-    impact = 0.7 # maximum impact parameter considered.
+    impact = 0.8 # maximum impact parameter considered.
 
     field = ckscool.io.load_table('field-cuts',cache=1)
     field = field[~field.isany]
-    field = field.rename(columns={'ber18_srad':'srad','m17_smass':'smass'})
-    field = field[field.smass.between(smass1,smass2)]
+    field = field.rename(columns={'ber19_srad':'srad','ber19_smass':'smass'})
+    plnt = ckscool.io.load_table('planets-cuts2+iso')
+    plnt = plnt[~plnt.isany]
+    namemap = {'gdir_prad':'prad','koi_period':'per','giso_smass':'smass','giso_sinc':'sinc'}
+    plnt = plnt.rename(columns=namemap)
+
+    if limits.has_key('smass1'):
+        smass1 = limits['smass1']  
+        smass2 = limits['smass2']
+        field = field[field.smass.between(smass1,smass2)]
+        plnt = plnt[plnt.smass.between(smass1,smass2)]
+
+    elif limits.has_key('bmr1'):
+        bmr1 = limits['bmr1']
+        bmr2 = limits['bmr2']
+        xs = 'gaia2_bpmag - gaia2_rpmag'
+        field = field[field.eval(xs).between(bmr1,bmr2)]
+        plnt = plnt[plnt.eval(xs).between(bmr1,bmr2)]
+
     n1 = len(field)
     field = field.dropna(subset=ckscool.comp.__STARS_REQUIRED_COLUMNS__)
     n2 = len(field)
     print "{}/{} stars remain after droping nulls ".format(n2,n1)
 
-    # Define grid of period and radius to compute completeness
-    comp_per_bins = np.round(logspace(log10(0.1),log10(1000),65),4)
-    comp_prad_bins = np.round(logspace(log10(0.25),log10(64),51 ),2)
-    
-    # debugging
-    if False:
-        comp_per_bins = comp_per_bins[:6]
-        comp_prad_bins = comp_prad_bins[:6]
-        
-    comp_bins_dict = {'per': comp_per_bins,'prad': comp_prad_bins}
-    spacing_dict = {'per':'log','prad':'log'}
-    grid = ckscool.grid.Grid(comp_bins_dict,spacing_dict)
+    if sinc:
+        comp_sinc_bins = np.round(logspace(log10(0.1),log10(100000),65),4)
+        comp_prad_bins = np.round(logspace(log10(0.25),log10(64),51 ),2)
 
-    comp = ckscool.comp.Completeness(field, grid, method, impact)
-    comp.compute_grid_prob_det(verbose=True)
-    comp.compute_grid_prob_tr(verbose=True)
-    comp.create_splines()
-    
-    plnt = ckscool.io.load_table('planets-cuts2+iso')
-    plnt = plnt[~plnt.isany]
-    namemap = {'gdir_prad':'prad','koi_period':'per','giso_smass':'smass'}
-    plnt = plnt.rename(columns=namemap)
-    plnt = plnt[plnt.smass.between(smass1,smass2)]
-    nstars = len(field)
-    occ = ckscool.occur.Occurrence(plnt, comp, nstars)
+        # debugging
+        if debug:
+            comp_sinc_bins = comp_sinc_bins[:6]
+            comp_prad_bins = comp_prad_bins[:6]
+
+        comp_bins_dict = {'sinc':comp_sinc_bins, 'prad': comp_prad_bins}
+        spacing_dict = {'sinc':'log','prad':'log'}
+        grid = ckscool.grid.Grid(comp_bins_dict, spacing_dict)
+        comp = ckscool.comp.Completeness_SincPrad(field, grid, method, impact)
+        comp.compute_grid_prob_det_sinc(verbose=False)
+        comp.compute_grid_prob_tr_sinc(verbose=False)
+        comp.create_splines_sinc()
+        nstars = len(field)
+        occ = ckscool.occur.Occurence_SincPrad(plnt, comp, nstars)
+
+    else:
+        # Define grid of period and radius to compute completeness
+        comp_per_bins = np.round(logspace(log10(0.1),log10(1000),65),4)
+        comp_prad_bins = np.round(logspace(log10(0.25),log10(64),51 ),2)
+
+        # debugging
+        if debug:
+            comp_per_bins = comp_per_bins[:6]
+            comp_prad_bins = comp_prad_bins[:6]
+
+        comp_bins_dict = {'per': comp_per_bins,'prad': comp_prad_bins}
+        spacing_dict = {'per':'log','prad':'log'}
+
+        grid = ckscool.grid.Grid(comp_bins_dict,spacing_dict)
+
+        comp = ckscool.comp.Completeness(field, grid, method, impact)
+        comp.compute_grid_prob_det(verbose=False)
+        comp.compute_grid_prob_tr(verbose=False)
+        comp.create_splines()
+        nstars = len(field)
+        occ = ckscool.occur.Occurence(plnt, comp, nstars)
     return occ
 
-
+def load_occur_resample(smass1, smass2, plnt, comp, nstars):
+    resample_indices = resample(np.arange(len(plnt)))
+    plnt_resampled =  plnt.iloc[resample_indices, :]
+    occ = ckscool.occur.Occurrence(plnt_resampled, comp, nstars)
+    return occ

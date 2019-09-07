@@ -1,73 +1,89 @@
-import pandas as pd
-import numpy as np
 from collections import OrderedDict
 
-SEED = 0  # reproducability
-rand = np.random.RandomState(SEED)
+import numpy as np
+import pandas as pd
 
-albedo = 0.30
+SEED = 0  # reproducability
+np.random.RandomState(SEED)
 
 def update_planet_parameters(df):
-    newkeys = [
-        'gdir_prad','gdir_prad_err1','gdir_prad_err2',
-        'giso_sinc','giso_sinc_err1','giso_sinc_err2',
-        'giso_sma','giso_sma_err1','giso_sma_err2',
-    ]
+    """Update planet parameters
 
-    for key in newkeys:
-        df[key] = np.nan
+    Args:
+         df: DataFrame
 
-    for i, row in df.iterrows():
+    Returns
+        pandas.DataFrame: with following columns added
 
-        # stellar radius direct method
-        srad_err = 0.5 * (row.gdir_srad_err1 - row.gdir_srad_err2)
-        gdir_srad_samp = rand.normal(row.gdir_srad, srad_err, size=10000)
+         -    gdir_prad
+         -    gdir_prad_err1
+         -    gdir_prad_err2
+         -    giso_prad
+         -    giso_prad_err1
+         -    giso_prad_err2
+         -    giso_sinc
+         -    giso_sinc_err1
+         -    giso_sinc_err2
+         -    giso_sma
+         -    giso_sma_err1
+         -    giso_sma_err2
 
-        # stellar radius grid method
-        srad_err = 0.5 * (row.giso_srad_err1 - row.giso_srad_err2)
-        giso_srad_samp = rand.normal(row.giso_srad, srad_err, size=10000)
+    """
+    nsamp = 1000
+    def sample(loc, scale):
+        loc = np.array(loc).reshape(-1, 1)
+        scale = np.array(scale).reshape(-1, 1)
+        return loc + scale * np.random.randn(1, nsamp)
 
-        # stellar mass
-        smass = row.giso_smass
-        smass_err = 0.5 * (row.giso_smass_err1 - row.giso_smass_err2)
-        smass_samp = rand.normal(row.giso_smass, smass_err, size=10000)
+    # stellar radius direct method
+    loc = df.gdir_srad
+    scale = df.eval('0.5 * (gdir_srad_err1 - gdir_srad_err2)')
+    gdir_srad_samp = sample(loc, scale)
 
-        # Teff
-        steff = row.cks_steff
-        steff_err = row.cks_steff_err
-        steff_samp = rand.normal(row.cks_steff, steff_err, size=10000)
+    # stellar radius grid method
+    loc = df.giso_srad
+    scale = df.eval('0.5 * (giso_srad_err1 - giso_srad_err2)')
+    giso_srad_samp = sample(loc, scale)
 
-        # Radius ratio
-        try:
-            ror = row.dr25_ror
-            ror_err = 0.5 * (row.dr25_ror_err1 - row.dr25_ror_err2)
-            ror_samp = rand.normal(row.dr25_ror, ror_err, size=10000)
-        except ValueError:
-            continue
-            
-        # Planet radius
-        gdir_prad_samp = ror_samp * gdir_srad_samp * 109.245
-        giso_prad_samp = ror_samp * giso_srad_samp * 109.245
+    # stellar mass
+    loc = df.giso_smass
+    scale = df.eval('0.5 * (giso_smass_err1 - giso_smass_err2)')
+    smass_samp = sample(loc, scale)
 
-        # Semi-major axis
-        sma_samp = (smass_samp * (row.koi_period / 365.) ** 2.) ** (1. / 3.)
+    # Teff
+    loc = df.cks_steff
+    scale = df.cks_steff_err
+    steff_samp = sample(loc, scale)
 
-        # insolation flux
-        sinc_samp = (steff_samp / 5778.) ** 4.0 * (giso_srad_samp / sma_samp) ** 2.0
+    # Radius ratio
+    loc = df.dr25_ror
+    scale = df.eval('0.5 * (dr25_ror_err1 - dr25_ror_err2)')
+    empty = scale.isnull()
+    scale = scale.fillna(0)
+    ror_samp = sample(loc, scale)
+    ror_samp[empty, :] = np.nan # fill with null
 
-        df.loc[i,'gdir_prad'] = np.median(gdir_prad_samp)
-        df.loc[i,'gdir_prad_err1'] = np.std(gdir_prad_samp)
-        df.loc[i,'gdir_prad_err2'] = -1.0 * df.loc[i,'gdir_prad_err1']
+    # Planet radius
+    gdir_prad_samp = ror_samp * gdir_srad_samp * 109.245
+    giso_prad_samp = ror_samp * giso_srad_samp * 109.245
 
-        df.loc[i,'giso_prad'] = np.median(giso_prad_samp)
-        df.loc[i,'giso_prad_err1'] = np.std(giso_prad_samp)
-        df.loc[i,'giso_prad_err2'] = -1.0 * df.loc[i,'giso_prad_err1']
+    # Semi-major axis
+    period = np.array(df.koi_period).reshape(-1, 1)
+    sma_samp = (smass_samp * (period/365)**2) ** 0.33
 
-        df.loc[i,'giso_sinc'] = np.median(sinc_samp)
-        df.loc[i,'giso_sinc_err1'] = np.std(sinc_samp)
-        df.loc[i,'giso_sinc_err2'] = -1.0 * np.std(sinc_samp)
-        df.loc[i,'giso_sma'] = np.median(sma_samp)
-        df.loc[i,'giso_sma_err1'] = np.std(sma_samp)
-        df.loc[i,'giso_sma_err2'] = -1.0 * np.std(sma_samp)
+    # insolation flux
+    sinc_samp = (steff_samp/5778)**4 * (giso_srad_samp/sma_samp)**2
 
+    df['gdir_prad'] = np.median(gdir_prad_samp, axis=1)
+    df['gdir_prad_err1'] = np.std(gdir_prad_samp, axis=1)
+    df['gdir_prad_err2'] = -1.0 * df['gdir_prad_err1']
+    df['giso_prad'] = np.median(giso_prad_samp)
+    df['giso_prad_err1'] = np.std(giso_prad_samp)
+    df['giso_prad_err2'] = -1.0 * df['giso_prad_err1']
+    df['giso_sinc'] = np.median(sinc_samp, axis=1)
+    df['giso_sinc_err1'] = np.std(sinc_samp, axis=1)
+    df['giso_sinc_err2'] = -1.0 * df['giso_sinc_err1']
+    df['giso_sma'] = np.median(sma_samp, axis=1)
+    df['giso_sma_err1'] = np.std(sma_samp, axis=1)
+    df['giso_sma_err2'] = -1.0 * df['giso_sma_err1']
     return df

@@ -103,6 +103,7 @@ ENV/
 # mypy
 .mypy_cache/
 
+
 data/
 fig*
 tab*
@@ -112,3 +113,4 @@ temp*
 *tot
 
 *load_table_cache*
+*csv

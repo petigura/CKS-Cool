@@ -32,18 +32,21 @@ def fig_cuts_field_steff_srad():
     nrows=2
     ncols=4
     df = ckscool.io.load_table('field-cuts',cache=2)
-    cuts(df,'ber18_steff','ber18_srad',nrows=nrows,ncols=ncols,plot_func=semilogy,stars=False)
+
+    df['dmod'] = 5 * log10(df.bj_dist/10)
+    cuts(df,'gaia2_bpmag - gaia2_rpmag','gaia2_gmag - dmod',nrows=nrows,ncols=ncols,stars=False)
     axL = gcf().get_axes()
     axL = np.array(axL).reshape(nrows,ncols) 
-    setp(axL,xlim=(7000,3000))
-    setp(axL[1,:],xlabel='Kp (mag)')
-    setp(axL[:,0],ylabel='Teff (K)')
+    setp(axL,ylim=(15,-5),xlim=(-1,5))
+    #setp(axL,xlim=(10,0))
+    setp(axL[1,:],xlabel='$Bp - Rp$ (mag)')
+    setp(axL[:,0],ylabel='$M_G$ (mag)')
 
 def fig_cuts_kepmag_steff():
     nrows=2
     ncols=4
     df = ckscool.io.load_table('planets-cuts1',cache=2)
-    cuts(df,'m17_kepmag','ber18_steff',nrows=nrows,ncols=ncols,plot_func=None,stars=False)
+    cuts(df,'m17_kepmag','m17_steff',nrows=nrows,ncols=ncols,plot_func=None,stars=False)
     axL = gcf().get_axes()
     axL = np.array(axL).reshape(nrows,ncols) 
     setp(axL,ylim=(3000,7000))
@@ -62,7 +65,7 @@ def fig_cuts_period_prad():
 
 def fig_cuts_smass_steff():
     df = ckscool.io.load_table('planets-cuts1')
-    cuts(df, 'm17_smass','ber18_steff',nrows=2,ncols=4,plot_func=semilogx)
+    cuts(df, 'm17_smass','m17_steff',nrows=2,ncols=4,plot_func=semilogx)
     axL = gcf().get_axes()
     setp(axL,ylim=(3000,7000))
     setp(
@@ -146,15 +149,18 @@ def cuts(df, xk,yk,nrows=None,ncols=None,plot_func=None, stars=False):
         #df[key] = cut.cut()
         bpass += df[key].astype(int)
             
-        plotkw = dict(ms=2,rasterized=True)
+        plotkw = dict(ms=2,rasterized=True,alpha=0.1)
 
-        x = df[xk]
-        y = df[yk]
+        x = df.eval(xk)
+        y = df.eval(yk)
 
         plot(x, y,'.',color='LightGray',**plotkw)
         dfcut = df[bpass==0]
-        
-        plot(dfcut[xk], dfcut[yk],'.', color='blue',**plotkw)
+
+        xcut = dfcut.eval(xk)
+        ycut = dfcut.eval(yk)
+
+        plot(xcut, ycut,'.', color='blue',**plotkw)
         _text = cut.plotstr + ' ({})'.format(len(dfcut))
 
         if stars:
