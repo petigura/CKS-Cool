@@ -6,6 +6,7 @@ import pandas as pd
 from astropy import constants as c
 from ckscool.plot.config import *
 import ckscool.io
+from matplotlib.patches import Rectangle
 
 sns.set_style('ticks')
 sns.set_color_codes()
@@ -20,10 +21,11 @@ cks1kw = dict(
 
 rstarticks = [0.5,0.7,1.0,1.4,2.0]
 
-def fig_hr():
-    sns.set_context('paper',font_scale=1.3)
-    fig,axL = subplots(figsize=(7,5))
 
+
+def fig_hr():
+    sns.set_context('paper',font_scale=1.0)
+    fig,axL = subplots(figsize=(4,3.5))
     df = ckscool.io.load_table('planets-cuts2+iso',cache=1)
     df = df[~df.isany]
     df = df.groupby('id_koi',as_index=False).nth(0)
@@ -31,26 +33,35 @@ def fig_hr():
     xlabel(texteff)
     ylabel('Stellar Radius (Solar-Radii)')
     semilogy()
-    xlim(7000,3500)
+    xlim(6750,3750)
+    ylim(0.4,2.4)
     minorticks_off()
     yticks(rstarticks,rstarticks)
     fig.set_tight_layout(True)
 
 def fig_smet_smass():
-    sns.set_context('paper',font_scale=1.3)
-    fig,axL = subplots(figsize=(7,5))
+    sns.set_context('paper',font_scale=1.0)
+    fig,axL = subplots(figsize=(4,3.5))
     df = ckscool.io.load_table('planets-cuts2+iso',cache=1)
     df = df[~df.isany]
     df = df.groupby('id_koi',as_index=False).nth(0)
     semilogy()
     plot(df.cks_smet,df.giso_smass,'.')
-    ylabel('Stellar Radius (Solar-Radii)')
+    ylabel('Stellar Mass (Solar-masses)')
     tight_layout(True)
     xlabel('[Fe/H] (dex)')
     yticks(rstarticks,rstarticks)
+    
+    xy = (-0.2,0.6)
+    w = 0.4
+    h = 1.2 - 0.6
+    rect = Rectangle(xy, w, h, lw=1, ec='r', fc='none', zorder=10)
+    axL.add_patch(rect)
+    ylim(0.4,2.0)
+    xlim(-0.5,0.5)
     minorticks_off()
     fig.set_tight_layout(True)
-
+    
 
 def fig_ferr_hist_star():
     fig = subplots(figsize=(4,3))

@@ -90,6 +90,7 @@ def fig_cuts_stars_hr():
         minorticks_off()
         ylim(0.4,3)
 
+
 def fig_cuts_planets_per_prad(zoom=False):
     xk = 'koi_period'
     yk = 'gdir_prad'

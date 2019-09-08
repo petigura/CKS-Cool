@@ -15,6 +15,7 @@ import ckscool.plot.sample   # submodule for including plots
 import ckscool.plot.spectra
 import ckscool.plot.hr
 import ckscool.plot.planet
+import ckscool.plot.smet
 from ckscool.plot.compare import fig_compare
 import ckscool.workflow
 
@@ -234,6 +235,8 @@ def create_workflow():
     w.plot['occur-contour-three'] = ckscool.plot.occur.fig_contour_three
     w.plot['occur-contour-six'] = ckscool.plot.occur.fig_contour_six
     w.plot['occur-contour-six-sinc'] = ckscool.plot.occur.fig_contour_six_sinc
+
+    w.plot['planets-warm-smet-smass'] = ckscool.plot.smet.fig_planets_warm_smet_smass
 
     # table
     f1 = ckscool.table.tab_star
