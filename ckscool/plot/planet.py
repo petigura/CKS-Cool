@@ -122,14 +122,24 @@ def fig_per_prad(**kwargs):
     df = df[~df.isany]
     _per_prad(df, **kwargs)
 
-def gradient_per_prad(plnt, bootstrap=False, **kwargs):
+# def gradient_per_prad(plnt, bootstrap=False, **kwargs):
+#
+#     if bootstrap:
+#         resample_indices = resample(np.arange(len(plnt)))
+#         plnt =  plnt.iloc[resample_indices, :]
+#
+#     X, Y, Z = _per_prad(plnt, **kwargs)
+#     return X, Y, Z
+#
+# def gradient_sinc_prad(plnt, bootstrap=False, **kwargs):
+#
+#     if bootstrap:
+#         resample_indices = resample(np.arange(len(plnt)))
+#         plnt =  plnt.iloc[resample_indices, :]
+#
+#     X, Y, Z = _sinc_prad(plnt, **kwargs)
+#     return X, Y, Z
 
-    if bootstrap:
-        resample_indices = resample(np.arange(len(plnt)))
-        plnt =  plnt.iloc[resample_indices, :]
-
-    X, Y, Z = _per_prad(plnt, **kwargs)
-    return X, Y, Z
 
 def _per_prad(df,nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1,for_gradient=False):
     if query is not None:
@@ -171,7 +181,7 @@ def _per_prad(df,nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1,for_gr
 
     tight_layout()
 
-def _sinc_prad(df,nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1):
+def _sinc_prad(df,nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1,for_gradient=False):
     xk = 'giso_sinc'
     yk = 'gdir_prad'
     yerrk = 'gdir_prad_err1'
@@ -195,7 +205,13 @@ def _sinc_prad(df,nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1):
 
     xticks = [1,3,10,30,100,300,1000,3000,1e4]
     yticks = [0.5,0.7,1.0,1.4,2.0,2.8,4.0,5.6,8.0,11.3,16.0]
-    p1.compute_density()
+
+    if for_gradient:
+        X, Y, Z = p1.compute_density(for_gradient=True)
+        return X, Y, Z
+    else:
+        p1.compute_density()
+
     p1.plot_contour()
     xlabel('Incident Bolometric Flux (Earth-units)')
     ylabel('Planet Size (Earth-radii)')

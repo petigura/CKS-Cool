@@ -8,7 +8,7 @@ from scipy import ndimage as nd
 
 import ckscool.io
 import ckscool.plot.planet
-from ckscool.gradient import R
+import ckscool.gradient #import R, R_sinc
 
 
 sns.set_style('ticks')
@@ -199,9 +199,26 @@ def gradient_arrays(cp):
     rate = rate.fillna(4e-6)
 
     # Smooth out the contours a bit
-    #rate = nd.gaussian_filter(rate,(4,2))
-    rate = nd.gaussian_filter(rate,(2,2))
+    rate = nd.gaussian_filter(rate,(4,2))
     X, Y = ds.perc, ds.pradc
+    ntrial = np.array(ds.ntrial)
+
+    return X, Y, rate, ntrial
+
+def gradient_arrays_sinc(cp):
+
+    """
+    Args:
+       cp : contour plotter object
+    """
+    # convert into an x-array for plotting
+    ds = cp.rate.groupby(['sinc1','prad1']).first().to_xarray()
+    rate = ds.rate
+    rate = rate.fillna(4e-6)
+
+    # Smooth out the contours a bit
+    rate = nd.gaussian_filter(rate,(4,2))
+    X, Y = ds.sincc, ds.pradc
     ntrial = np.array(ds.ntrial)
 
     return X, Y, rate, ntrial
@@ -217,14 +234,22 @@ def add_gradient(logx, chain, sinc=False):
     Rp10_sigma = np.percentile(chain[:,1], [16,84])
     Rp10_err = [Rp10-Rp10_sigma[0], Rp10_sigma[1]-Rp10]
 
-    label_str = r"m = {0:.2f}$^{{{1:.2f}}}_{{{2:.2f}}}$, R$_p$(10)={3:.2f}$^{{{4:.2f}}}_{{{5:.2f}}}$".format(m, m_err[1], m_err[0], Rp10, Rp10_err[1], Rp10_err[0])
-    plt.plot(logx, [log10(R(10**i, m, Rp10)) for i in logx], color='b', label=label_str)
+    if sinc:
+        label_str = r"m = {0:.2f}$^{{{1:.2f}}}_{{{2:.2f}}}$, R$_p$(100)={3:.2f}$^{{{4:.2f}}}_{{{5:.2f}}}$".format(m, m_err[1], m_err[0], Rp10, Rp10_err[1], Rp10_err[0])
+        plt.plot(logx, [log10(ckscool.gradient.R_sinc(10**i, m, Rp10)) for i in logx], color='b', label=label_str)
+    else:
+        label_str = r"m = {0:.2f}$^{{{1:.2f}}}_{{{2:.2f}}}$, R$_p$(10)={3:.2f}$^{{{4:.2f}}}_{{{5:.2f}}}$".format(m, m_err[1], m_err[0], Rp10, Rp10_err[1], Rp10_err[0])
+        plt.plot(logx, [log10(ckscool.gradient.R(10**i, m, Rp10)) for i in logx], color='b', label=label_str)
+
 
     R_upper = []
     R_lower = []
 
     for i in logx:
-        R_values_i = [R(10**i, chain[j,0], chain[j,1]) for j in range(len(chain[:,0]))]
+        if sinc:
+            R_values_i = [ckscool.gradient.R_sinc(10**i, chain[j,0], chain[j,1]) for j in range(len(chain[:,0]))]
+        else:
+            R_values_i = [ckscool.gradient.R(10**i, chain[j,0], chain[j,1]) for j in range(len(chain[:,0]))]
         R_lim_i = np.percentile(R_values_i, [16,84])
         R_upper.append(R_lim_i[0])
         R_lower.append(R_lim_i[1])
@@ -268,8 +293,8 @@ def fig_contour_six(gradient=False):
 
         if gradient:
             logperc = cp.rate['logperc']
-            bootstrap_det_chain = np.loadtxt("./data/chain_det_{0}-{1}-smass.csv".format(_mass1, _mass2), delimiter=',')
-            bootstrap_occ_chain = np.loadtxt("./data/chain_occ_{0}-{1}-smass.csv".format(_mass1, _mass2), delimiter=',')
+            bootstrap_det_chain = np.loadtxt("./data/chain_detv2_{0}-{1}-smass.csv".format(_mass1, _mass2), delimiter=',')
+            bootstrap_occ_chain = np.loadtxt("./data/chain_occv2_{0}-{1}-smass.csv".format(_mass1, _mass2), delimiter=',')
 
         sca(axL[i,0])
         df = cp.occ.plnt.copy()
@@ -317,21 +342,21 @@ def fig_contour_six_sinc(gradient=False):
 
         if gradient:
             logsinc = cp.rate['logsincc']
-            # bootstrap_det_chain = np.loadtxt("./data/chain_det_SincPrad_{0}-{1}-smass.csv".format(_mass1, _mass2), delimiter=',')
-            bootstrap_occ_chain = np.loadtxt("./data/chain_occ_SincPrad_{0}-{1}-smass.csv".format(_mass1, _mass2), delimiter=',')
+            bootstrap_det_chain = np.loadtxt("./data/chain_det_SincPradv2_{0}-{1}-smass.csv".format(_mass1, _mass2), delimiter=',')
+            bootstrap_occ_chain = np.loadtxt("./data/chain_occ_SincPradv2_{0}-{1}-smass.csv".format(_mass1, _mass2), delimiter=',')
 
         sca(axL[i,0])
         df = cp.occ.plnt.copy()
         df = df.rename(columns={'prad':'gdir_prad','sinc':'giso_sinc'})
         ckscool.plot.planet._sinc_prad(df,nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1)
-        # if gradient:
-        #     add_gradient(logsinc, bootstrap_det_chain)
+        if gradient:
+            add_gradient(logsinc, bootstrap_det_chain, sinc=True)
 
 
         sca(axL[i,1])
         contour_sinc(cp,plot_interval=True,draw_colorbar=True, ntrials_min=100)
         if gradient:
-            add_gradient(logsinc, bootstrap_occ_chain)
+            add_gradient(logsinc, bootstrap_occ_chain, sinc=True)
 
         title = '$M_\star = {}-{}\, M_\odot$ '.format(_mass1,_mass2)
         setp(axL[i,:],title=title)
