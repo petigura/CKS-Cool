@@ -40,7 +40,28 @@ def R(P,m,Rp_10):
     Returns:
     R: Radius (M_earths)
     """
+
     return Rp_10 * (P/10)**m
+
+
+
+def R_sinc(F,m,Rp_100):
+    """
+    Returns the value of the radius versus period line.
+    As this straight line is in log-space, it takes the
+    form of a power law in linear space.
+
+    Arguments:
+    P     : period value (days)
+    m     : gradient
+    Rp_10 : intercept at 10 day period
+
+    Returns:
+    R: Radius (M_earths)
+    """
+
+    return Rp_100 * (F/100)**m
+
 
 
 # ---------------------------------------------------------------------------- #
@@ -61,11 +82,10 @@ def line_integral(theta, map, sinc=False):
         the occurence map.
     """
 
-
     m, Rp_10 = theta
     if sinc:
-        P_domain = np.logspace(np.log10(1),np.log10(100),100)
-        Rp10_lim = [1.5, 1.9]
+        P_domain = np.logspace(np.log10(1),np.log10(300),100)
+        Rp10_lim = [1.5, 2.3]
         m_lim = [-0.1,0.1]
     else:
         P_domain = np.logspace(np.log10(1),np.log10(100),100)
@@ -80,9 +100,14 @@ def line_integral(theta, map, sinc=False):
         integral = 0
         for i in range(len(P_domain)-1):
 
-            dl = np.sqrt((P_domain[i+1]-P_domain[i])**2 + (R(P_domain[i],m,Rp_10)-R(P_domain[i+1],m,Rp_10))**2)
+            if sinc:
+                dl = np.sqrt((P_domain[i+1]-P_domain[i])**2 + (R_sinc(P_domain[i],m,Rp_10)-R_sinc(P_domain[i+1],m,Rp_10))**2)
+                R_mid = ( R_sinc(P_domain[i+1],m,Rp_10) + R_sinc(P_domain[i],m,Rp_10) ) / 2
 
-            R_mid = ( R(P_domain[i+1],m,Rp_10) + R(P_domain[i],m,Rp_10) ) / 2
+            else:
+                dl = np.sqrt((P_domain[i+1]-P_domain[i])**2 + (R(P_domain[i],m,Rp_10)-R(P_domain[i+1],m,Rp_10))**2)
+                R_mid = ( R(P_domain[i+1],m,Rp_10) + R(P_domain[i],m,Rp_10) ) / 2
+
             P_mid = ( P_domain[i+1] + P_domain[i] ) / 2
             contribution = map(P_mid,R_mid)[0,0] * dl
 
@@ -92,7 +117,6 @@ def line_integral(theta, map, sinc=False):
             else:
                 integral += contribution
 
-            # print P_mid, R_mid, dl, contribution
 
 
         return integral
@@ -101,7 +125,7 @@ def line_integral(theta, map, sinc=False):
 
 # ---------------------------------------------------------------------------- #
 
-def gradient(P_array, R_array, map, init_guess=[0.0,1.6], sinc=False):
+def gradient(P_array, R_array, map, sinc=False):
     """
     Runs a minimisation algorithm to find the gradient and intercept that
     minimise the line integral through the occurence map.
@@ -117,12 +141,12 @@ def gradient(P_array, R_array, map, init_guess=[0.0,1.6], sinc=False):
     # KDE interpolation
     map_interp = interpolate.RectBivariateSpline(P_array,R_array,map)
 
-    sol = optimize.minimize(line_integral, x0=init_guess, args=(map_interp, sinc),
-                            method='Nelder-Mead')
-
-    # print line_integral(sol.x, map_interp, sinc=sinc)
-    # print line_integral([0.02,1.62], map_interp, sinc=sinc)
-
+    if sinc:
+        sol = optimize.minimize(line_integral, x0=[0.0,1.6], args=(map_interp, sinc),
+                                method='Nelder-Mead')
+    else:
+        sol = optimize.minimize(line_integral, x0=[-0.08,1.8], args=(map_interp, sinc),
+                                method='Nelder-Mead')
 
     return sol
 
@@ -156,7 +180,7 @@ def bootstrap_occurrence(smass1, smass2, plnt, comp, nstars, x_range, y_range, s
         # get occurence meshgrid and values
         X, Y, Z, ntrial = ckscool.plot.occur.gradient_arrays_sinc(cp_i)
         if debug:
-            ckscool.plot.occur.contour_sinc(cp_i, ntrials_min=100)
+            ckscool.plot.occur.contour_sinc(cp_i)
     else:
         # resample and calculate occurence
         occ_i = ckscool.occur.load_occur_resample(smass1, smass2, plnt, comp, nstars)
@@ -164,7 +188,7 @@ def bootstrap_occurrence(smass1, smass2, plnt, comp, nstars, x_range, y_range, s
         # get occurence meshgrid and values
         X, Y, Z, ntrial = ckscool.plot.occur.gradient_arrays(cp_i)
         if debug:
-            ckscool.plot.occur.contour(cp_i, ntrials_min=100)
+            ckscool.plot.occur.contour(cp_i)
 
 
     # mask occurence with low ntrial
@@ -177,18 +201,18 @@ def bootstrap_occurrence(smass1, smass2, plnt, comp, nstars, x_range, y_range, s
         sol_i = ckscool.gradient.gradient(x_range, y_range, Z, sinc=True)
         if debug:
             sinc_domain = np.log10(np.logspace(0,3,100))
-            R_sinc = log10([ckscool.gradient.R(10**i,sol_i.x[0], sol_i.x[1]) for i in sinc_domain])
-            plt.plot(sinc_domain, R_sinc,label=r'm={0:.2f}, R$_p$(10)={1:.2f}'.format(sol_i.x[0], sol_i.x[1]))
+            R_sinc = log10([ckscool.gradient.R_sinc(10**i,sol_i.x[0], sol_i.x[1]) for i in sinc_domain])
+            plt.plot(sinc_domain, R_sinc,label=r'm={0:.2f}, R$_p$(100)={1:.2f}'.format(sol_i.x[0], sol_i.x[1]))
             plt.legend()
             plt.savefig('./test_{}'.format(seed))
             plt.clf()
             plt.close()
     else:
-        sol_i = ckscool.gradient.gradient(x_range, y_range, Z)
+        sol_i = ckscool.gradient.gradient(x_range, y_range, Z, sinc=False)
         if debug:
             per_domain = np.log10(np.logspace(0,2,100))
             R_per = log10([ckscool.gradient.R(10**i,sol_i.x[0], sol_i.x[1]) for i in per_domain])
-            plt.plot(sinc_domain, R_per,label=r'm={0:.2f}, R$_p$(10)={1:.2f}'.format(sol_i.x[0], sol_i.x[1]))
+            plt.plot(per_domain, R_per,label=r'm={0:.2f}, R$_p$(10)={1:.2f}'.format(sol_i.x[0], sol_i.x[1]))
             plt.legend()
             plt.savefig('./test_{}'.format(seed))
             plt.clf()
@@ -197,7 +221,7 @@ def bootstrap_occurrence(smass1, smass2, plnt, comp, nstars, x_range, y_range, s
 
 # ---------------------------------------------------------------------------- #
 
-def bootstrap_detection(plnt, seed):
+def bootstrap_detection(plnt, seed, sinc=False, debug=False):
 
     """
     resamples planet population (with replacement) and finds best fit gradient
@@ -218,18 +242,42 @@ def bootstrap_detection(plnt, seed):
     # seed random number generator
     np.random.seed(seed)
 
+    resample_indices = resample(np.arange(len(plnt)))
+    plnt =  plnt.iloc[resample_indices, :]
 
-    X,Y,Z = ckscool.plot.planet.gradient_per_prad(plnt, bootstrap=True, for_gradient=True)
-    per_range = np.array([10**i for i in X])
-    prad_range = np.array([10**i for i in Y])
+    if sinc:
+        X,Y,Z = ckscool.plot.planet._sinc_prad(plnt, for_gradient=True)
+        sinc_range = np.array([10**i for i in X])
+        prad_range = np.array([10**i for i in Y])
+        sol_i = ckscool.gradient.gradient(sinc_range, prad_range, Z, sinc=True)
+        if debug:
+            ckscool.plot.planet._sinc_prad(plnt, zoom=True)
+            sol = ckscool.gradient.gradient(sinc_range, prad_range, Z, sinc=True)
+            R_sinc = log10([ckscool.gradient.R_sinc(10**i,sol.x[0], sol.x[1]) for i in sinc_range])
+            plt.plot(sinc_range, R_sinc)
+            plt.savefig('./test_{}'.format(seed))
+            plt.clf()
+            plt.close()
 
-    # find gradient and intercept
-    sol_i = ckscool.gradient.gradient(per_range, prad_range, Z)
+    else:
+        X,Y,Z = ckscool.plot.planet._per_prad(plnt, for_gradient=True)
+        per_range = np.array([10**i for i in X])
+        prad_range = np.array([10**i for i in Y])
+        sol_i = ckscool.gradient.gradient(per_range, prad_range, Z)
+        if debug:
+            ckscool.plot.planet._per_prad(plnt, zoom=True)
+            sol = ckscool.gradient.gradient(per_range, prad_range, Z, sinc=False)
+            R_per = log10([ckscool.gradient.R(10**i,sol.x[0], sol.x[1]) for i in per_range])
+            plt.plot(per_range, R_per)
+            plt.savefig('./test_{}'.format(seed))
+            plt.clf()
+            plt.close()
+
     return list(sol_i.x)
 
 # ---------------------------------------------------------------------------- #
 
-def bootstrap_chain(smass_bins, map, n_iter=10000, n_cores=1):
+def bootstrap_chain(smass_bins, map, n_iter=10000, n_cores=1, debug=False):
 
     for k in range(len(smass_bins)-1):
 
@@ -240,7 +288,7 @@ def bootstrap_chain(smass_bins, map, n_iter=10000, n_cores=1):
             plnt = ckscool.io.load_table('planets-cuts2+iso')
             plnt = plnt[~plnt.isany]
             plnt = plnt[plnt.giso_smass.between(smass1,smass2)]
-            chain = Parallel(n_jobs=n_cores)(delayed(bootstrap_detection)(plnt, seed=i) for i in np.arange(n_iter))
+            chain = Parallel(n_jobs=n_cores)(delayed(bootstrap_detection)(plnt, seed=i, debug=debug) for i in np.arange(n_iter))
             np.savetxt("./data/chain_detv2_{0}-{1}-smass.csv".format(smass1, smass2), chain, delimiter=',')
 
         elif map=="occurrence":
@@ -285,7 +333,7 @@ def bootstrap_chain(smass_bins, map, n_iter=10000, n_cores=1):
             prad_range = np.logspace(np.log10(0.5),np.log10(4),80)
 
 
-            chain = Parallel(n_jobs=n_cores)(delayed(bootstrap_occurrence)(smass1, smass2, plnt, comp, nstars, per_range, prad_range, seed=i) for i in np.arange(n_iter))
+            chain = Parallel(n_jobs=n_cores)(delayed(bootstrap_occurrence)(smass1, smass2, plnt, comp, nstars, per_range, prad_range, seed=i, debug=debug) for i in np.arange(n_iter))
             np.savetxt("./data/chain_occv2_{0}-{1}-smass.csv".format(smass1, smass2), chain, delimiter=',')
 
         else:
@@ -293,57 +341,62 @@ def bootstrap_chain(smass_bins, map, n_iter=10000, n_cores=1):
 
 # ---------------------------------------------------------------------------- #
 
-def bootstrap_chain_SincPrad(smass_bins, n_iter=10000, n_cores=1):
+def bootstrap_chain_sinc(smass_bins, map, n_iter=10000, n_cores=1, debug=False):
 
     for k in range(len(smass_bins)-1):
 
         smass1, smass2 = smass_bins[k], smass_bins[k+1]
 
-        # if map=="detections":
-        #
-        #     plnt = ckscool.io.load_table('planets-cuts2+iso')
-        #     plnt = plnt[~plnt.isany]
-        #     plnt = plnt[plnt.giso_smass.between(smass1,smass2)]
-        #     chain = Parallel(n_jobs=n_cores)(delayed(bootstrap_detection)(plnt, seed=i) for i in np.arange(n_iter))
-        #     np.savetxt("./data/chain_detections_{0}-{1}-smass.csv".format(smass1, smass2), chain, delimiter=',')
+        if map=="detections":
 
-        # Derive completeness object
-        method = 'fulton-gamma-clip' # treatment for planet detectability
-        impact = 0.8 # maximum impact parameter considered.
-
-        field = ckscool.io.load_table('field-cuts',cache=1)
-        field = field[~field.isany]
-        field = field.rename(columns={'ber19_srad':'srad','ber19_smass':'smass'})
-        field = field[field.smass.between(smass1,smass2)]
-        n1 = len(field)
-        field = field.dropna(subset=ckscool.comp.__STARS_REQUIRED_COLUMNS__)
-        n2 = len(field)
-        print "{}/{} stars remain after droping nulls ".format(n2,n1)
-        nstars = n2
-
-        # Define grid of period and radius to compute completeness
-        comp_sinc_bins = np.round(logspace(log10(0.1),log10(100000),65),4)
-        comp_prad_bins = np.round(logspace(log10(0.25),log10(64),51 ),2)
-
-        comp_bins_dict = {'sinc':comp_sinc_bins, 'prad': comp_prad_bins}
-        spacing_dict = {'sinc':'log','prad':'log'}
-        grid = ckscool.grid.Grid(comp_bins_dict, spacing_dict)
-        comp = ckscool.comp.Completeness_SincPrad(field, grid, method, impact)
-        comp.compute_grid_prob_det_sinc(verbose=False)
-        comp.compute_grid_prob_tr_sinc(verbose=False)
-        comp.create_splines_sinc()
-
-        # load planet population
-        plnt = ckscool.io.load_table('planets-cuts2+iso')
-        plnt = plnt[~plnt.isany]
-        namemap = {'gdir_prad':'prad','koi_period':'per','giso_smass':'smass','giso_sinc':'sinc'}
-        plnt = plnt.rename(columns=namemap)
-        plnt = plnt[plnt.smass.between(smass1,smass2)]
-
-        # ranges must match those defined in ckscool.plot.occur.load_contour_plotter
-        sinc_range = logspace(log10(0.1),log10(30000),80)
-        prad_range = logspace(log10(0.5),log10(4),80)
+            plnt = ckscool.io.load_table('planets-cuts2+iso')
+            plnt = plnt[~plnt.isany]
+            plnt = plnt[plnt.giso_smass.between(smass1,smass2)]
+            chain = Parallel(n_jobs=n_cores)(delayed(bootstrap_detection)(plnt, seed=i, sinc=True, debug=debug) for i in np.arange(n_iter))
+            np.savetxt("./data/chain_det_SincPradv2_{0}-{1}-smass.csv".format(smass1, smass2), chain, delimiter=',')
 
 
-        chain = Parallel(n_jobs=n_cores)(delayed(bootstrap_occurrence)(smass1, smass2, plnt, comp, nstars, sinc_range, prad_range, seed=i, sinc=True) for i in np.arange(n_iter))
-        np.savetxt("./data/chain_occ_SincPrad_{0}-{1}-smass.csv".format(smass1, smass2), chain, delimiter=',')
+        elif map=="occurrence":
+            # Derive completeness object
+            method = 'fulton-gamma-clip' # treatment for planet detectability
+            impact = 0.8 # maximum impact parameter considered.
+
+            field = ckscool.io.load_table('field-cuts',cache=1)
+            field = field[~field.isany]
+            field = field.rename(columns={'ber19_srad':'srad','ber19_smass':'smass'})
+            field = field[field.smass.between(smass1,smass2)]
+            n1 = len(field)
+            field = field.dropna(subset=ckscool.comp.__STARS_REQUIRED_COLUMNS__)
+            n2 = len(field)
+            print "{}/{} stars remain after droping nulls ".format(n2,n1)
+            nstars = n2
+
+            # Define grid of period and radius to compute completeness
+            comp_sinc_bins = np.round(logspace(log10(0.1),log10(100000),65),4)
+            comp_prad_bins = np.round(logspace(log10(0.25),log10(64),51 ),2)
+
+            comp_bins_dict = {'sinc':comp_sinc_bins, 'prad': comp_prad_bins}
+            spacing_dict = {'sinc':'log','prad':'log'}
+            grid = ckscool.grid.Grid(comp_bins_dict, spacing_dict)
+            comp = ckscool.comp.Completeness_SincPrad(field, grid, method, impact)
+            comp.compute_grid_prob_det_sinc(verbose=False)
+            comp.compute_grid_prob_tr_sinc(verbose=False)
+            comp.create_splines_sinc()
+
+            # load planet population
+            plnt = ckscool.io.load_table('planets-cuts2+iso')
+            plnt = plnt[~plnt.isany]
+            namemap = {'gdir_prad':'prad','koi_period':'per','giso_smass':'smass','giso_sinc':'sinc'}
+            plnt = plnt.rename(columns=namemap)
+            plnt = plnt[plnt.smass.between(smass1,smass2)]
+
+            # ranges must match those defined in ckscool.plot.occur.load_contour_plotter
+            sinc_range = logspace(log10(0.1),log10(30000),80)
+            prad_range = logspace(log10(0.5),log10(4),80)
+
+
+            chain = Parallel(n_jobs=n_cores)(delayed(bootstrap_occurrence)(smass1, smass2, plnt, comp, nstars, sinc_range, prad_range, seed=i, sinc=True, debug=debug) for i in np.arange(n_iter))
+            np.savetxt("./data/chain_occ_SincPradv2_{0}-{1}-smass.csv".format(smass1, smass2), chain, delimiter=',')
+
+        else:
+            raise NameError(' "map" argument  must be one of the following: "occurrence" or "detections" ')
