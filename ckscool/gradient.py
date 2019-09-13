@@ -66,7 +66,7 @@ def R_sinc(F,m,Rp_100):
 
 # ---------------------------------------------------------------------------- #
 
-def line_integral(theta, map, sinc=False):
+def line_integral(theta, map, maptype, sinc=False):
     """
     Return the line integral for a given straight line
 
@@ -84,16 +84,22 @@ def line_integral(theta, map, sinc=False):
 
     m, Rp_10 = theta
     if sinc:
-        P_domain = np.logspace(np.log10(1),np.log10(300),100)
+        if maptype == 'occurrence':
+            P_domain = np.logspace(np.log10(1),np.log10(80),100)
+        elif maptype == 'detections':
+            P_domain = np.logspace(np.log10(1),np.log10(300),100)
+
         Rp10_lim = [1.5, 2.3]
         m_lim = [-0.1,0.1]
     else:
-        P_domain = np.logspace(np.log10(1),np.log10(100),100)
+        if maptype == 'occurrence':
+            P_domain = np.logspace(np.log10(1),np.log10(200),100)
+        elif maptype == 'detections':
+            P_domain = np.logspace(np.log10(1),np.log10(200),100)
         Rp10_lim = [1.7, 2.4]
         m_lim = [-0.2,0.2]
 
     # constraints for intercepts with P(R_min) and P(R_max)
-    # if 1.5 <= R(P_domain[0],m,Rp_10) <= 3.0 and 1.0 <= R(P_domain[-1],m,Rp_10) <= 3.0:
     if m_lim[0] <= m <= m_lim[1] and Rp10_lim[0] <= Rp_10 <= Rp10_lim[1]:
 
         # sum contributions to integrand
@@ -125,7 +131,7 @@ def line_integral(theta, map, sinc=False):
 
 # ---------------------------------------------------------------------------- #
 
-def gradient(P_array, R_array, map, sinc=False):
+def gradient(P_array, R_array, map, maptype, sinc=False):
     """
     Runs a minimisation algorithm to find the gradient and intercept that
     minimise the line integral through the occurence map.
@@ -142,10 +148,10 @@ def gradient(P_array, R_array, map, sinc=False):
     map_interp = interpolate.RectBivariateSpline(P_array,R_array,map)
 
     if sinc:
-        sol = optimize.minimize(line_integral, x0=[0.0,1.6], args=(map_interp, sinc),
+        sol = optimize.minimize(line_integral, x0=[0.0,1.6], args=(map_interp, maptype, sinc),
                                 method='Nelder-Mead')
     else:
-        sol = optimize.minimize(line_integral, x0=[-0.08,1.8], args=(map_interp, sinc),
+        sol = optimize.minimize(line_integral, x0=[-0.08,1.8], args=(map_interp, maptype, sinc),
                                 method='Nelder-Mead')
 
     return sol
@@ -172,6 +178,10 @@ def bootstrap_occurrence(smass1, smass2, plnt, comp, nstars, x_range, y_range, s
 
     # seed random number generator
     np.random.seed(seed)
+    if sinc:
+        ntrials_min = 100
+    else:
+        ntrials_min = 100
 
     if sinc:
         # resample and calculate occurence
@@ -180,7 +190,7 @@ def bootstrap_occurrence(smass1, smass2, plnt, comp, nstars, x_range, y_range, s
         # get occurence meshgrid and values
         X, Y, Z, ntrial = ckscool.plot.occur.gradient_arrays_sinc(cp_i)
         if debug:
-            ckscool.plot.occur.contour_sinc(cp_i)
+            ckscool.plot.occur.contour_sinc(cp_i, ntrials_min=ntrials_min)
     else:
         # resample and calculate occurence
         occ_i = ckscool.occur.load_occur_resample(smass1, smass2, plnt, comp, nstars)
@@ -188,17 +198,17 @@ def bootstrap_occurrence(smass1, smass2, plnt, comp, nstars, x_range, y_range, s
         # get occurence meshgrid and values
         X, Y, Z, ntrial = ckscool.plot.occur.gradient_arrays(cp_i)
         if debug:
-            ckscool.plot.occur.contour(cp_i)
+            ckscool.plot.occur.contour(cp_i, ntrials_min=ntrials_min)
 
 
     # mask occurence with low ntrial
-    ntrial[ntrial <= 100] = 0.0
-    ntrial[ntrial >  100] = 1.0
+    ntrial[ntrial <= ntrials_min] = 0.0
+    ntrial[ntrial >  ntrials_min] = 1.0
     Z = Z * ntrial
 
     # find gradient and intercept
     if sinc:
-        sol_i = ckscool.gradient.gradient(x_range, y_range, Z, sinc=True)
+        sol_i = ckscool.gradient.gradient(x_range, y_range, Z, 'occurrence', sinc=True)
         if debug:
             sinc_domain = np.log10(np.logspace(0,3,100))
             R_sinc = log10([ckscool.gradient.R_sinc(10**i,sol_i.x[0], sol_i.x[1]) for i in sinc_domain])
@@ -208,7 +218,7 @@ def bootstrap_occurrence(smass1, smass2, plnt, comp, nstars, x_range, y_range, s
             plt.clf()
             plt.close()
     else:
-        sol_i = ckscool.gradient.gradient(x_range, y_range, Z, sinc=False)
+        sol_i = ckscool.gradient.gradient(x_range, y_range, Z, 'occurrence', sinc=False)
         if debug:
             per_domain = np.log10(np.logspace(0,2,100))
             R_per = log10([ckscool.gradient.R(10**i,sol_i.x[0], sol_i.x[1]) for i in per_domain])
@@ -249,11 +259,10 @@ def bootstrap_detection(plnt, seed, sinc=False, debug=False):
         X,Y,Z = ckscool.plot.planet._sinc_prad(plnt, for_gradient=True)
         sinc_range = np.array([10**i for i in X])
         prad_range = np.array([10**i for i in Y])
-        sol_i = ckscool.gradient.gradient(sinc_range, prad_range, Z, sinc=True)
+        sol_i = ckscool.gradient.gradient(sinc_range, prad_range, Z, 'detections', sinc=True)
         if debug:
             ckscool.plot.planet._sinc_prad(plnt, zoom=True)
-            sol = ckscool.gradient.gradient(sinc_range, prad_range, Z, sinc=True)
-            R_sinc = log10([ckscool.gradient.R_sinc(10**i,sol.x[0], sol.x[1]) for i in sinc_range])
+            R_sinc = log10([ckscool.gradient.R_sinc(10**i,sol_i.x[0], sol_i.x[1]) for i in sinc_range])
             plt.plot(sinc_range, R_sinc)
             plt.savefig('./test_{}'.format(seed))
             plt.clf()
@@ -266,8 +275,7 @@ def bootstrap_detection(plnt, seed, sinc=False, debug=False):
         sol_i = ckscool.gradient.gradient(per_range, prad_range, Z)
         if debug:
             ckscool.plot.planet._per_prad(plnt, zoom=True)
-            sol = ckscool.gradient.gradient(per_range, prad_range, Z, sinc=False)
-            R_per = log10([ckscool.gradient.R(10**i,sol.x[0], sol.x[1]) for i in per_range])
+            R_per = log10([ckscool.gradient.R(10**i,sol_i.x[0], sol_i.x[1]) for i in per_range])
             plt.plot(per_range, R_per)
             plt.savefig('./test_{}'.format(seed))
             plt.clf()
@@ -353,7 +361,7 @@ def bootstrap_chain_sinc(smass_bins, map, n_iter=10000, n_cores=1, debug=False):
             plnt = plnt[~plnt.isany]
             plnt = plnt[plnt.giso_smass.between(smass1,smass2)]
             chain = Parallel(n_jobs=n_cores)(delayed(bootstrap_detection)(plnt, seed=i, sinc=True, debug=debug) for i in np.arange(n_iter))
-            np.savetxt("./data/chain_det_SincPradv2_{0}-{1}-smass.csv".format(smass1, smass2), chain, delimiter=',')
+            np.savetxt("./data/chain_det_SincPradv3_{0}-{1}-smass.csv".format(smass1, smass2), chain, delimiter=',')
 
 
         elif map=="occurrence":
@@ -396,7 +404,7 @@ def bootstrap_chain_sinc(smass_bins, map, n_iter=10000, n_cores=1, debug=False):
 
 
             chain = Parallel(n_jobs=n_cores)(delayed(bootstrap_occurrence)(smass1, smass2, plnt, comp, nstars, sinc_range, prad_range, seed=i, sinc=True, debug=debug) for i in np.arange(n_iter))
-            np.savetxt("./data/chain_occ_SincPradv2_{0}-{1}-smass.csv".format(smass1, smass2), chain, delimiter=',')
+            np.savetxt("./data/chain_occ_SincPradv3_{0}-{1}-smass.csv".format(smass1, smass2), chain, delimiter=',')
 
         else:
             raise NameError(' "map" argument  must be one of the following: "occurrence" or "detections" ')
