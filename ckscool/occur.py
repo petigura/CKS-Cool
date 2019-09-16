@@ -8,6 +8,7 @@ from scipy import special
 from sklearn.utils import resample
 
 import ckscool.io
+import ckscool.grid
 #import ckscool.gradient
 
 class Occurrence(object):
@@ -61,6 +62,7 @@ class Occurrence(object):
 
         uplim = nplnt==0
         rate = samples_to_rate(samples,uplim=uplim)
+        out = {}
         out['ntrial'] = ntrial
         out['nplnt'] = nplnt
         out['prob_trdet_mean'] = prob_trdet_mean
@@ -68,7 +70,7 @@ class Occurrence(object):
         out = dict(out,**rate)
         return out
 
-class Occurence_SincPrad(Occurrence):
+class Occurrence_SincPrad(Occurrence):
     def occurence_box_sinc(self, limits):
         """Compute occurrence in a little box
 
@@ -267,7 +269,7 @@ def load_occur(limits, debug=False, sinc=False):
         comp.compute_grid_prob_tr_sinc(verbose=False)
         comp.create_splines_sinc()
         nstars = len(field)
-        occ = ckscool.occur.Occurence_SincPrad(plnt, comp, nstars)
+        occ = ckscool.occur.Occurrence_SincPrad(plnt, comp, nstars)
 
     else:
         # Define grid of period and radius to compute completeness
@@ -289,7 +291,7 @@ def load_occur(limits, debug=False, sinc=False):
         comp.compute_grid_prob_tr(verbose=False)
         comp.create_splines()
         nstars = len(field)
-        occ = ckscool.occur.Occurence(plnt, comp, nstars)
+        occ = ckscool.occur.Occurrence(plnt, comp, nstars)
     return occ
 
 def load_occur_resample(smass1, smass2, plnt, comp, nstars):

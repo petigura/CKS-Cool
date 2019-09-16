@@ -55,9 +55,9 @@ def contour(cp, plot_interval=False, draw_colorbar=True, cax=None,
 
     # Completeness
     if plot_completeness:
-        Z = np.array(ds.ntrial)
+        Zt = np.array(ds.ntrial)
         cmap = sns.light_palette("gray",as_cmap=True)
-        contourf(X,Y,Z,[0,ntrials_min],zorder=2.5,cmap=cmap,vmax=1)
+        contourf(X,Y,Zt,[0,ntrials_min],zorder=2.5,cmap=cmap,vmax=1)
         '''
         text(
             0.95,0.15,'Low Completeness',rotation=12,zorder=5,size='small',
@@ -98,6 +98,10 @@ $\Delta \log R_P$ = {:.2f} dex
         kw = dict(
             size='x-small',zorder=5,va='top',ha='left',transform=ax.transAxes,
         )
+
+
+    return X, Y, Z
+
 #        text(xyaxes[0]+0.07,xyaxes[1],s,**kw)
 # ---------------------------------------------------------------------------- #
 
@@ -245,7 +249,7 @@ def fig_contour_six():
         df = cp.occ.plnt.copy()
         df = df.rename(columns={'prad':'gdir_prad','per':'koi_period'})
         ckscool.plot.planet._per_prad(
-            df,nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1
+            df, nopoints=False, zoom=False, query=None, yerrfac=1, xerrfac=1
         )
         sca(axL[i,1])
         contour(cp,plot_interval=True,draw_colorbar=True)
@@ -408,38 +412,48 @@ def load_surface_smass(per1, per2):
     df = pd.DataFrame(df)
     return df
 
-def fig_contour_smass(normalize=False):
+def fig_contour_smass(per1, per2, normalize=False,):
     sns.set_context('talk')
     figure(figsize=(8,6,))
-    df = load_surface_smass(10,30)
+    df = load_surface_smass(per1,per2)
     if normalize:
-        df = df.query('1 < pradc < 4')
+        df = df.query('0.25 < pradc < 4')
         ds = df.groupby(['smass1','prad1']).nth(0).to_xarray()
         X, Y = np.array(np.log10(ds.smassc)), np.array(np.log10(ds.pradc))
         Z = ds.rate.fillna(0)
-        Z = nd.gaussian_filter(Z,(1.5,1))
+        Z = nd.gaussian_filter(Z,(2,4))
         Z = Z / Z.sum(axis=1)[:,newaxis]
-        levels = arange(0.0,0.05,0.001)
-        _title = 'Normalized Occurrence \n $\Delta M_\star = 0.1$ dex = 0.2 mag $\Delta R_P$ = 0.05 dex, $P$ = 10-30 day'
+        levels = np.round(linspace(0.0,1.2*Z.max(),20),3)
+        _title = 'Normalized Occurrence \n $\Delta M_\star = 0.1$ dex $\Delta R_P$ = 0.05 dex, $P$ = {}-{} day'.format(per1,per2)
     else:
         ds = df.groupby(['smass1','prad1']).nth(0).to_xarray()
         X, Y = np.array(np.log10(ds.smassc)), np.array(np.log10(ds.pradc))
         Z = ds.rate.fillna(0)
-        Z = nd.gaussian_filter(Z,(1.5,1))
-        levels = arange(0.0,0.08,0.003)
-        _title = 'Occurrence \n $\Delta M_\star = 0.1$ dex $\Delta R_P$ = 0.05 dex, $P$ = 10-30 day'
+        Z = nd.gaussian_filter(Z,(1,4))
+        
+        # Choose levels based on the maximum flu
+        Zcut = Z[array((1 < ds.pradc) & (ds.pradc < 4))]
+        levels = linspace(0,1.2*Zcut.max(),20)
+        _title = 'Occurrence \n $\Delta M_\star = 0.1$ dex $\Delta R_P$ = 0.05 dex, $P$ = {}-{} day'.format(per1,per2)
 
     cmap = 'YlGn' #,None #'hot_r'
     qcs = contourf(X,Y,Z,levels=levels,cmap=cmap,zorder=0)
     colorbar()
     Z = np.array(ds.ntrial)
     cmap = sns.light_palette("gray",as_cmap=True)
-    contourf(X,Y,Z,[0,25],zorder=2.5,cmap=cmap,vmax=1)
+    contourf(X,Y,Z,[0,100],zorder=2.5,cmap=cmap,vmax=1)
     xt = [0.5,0.7,1.0,1.4]
     yt = [1,1.4,2,2.8,4]
     xticks([log10(_xt) for _xt in xt],xt)
     yticks([log10(_yt) for _yt in yt],yt)
-    ylim(log10(1,),log10(4))
+
+    df = ckscool.io.load_table('planets-cuts2+iso')
+    df = df[~df.isany]
+    df = df[df.koi_period.between(per1,per2)]
+    plot(log10(df.giso_smass), log10(df.gdir_prad),'.')
+
+    ylim(log10(0.5),log10(4))
+    xlim(log10(0.5),log10(1.4))
     title(_title)
     xlabel('Stellar Mass (Solar Masses)')
     ylabel('Planet Size (Earth Radii)')
@@ -505,3 +519,6 @@ def fig_contour_bmr(normalize=False):
     title(_title) 
     xlabel('B-V (mag)')
     ylabel('Planet Size (Earth-radii)')
+
+
+Metallicity/cksmet/plotting/
