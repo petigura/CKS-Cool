@@ -22,6 +22,7 @@ import ckscool.gaia
 import ckscool.occur
 import ckscool.plot.occur
 import ckscool._isoclassify
+import ckscool.fit
 
 # Ignore the Natural name warning
 warnings.simplefilter('ignore', tables.NaturalNameWarning)
@@ -688,7 +689,67 @@ def load_object(key,cache=0,verbose=1):
         obj.comp.__delattr__('stars')
         limits = dict(smass1=0.9,smass2=1.1)
 
+    elif key.count('fitper_')==1:
+        dlogper = 0.05 # Size of the bins used in the fitting
+        dx = [dlogper]
+        #_, smet, size = key.split('-')
+        bits = key.split('_')
+        limits = {}
+        for bit in bits:
+            if bit.count('smass='):
+                smass1, smass2 = bit.replace('smass=','').split('-')
+                smass1 = float(smass1)
+                smass2 = float(smass2)
+            if bit.count('per='):
+                per1, per2 = bit.replace('per=','').split('-')
+                per1 = float(per1)
+                per2 = float(per2)
+            if bit.count('prad='):
+                prad1, prad2 = bit.replace('prad=','').split('-')
+                prad1 = float(prad1)
+                prad2 = float(prad2)
 
+        occkey = 'occur_smass={}-{}'.format(smass1,smass2)
+        occ = load_object(occkey,cache=1)
+        cut = occ.occurrence_grid(
+            per1=per1, per2=per2, dlogper=dlogper, 
+            prad1=prad1,prad2=prad2,dlogprad=None
+        )
+        fit = ckscool.fit.PowerLawCutoff(cut.perc, dx, cut.nplnt, cut.ntrial) 
+        fit.fit()
+        fit.mcmc(burn=300, steps=600, thin=1, nwalkers=100)
+        obj = fit
 
+    elif key.count('fitsinc_')==1:
+        dlogsinc = 0.05 # Size of the bins used in the fitting
+        dx = [dlogsinc]
+        #_, smet, size = key.split('-')
+        bits = key.split('_')
+        limits = {}
+        for bit in bits:
+            if bit.count('smass='):
+                smass1, smass2 = bit.replace('smass=','').split('-')
+                smass1 = float(smass1)
+                smass2 = float(smass2)
+            if bit.count('sinc='):
+                sinc1, sinc2 = bit.replace('sinc=','').split('-')
+                sinc1 = float(sinc1)
+                sinc2 = float(sinc2)
+            if bit.count('prad='):
+                prad1, prad2 = bit.replace('prad=','').split('-')
+                prad1 = float(prad1)
+                prad2 = float(prad2)
+
+        occkey = 'occur-sinc_smass={}-{}'.format(smass1,smass2)
+        occ = load_object(occkey,cache=1)
+        cut = occ.occurrence_grid(
+            sinc1=sinc1, sinc2=sinc2, dlogsinc=dlogsinc, 
+            prad1=prad1,prad2=prad2,dlogprad=None
+        )
+        fit = ckscool.fit.CutoffPowerLaw(cut.sincc, dx, cut.nplnt, cut.ntrial) 
+        fit.fit()
+        fit.mcmc(burn=300, steps=600, thin=1, nwalkers=100)
+        obj = fit
 
     return obj
+

@@ -6,9 +6,12 @@ from numpy import log10, logspace, arange, round
 from scipy.special import gammaln as gamln
 from scipy import special
 from sklearn.utils import resample
+import pandas as pd 
+
 
 import ckscool.io
 import ckscool.grid
+
 #import ckscool.gradient
 
 class Occurrence(object):
@@ -23,8 +26,6 @@ class Occurrence(object):
         nstars (int): number of stars in parent stellar population
 
     """
-
-
     def __init__(self, plnt, comp, nstars):
         self.plnt = plnt
         self.comp = comp
@@ -70,8 +71,44 @@ class Occurrence(object):
         out = dict(out,**rate)
         return out
 
+
+    def occurrence_grid(self, per1=None, per2=None, dlogper=None, 
+                            prad1=None, prad2=None, dlogprad=None):
+
+        """
+        A convenience function to compute occurrence over a grid in period and radius
+        """
+        eps = 1e-9
+        if dlogper is None:
+            per = [per1,per2]
+        else:
+            per = 10**np.arange(log10(per1),log10(per2)+eps,dlogper)
+            
+        if dlogprad is None:
+            prad = [prad1,prad2]
+        else:
+            prad = 10**np.arange(log10(prad1),log10(prad2)+eps,dlogprad)
+        
+        df = []
+        for i in range(len(per)-1):
+            _per1 = per[i]
+            _per2 = per[i+1]
+            for j in range(len(prad)-1):
+                _prad1 = prad[j]
+                _prad2 = prad[j+1]
+                limits = dict(
+                    per1=_per1, per2=_per2, prad1=_prad1, prad2=_prad2
+                )
+                _out = self.occurence_box(limits)
+                _out['perc'] = np.sqrt(_per1*_per2)
+                _out['pradc'] = np.sqrt(_prad1*_prad2)
+                df.append(_out)
+
+        df = pd.DataFrame(df)
+        return df
+
 class Occurrence_SincPrad(Occurrence):
-    def occurence_box_sinc(self, limits):
+    def occurence_box(self, limits):
         """Compute occurrence in a little box
 
         We make the assumption that the dN/dlogSinc and dN/lopRp is constant
@@ -109,6 +146,42 @@ class Occurrence_SincPrad(Occurrence):
         out['prob_det_mean'] = prob_det_mean
         out = dict(out,**rate)
         return out
+
+    def occurrence_grid(self, sinc1=None, sinc2=None, dlogsinc=None, 
+                             prad1=None, prad2=None, dlogprad=None):
+        
+        """
+        A convenience function to compute occurrence over a grid in period and radius
+        """
+        eps = 1e-9
+        if dlogsinc is None:
+            sinc = [sinc1,sinc2]
+        else:
+            sinc = 10**np.arange(log10(sinc1),log10(sinc2)+eps,dlogsinc)
+            
+        if dlogprad is None:
+            prad = [prad1,prad2]
+        else:
+            prad = 10**np.arange(log10(prad1),log10(prad2)+eps,dlogprad)
+        
+        df = []
+        for i in range(len(sinc)-1):
+            _sinc1 = sinc[i]
+            _sinc2 = sinc[i+1]
+            for j in range(len(prad)-1):
+                _prad1 = prad[j]
+                _prad2 = prad[j+1]
+                limits = dict(
+                    sinc1=_sinc1, sinc2=_sinc2, prad1=_prad1, prad2=_prad2
+                )
+                _out = self.occurence_box(limits)
+                _out['sincc'] = np.sqrt(_sinc1*_sinc2)
+                _out['pradc'] = np.sqrt(_prad1*_prad2)
+                df.append(_out)
+
+        df = pd.DataFrame(df)
+        return df
+
 
 class Binomial(object):
     """Class that computes binomial statistics

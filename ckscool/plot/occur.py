@@ -521,4 +521,201 @@ def fig_contour_bmr(normalize=False):
     ylabel('Planet Size (Earth-radii)')
 
 
-Metallicity/cksmet/plotting/
+def per(per1, per2, prad1, prad2, smass1, smass2, fmtkey):
+    dlogper_bin = 0.25
+    dlogper_fit = 0.05 # Size of the bins used in the fitting
+
+    key = 'occur_smass={}-{}'.format(smass1,smass2)
+    occ = ckscool.io.load_object(key,cache=1)
+
+    dx = [dlogper_fit]
+    cut = occ.occurrence_grid(
+        per1=per1, per2=per2, dlogper=dlogper_fit, 
+        prad1=prad1, prad2=prad2
+    )
+
+    occ = ckscool.io.load_object(key,cache=1)
+    key = 'fitper_per={}-{}_prad={}-{}_smass={}-{}'.format(
+        per1,per2,prad1,prad2,smass1,smass2
+    )
+    fit = ckscool.io.load_object(key,cache=1)
+    sampler = ckscool.plot.occur.SamplerPer(fit, fmtkey, dlogper_bin)
+    sampler.plot_all()
+
+    # Plot binned occurrence to guide the eye
+    df = occ.occurrence_grid(
+        per1=per1, per2=per2, dlogper=dlogper_bin, prad1=prad1, prad2=prad2
+    )
+    fac = 1
+    plot_rates('perc', df, fmtkey, fac=fac)
+
+def sinc(sinc1, sinc2, prad1, prad2, smass1, smass2, fmtkey):
+    dlogsinc_bin = 0.5
+    dlogsinc_fit = 0.05 # Size of the bins used in the fitting
+
+    key = 'occur-sinc_smass={}-{}'.format(smass1,smass2)
+    occ = ckscool.io.load_object(key,cache=1)
+
+    dx = [dlogsinc_fit]
+    cut = occ.occurrence_grid(
+        sinc1=sinc1, sinc2=sinc2, dlogsinc=dlogsinc_fit, 
+        prad1=prad1, prad2=prad2
+    )
+
+    occ = ckscool.io.load_object(key,cache=1)
+    key = 'fitsinc_sinc={}-{}_prad={}-{}_smass={}-{}'.format(
+        sinc1,sinc2,prad1,prad2,smass1,smass2
+    )
+    fit = ckscool.io.load_object(key,cache=1)
+    sampler = ckscool.plot.occur.SamplerSinc(fit, fmtkey, dlogsinc_bin)
+    sampler.plot_all()
+    # Plot binned occurrence to guide the eye
+    df = occ.occurrence_grid(
+        sinc1=sinc1, sinc2=sinc2, dlogsinc=dlogsinc_bin, prad1=prad1, prad2=prad2
+    )
+    fac = 1
+    plot_rates('sincc', df, fmtkey, fac=fac)
+
+def plot_rates(xk, occur, fmtkey, fac=1.0, **kw):
+    """
+    Args
+        xk (str): x value
+        occur (pd.DataFrame): must contain rate, rate_err1, rate_err2
+    """
+    _ptcolor = ptcolor[fmtkey]
+
+    efac = 0.2
+    cfac = 1.05
+    ebkw = {}
+
+    kw['ms'] = 5
+    kw['mew'] = efac * kw['ms']
+    kw['mfc'] = 'w'
+    kw['capsize'] = cfac * kw['ms']
+    kw['capthick'] = kw['mew']
+    kw['zorder'] = 4
+    kw['color'] = _ptcolor
+    kw['fmt'] = 'o'
+
+    ebkw1 = kw
+    ebkw2 = dict(**ebkw1)
+    ebkw2['mfc'] = 'none'
+    ebkw2['zorder'] = 5
+    ebkw2['lw'] = 0
+    ebkw2['zorder'] = 5
+
+    # Points as upperlimit remove errorbar specific kw
+    ulkw = dict(**kw)
+    ulkw.pop('fmt')
+    ulkw.pop('capthick')
+    ulkw.pop('capsize')
+    ulkw['color'] = _ptcolor
+    ulkw['marker'] = 'v'
+    ulkw['lw'] = 0
+    ulkw['zorder'] = 6
+    
+    yerr = np.array(occur['rate_err2 rate_err1'.split()]).T
+    yerr[0] *= -1 
+
+    #semilogy()
+    
+    x = occur[xk]
+    y = occur.rate
+    errorbar(x,y*fac,yerr=yerr*fac, **ebkw1)
+    errorbar(x,y*fac,yerr=yerr*fac, **ebkw2)
+
+    occurul = occur.dropna(subset=['rate_ul'])
+    if len(occurul) >0:
+        plot(x,occur.rate_ul*fac,**ulkw)
+
+sns.set_style('ticks')
+sns.set_color_codes()
+
+ptcolor = {
+    'se':'g',
+    'sn':'b',
+    'ss':'y',
+    'jup':'r',
+    'smass1':'r',
+    'smass2':'g',
+    'smass3':'b',
+}
+
+bdcolor = {
+    'se':'light green',
+    'sn':'light blue',
+    'ss':'light mustard',
+    'jup':'light pink'
+}
+
+namedict = {
+    'se':'Super-Earths',
+    'sn':'Sub-Neptunes',
+    'ss':'Sub-Saturns',
+    'jup':'Jupiters',
+    'sub':'[Fe/H] < 0',
+    'sup':'[Fe/H] > 0',
+}
+
+sizedict = {
+    'se':'$R_P$ = 1.0$-$1.7 $R_E$',
+    'sn':'$R_P$ = 1.7$-$4.0 $R_E$',
+    'ss':'$R_P$ = 4.0$-$8.0 $R_E$',
+    'jup':'$R_P$ = 8.0$-$24.0 $R_E$'
+}
+
+class Sampler(object):
+    nsamples = 1000
+    def __init__(self, fit, fmtkey, dx):
+        """
+        dx : size of phase-space volume to integrate occurrence 
+        """
+        self.fit = fit
+        self.fmtkey = fmtkey
+        self.dx = dx
+
+    def plot_band(self):
+        p16, p50, p84 = np.percentile(self.fit_samples,[16,50,84],axis=0)
+        _bdcolor = ptcolor[self.fmtkey]
+        fill_between(self.x, p16, p84, color=_bdcolor,alpha=0.3)
+        
+    def plot_best(self):
+        plot(self.x, self.fit_best, color=ptcolor[self.fmtkey])
+
+    def plot_all(self):
+        self.compute_samples()
+        self.compute_best()
+        self.plot_band()
+        self.plot_best()
+
+    def dict_to_params(self, params):
+        _params = lmfit.Parameters()
+        for k in params.keys():
+            _params.add(k, value=params[k] )
+        return _params 
+
+    def compute_samples(self):
+        psamples = self.fit.sample_chain(self.nsamples)
+        fit_samples = []
+        for i, params in psamples.iterrows():
+            params = self.dict_to_params(params)
+            fit_samples.append(self.model(params))
+        self.fit_samples = np.vstack(fit_samples)
+
+    def model(self,params):
+        """Compute planet occurrence integrated over volumes of size dx""" 
+        return self.fit.model(params,self.x) * self.dx 
+
+    def compute_best(self):
+        params = self.fit.pfit
+        self.fit_best = self.model(params)
+
+class SamplerPer(Sampler):
+    dx = 0.25 / 10
+    x = arange(np.log10(0.1) + 0.5*dx,np.log10(1000),dx)
+    x = 10**x
+
+class SamplerSinc(Sampler):
+    dx = 0.25 / 10
+    x = arange(np.log10(0.1) + 0.5*dx,np.log10(1e4),dx)
+    x = 10**x
