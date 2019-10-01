@@ -66,7 +66,7 @@ def R_sinc(F,m,Rp_100):
 
 # ---------------------------------------------------------------------------- #
 
-def line_integral(theta, map, maptype, sinc=False):
+def line_integral(theta, map, maptype, smass_lims, sinc=False):
     """
     Return the line integral for a given straight line
 
@@ -84,18 +84,31 @@ def line_integral(theta, map, maptype, sinc=False):
 
     m, Rp_10 = theta
     if sinc:
-        if maptype == 'occurrence':
-            P_domain = np.logspace(np.log10(1),np.log10(80),100)
-        elif maptype == 'detections':
-            P_domain = np.logspace(np.log10(1),np.log10(300),100)
+        # if maptype == 'occurrence':
+        if smass_lims == [0.5,0.8]:
+            P_domain = np.logspace(np.log10(1),np.log10(76),100)
+        if smass_lims == [0.8,1.1]:
+            P_domain = np.logspace(np.log10(1),np.log10(374),100)
+        if smass_lims == [1.1,1.4]:
+            P_domain = np.logspace(np.log10(1),np.log10(560),100)
 
+        # elif maptype == 'detections':
+        #     P_domain = np.logspace(np.log10(1),np.log10(100),100)
         Rp10_lim = [1.5, 2.3]
         m_lim = [-0.1,0.1]
+
     else:
-        if maptype == 'occurrence':
-            P_domain = np.logspace(np.log10(1),np.log10(200),100)
-        elif maptype == 'detections':
-            P_domain = np.logspace(np.log10(1),np.log10(200),100)
+        # if maptype == 'occurrence':
+        if smass_lims == [0.5,0.8]:
+            P_domain = np.logspace(np.log10(4.4),np.log10(300),100)
+        if smass_lims == [0.8,1.1]:
+            P_domain = np.logspace(np.log10(4.7),np.log10(300),100)
+        if smass_lims == [1.1,1.4]:
+            P_domain = np.logspace(np.log10(6.5),np.log10(300),100)
+
+
+        # elif maptype == 'detections':
+            # P_domain = np.logspace(np.log10(1),np.log10(200),100)
         Rp10_lim = [1.7, 2.4]
         m_lim = [-0.2,0.2]
 
@@ -131,7 +144,7 @@ def line_integral(theta, map, maptype, sinc=False):
 
 # ---------------------------------------------------------------------------- #
 
-def gradient(P_array, R_array, map, maptype, sinc=False):
+def gradient(P_array, R_array, map, maptype, smass_lims, sinc=False):
     """
     Runs a minimisation algorithm to find the gradient and intercept that
     minimise the line integral through the occurence map.
@@ -148,10 +161,10 @@ def gradient(P_array, R_array, map, maptype, sinc=False):
     map_interp = interpolate.RectBivariateSpline(P_array,R_array,map)
 
     if sinc:
-        sol = optimize.minimize(line_integral, x0=[0.0,1.6], args=(map_interp, maptype, sinc),
+        sol = optimize.minimize(line_integral, x0=[0.0,1.6], args=(map_interp, maptype, smass_lims, sinc),
                                 method='Nelder-Mead')
     else:
-        sol = optimize.minimize(line_integral, x0=[-0.08,1.8], args=(map_interp, maptype, sinc),
+        sol = optimize.minimize(line_integral, x0=[-0.08,1.8], args=(map_interp, maptype, smass_lims, sinc),
                                 method='Nelder-Mead')
 
     return sol
@@ -208,7 +221,7 @@ def bootstrap_occurrence(smass1, smass2, plnt, comp, nstars, x_range, y_range, s
 
     # find gradient and intercept
     if sinc:
-        sol_i = ckscool.gradient.gradient(x_range, y_range, Z, 'occurrence', sinc=True)
+        sol_i = ckscool.gradient.gradient(x_range, y_range, Z, 'occurrence', [smass1, smass2], sinc=True)
         if debug:
             sinc_domain = np.log10(np.logspace(0,3,100))
             R_sinc = log10([ckscool.gradient.R_sinc(10**i,sol_i.x[0], sol_i.x[1]) for i in sinc_domain])
@@ -218,7 +231,7 @@ def bootstrap_occurrence(smass1, smass2, plnt, comp, nstars, x_range, y_range, s
             plt.clf()
             plt.close()
     else:
-        sol_i = ckscool.gradient.gradient(x_range, y_range, Z, 'occurrence', sinc=False)
+        sol_i = ckscool.gradient.gradient(x_range, y_range, Z, 'occurrence', [smass1, smass2], sinc=False)
         if debug:
             per_domain = np.log10(np.logspace(0,2,100))
             R_per = log10([ckscool.gradient.R(10**i,sol_i.x[0], sol_i.x[1]) for i in per_domain])
@@ -231,7 +244,7 @@ def bootstrap_occurrence(smass1, smass2, plnt, comp, nstars, x_range, y_range, s
 
 # ---------------------------------------------------------------------------- #
 
-def bootstrap_detection(plnt, seed, sinc=False, debug=False):
+def bootstrap_detection(plnt, smass1, smass2, seed, sinc=False, debug=False):
 
     """
     resamples planet population (with replacement) and finds best fit gradient
@@ -259,7 +272,7 @@ def bootstrap_detection(plnt, seed, sinc=False, debug=False):
         X,Y,Z = ckscool.plot.planet._sinc_prad(plnt, for_gradient=True)
         sinc_range = np.array([10**i for i in X])
         prad_range = np.array([10**i for i in Y])
-        sol_i = ckscool.gradient.gradient(sinc_range, prad_range, Z, 'detections', sinc=True)
+        sol_i = ckscool.gradient.gradient(sinc_range, prad_range, Z, 'detections', [smass1, smass2], sinc=True)
         if debug:
             ckscool.plot.planet._sinc_prad(plnt, zoom=True)
             R_sinc = log10([ckscool.gradient.R_sinc(10**i,sol_i.x[0], sol_i.x[1]) for i in sinc_range])
@@ -272,7 +285,7 @@ def bootstrap_detection(plnt, seed, sinc=False, debug=False):
         X,Y,Z = ckscool.plot.planet._per_prad(plnt, for_gradient=True)
         per_range = np.array([10**i for i in X])
         prad_range = np.array([10**i for i in Y])
-        sol_i = ckscool.gradient.gradient(per_range, prad_range, Z)
+        sol_i = ckscool.gradient.gradient(per_range, prad_range, Z, 'detections', [smass1, smass2])
         if debug:
             ckscool.plot.planet._per_prad(plnt, zoom=True)
             R_per = log10([ckscool.gradient.R(10**i,sol_i.x[0], sol_i.x[1]) for i in per_range])
@@ -296,8 +309,8 @@ def bootstrap_chain(smass_bins, map, n_iter=10000, n_cores=1, debug=False):
             plnt = ckscool.io.load_table('planets-cuts2+iso')
             plnt = plnt[~plnt.isany]
             plnt = plnt[plnt.giso_smass.between(smass1,smass2)]
-            chain = Parallel(n_jobs=n_cores)(delayed(bootstrap_detection)(plnt, seed=i, debug=debug) for i in np.arange(n_iter))
-            np.savetxt("./data/chain_detv2_{0}-{1}-smass.csv".format(smass1, smass2), chain, delimiter=',')
+            chain = Parallel(n_jobs=n_cores)(delayed(bootstrap_detection)(plnt, smass1, smass2, seed=i, debug=debug) for i in np.arange(n_iter))
+            np.savetxt("./data/chain_detv4_{0}-{1}-smass.csv".format(smass1, smass2), chain, delimiter=',')
 
         elif map=="occurrence":
 
@@ -342,7 +355,7 @@ def bootstrap_chain(smass_bins, map, n_iter=10000, n_cores=1, debug=False):
 
 
             chain = Parallel(n_jobs=n_cores)(delayed(bootstrap_occurrence)(smass1, smass2, plnt, comp, nstars, per_range, prad_range, seed=i, debug=debug) for i in np.arange(n_iter))
-            np.savetxt("./data/chain_occv2_{0}-{1}-smass.csv".format(smass1, smass2), chain, delimiter=',')
+            np.savetxt("./data/chain_occv4_{0}-{1}-smass.csv".format(smass1, smass2), chain, delimiter=',')
 
         else:
             raise NameError(' "map" argument  must be one of the following: "occurrence" or "detections" ')
@@ -360,8 +373,8 @@ def bootstrap_chain_sinc(smass_bins, map, n_iter=10000, n_cores=1, debug=False):
             plnt = ckscool.io.load_table('planets-cuts2+iso')
             plnt = plnt[~plnt.isany]
             plnt = plnt[plnt.giso_smass.between(smass1,smass2)]
-            chain = Parallel(n_jobs=n_cores)(delayed(bootstrap_detection)(plnt, seed=i, sinc=True, debug=debug) for i in np.arange(n_iter))
-            np.savetxt("./data/chain_det_SincPradv3_{0}-{1}-smass.csv".format(smass1, smass2), chain, delimiter=',')
+            chain = Parallel(n_jobs=n_cores)(delayed(bootstrap_detection)(plnt, smass1, smass2, seed=i, sinc=True, debug=debug) for i in np.arange(n_iter))
+            np.savetxt("./data/chain_det_SincPradv4_{0}-{1}-smass.csv".format(smass1, smass2), chain, delimiter=',')
 
 
         elif map=="occurrence":
@@ -404,7 +417,7 @@ def bootstrap_chain_sinc(smass_bins, map, n_iter=10000, n_cores=1, debug=False):
 
 
             chain = Parallel(n_jobs=n_cores)(delayed(bootstrap_occurrence)(smass1, smass2, plnt, comp, nstars, sinc_range, prad_range, seed=i, sinc=True, debug=debug) for i in np.arange(n_iter))
-            np.savetxt("./data/chain_occ_SincPradv3_{0}-{1}-smass.csv".format(smass1, smass2), chain, delimiter=',')
+            np.savetxt("./data/chain_occ_SincPradv4_{0}-{1}-smass.csv".format(smass1, smass2), chain, delimiter=',')
 
         else:
             raise NameError(' "map" argument  must be one of the following: "occurrence" or "detections" ')
