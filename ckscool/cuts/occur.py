@@ -176,7 +176,7 @@ class CutImpact(CutBase):
 class CutImpactTau(CutBase):
     """Remove planets with high impact parameters"""
     cuttype = 'badimpacttau'
-    texstr = r'$\tau / \tau_0$ < 0.5'
+    texstr = r'$\tau / \tau_0$ > 0.6'
     plotstr = texstr
     def cut(self):
         b = (self.df.dr25_tau / self.df.giso_tau0) < 0.6

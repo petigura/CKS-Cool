@@ -1,5 +1,5 @@
 """
-Defines occurrence object
+grid
 """
 import numpy as np
 from numpy import log10, logspace, arange, round

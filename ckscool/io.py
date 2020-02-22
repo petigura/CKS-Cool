@@ -1,7 +1,7 @@
+from __future__ import print_function
+
 """
 Module for CKS-Cool I/O
-
-
 """
 import os
 import cPickle as pickle
@@ -63,20 +63,20 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
     if cache == 1:
         try:
             df = pd.read_hdf(cachefn, table, mode='a')
-            print "read table {} from {}".format(table, cachefn)
+            print("read table {} from {}".format(table, cachefn))
             return df
         except IOError:
-            print "Could not find cache file: %s" % cachefn
-            print "Building cache..."
+            print("Could not find cache file: %s" % cachefn)
+            print("Building cache...")
             cache = 2
         except KeyError:
-            print "Cache not built for table: %s" % table
-            print "Building cache..."
+            print("Cache not built for table: %s" % table)
+            print("Building cache...")
             cache = 2
 
     if cache == 2:
         df = load_table(table, cache=False)
-        print "writing table {} to cache".format(table)
+        print("writing table {} to cache".format(table))
         df.to_hdf(cachefn, table)
         return df
 
@@ -189,7 +189,8 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
     elif table == 'iso':
         source = 'cks1'
         star0 = ckscool._isoclassify.load_stellar_parameters(source)
-        iso = pd.read_csv('data/isoclassify_{}.csv'.format(source),index_col=0)
+        fn = os.path.join(DATADIR,'isoclassify_{}.csv'.format(source))
+        iso = pd.read_csv(fn,index_col=0)
         iso['id_koi'] = iso.id_starname.str.slice(start=-5).astype(int)
         cks1 = pd.merge(star0,iso)
         cks1.index = cks1.id_koi
@@ -197,14 +198,16 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
 
         source = 'smemp'
         star0 = ckscool._isoclassify.load_stellar_parameters(source)
-        iso = pd.read_csv('data/isoclassify_{}.csv'.format(source),index_col=0)
+        fn = os.path.join(DATADIR,'isoclassify_{}.csv'.format(source))
+        iso = pd.read_csv(fn,index_col=0)
         iso['id_koi'] = iso.id_starname.str.slice(start=-5).astype(int)
         smemp = pd.merge(star0,iso)
         smemp.index = smemp.id_koi
 
         source = 'smsyn'
         star0 = ckscool._isoclassify.load_stellar_parameters(source)
-        iso = pd.read_csv('data/isoclassify_{}.csv'.format(source),index_col=0)
+        fn = os.path.join(DATADIR,'isoclassify_{}.csv'.format(source))
+        iso = pd.read_csv(fn,index_col=0)
         iso['id_koi'] = iso.id_starname.str.slice(start=-5).astype(int)
         smsyn = pd.merge(star0,iso)
         smsyn.index = smsyn.id_koi
@@ -278,13 +281,13 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         # Add in expected transit duration
         df['giso_tau0'] = 2.036 * df.koi_period**(1/3.) * df.giso_srho**(-1/3.0)
         
-        print "updating parameters"
+        print("updating parameters")
         df = ckscool.calc.update_planet_parameters(df)
         #df = order_columns(df, verbose=True)
 
-        print "number of planets {}".format(len(df))
+        print("number of planets {}".format(len(df)))
         df = df.dropna(subset=['cks_steff'])
-        print "number of planets after after removing missing CKS {}".format(len(df))
+        print("number of planets after after removing missing CKS {}".format(len(df)))
         
     elif table == 'planets-cuts1+iso':
         df = load_table('planets+iso',cache=1)
@@ -306,7 +309,8 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
 
     # Spectroscopic parameters
     elif table == 'smemp':
-        df = pd.read_csv('data/specmatch-emp_results.csv')
+        fn = os.path.join(DATADIR,'specmatch-emp_results.csv'.format(source))
+        iso = pd.read_csv(fn,index_col=0)
         df = df.dropna(subset=['name'])
         namemap = {
             'obs':'id_obs',
@@ -331,7 +335,8 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
     # Tables from other papers #
     ############################
     elif table == 'fpp':
-        df = pd.read_csv('data/q1_q17_dr25_koifpp.csv',comment='#')
+        fn = os.path.join(DATADIR,'q1_q17_dr25_koifpp.csv')
+        df = pd.read_csv(fn,comment='#')
         namemap = {'kepoi_name':'id_koicand','fpp_prob':'fpp_prob'}
         df = df.rename(columns=namemap)[namemap.values()]
 
@@ -343,14 +348,16 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
     elif table == 'koi-thompson18-dr25-chains':
         df = load_table_koi(table)
         t18.index = t18.id_koicand
-        df = pd.read_csv('data/dr25-mcmc-chains_missing.txt',sep=' ',names=['s','x'])
+        fn = os.path.join(DATADIR,'dr25-mcmc-chains_missing.txt' )
+        df = pd.read_csv(fn,sep=' ',names=['s','x'])
         df['id_koicand'] = df.s.apply(lambda x : x.split('-')[-1]).str.upper()
         t18 = t18.drop(df.id_koicand)
         df = t18
         
     elif table == 'koi-thompson18-dr25':
         df = load_table_koi('koi-thompson18')
-        dr25 = pd.read_hdf('data/dr25-mcmc-summary.hdf','dr25',)
+        fn = os.path.join(DATADIR,'dr25-mcmc-summary.hdf')
+        dr25 = pd.read_hdf(fn ,'dr25',)
         namemap = {
             'dr25_RD1_cum':'dr25_ror',
             'dr25_RD1_cum_err1':'dr25_ror_err1',
@@ -464,7 +471,8 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
 
     # Berger al. (2018)
     elif table == 'berger18':
-        tab = ascii.read('data/berger18/apjaada83t1_mrt.txt')
+        fn = os.path.join(DATADIR,'berger18/apjaada83t1_mrt.txt')
+        tab = ascii.read(fn)
         df = tab.to_pandas()
         namemap = {
             'KIC':'id_kic',
@@ -630,8 +638,8 @@ def order_columns(df, verbose=False, drop=False):
     df = df[cols]
     if verbose and (len(cols) < len(columns)):
         mcols = list(df0.drop(cols,axis=1).columns)
-        print "following columns are not defined"
-        print mcols
+        print("following columns are not defined")
+        print(mcols)
 
     if not drop:
         df = pd.concat([df,df0[mcols]],axis=1)
@@ -644,17 +652,17 @@ def load_object(key,cache=0,verbose=1):
             with open(pklfn,'r') as f:
                 obj = pickle.load(f)
                 if verbose:
-                    print "read {} from {}".format(obj,pklfn)
+                    print("read {} from {}".format(obj,pklfn))
                 return obj
 
         except IOError:
-            print "Could not find cache file: %s" % pklfn
-            print "Building cache..."
+            print("Could not find cache file: %s" % pklfn)
+            print("Building cache...")
             cache = 2
 
     if cache == 2:
         obj = load_object(key, cache=0)
-        print "writing {} to {}".format(obj,pklfn)
+        print("writing {} to {}".format(obj,pklfn))
         with open(pklfn,'w') as f:
             pickle.dump(obj,f)
         return obj
