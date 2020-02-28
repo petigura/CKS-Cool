@@ -379,11 +379,27 @@ def load_contour_plotter_sinc(occ):
     return cp
 
 def load_surface_smass(per1, per2):
+    """Compute occurrence over a grid in stellar mass and planet size
+
+    First loads up occurrence for a specific range of stellar
+    masses. Then loops over the occ.occurrence_box method to determine
+    planet occurrence in a box of period and a planet size.
+
+    Args:
+        per1: lower period limit
+        per2: upper period limit
+    
+    
+    Returns:
+        pd.DataFrame: grid of planet occurrence
+
+    """
+
     logsmassc = linspace(log10(0.5),log10(1.4),10)
     logsmassc = logsmassc[1:]
     logpradc = linspace(log10(0.5),log10(4),80)
     smasswid = 0.1
-    pradwid = 0.05
+    pradwid = 0.2
     df = []
     for i in range(len(logsmassc)):
         d = {}
@@ -417,11 +433,11 @@ def fig_contour_smass(per1, per2, normalize=False,):
     figure(figsize=(8,6,))
     df = load_surface_smass(per1,per2)
     if normalize:
-        df = df.query('0.25 < pradc < 4')
+        df = df.query('0.5 < pradc < 4')
         ds = df.groupby(['smass1','prad1']).nth(0).to_xarray()
         X, Y = np.array(np.log10(ds.smassc)), np.array(np.log10(ds.pradc))
         Z = ds.rate.fillna(0)
-        Z = nd.gaussian_filter(Z,(2,4))
+        Z = nd.gaussian_filter(Z,(0.2,0.2))
         Z = Z / Z.sum(axis=1)[:,newaxis]
         levels = np.round(linspace(0.0,1.2*Z.max(),20),3)
         _title = 'Normalized Occurrence \n $\Delta M_\star = 0.1$ dex $\Delta R_P$ = 0.05 dex, $P$ = {}-{} day'.format(per1,per2)
@@ -429,7 +445,7 @@ def fig_contour_smass(per1, per2, normalize=False,):
         ds = df.groupby(['smass1','prad1']).nth(0).to_xarray()
         X, Y = np.array(np.log10(ds.smassc)), np.array(np.log10(ds.pradc))
         Z = ds.rate.fillna(0)
-        Z = nd.gaussian_filter(Z,(1,4))
+        Z = nd.gaussian_filter(Z,(1,1))
         
         # Choose levels based on the maximum flu
         Zcut = Z[array((1 < ds.pradc) & (ds.pradc < 4))]
