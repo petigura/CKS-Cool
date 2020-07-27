@@ -35,7 +35,7 @@ warnings.simplefilter('ignore', pd.errors.PerformanceWarning)
 # changes. The CACHEDIR can be set for different git branches
 FILE = os.path.dirname(__file__)
 DATADIR = os.path.join(FILE, '../data/')
-CACHEDIR = os.path.join(FILE, '../cache/field-ber19-plnt-giso/')
+CACHEDIR = os.path.join(FILE, '../cache/field-ber19-plnt-giso_broken/')
 CACHEFN = os.path.join(CACHEDIR, 'load_table_cache.hdf')
 os.system('mkdir -p {}'.format(CACHEDIR)) # creates CACHEDIR if doesn't exist
 KBCFN = os.path.join(DATADIR,'kbcvel.csv')
@@ -723,9 +723,9 @@ def load_object(key,cache=0,verbose=1):
             per1=per1, per2=per2, dlogper=dlogper, 
             prad1=prad1,prad2=prad2,dlogprad=None
         )
-        fit = ckscool.fit.PowerLawCutoff(cut.perc, dx, cut.nplnt, cut.ntrial) 
+        fit = ckscool.fit.BrokenPowerLaw(cut.perc, dx, cut.nplnt, cut.ntrial) 
         fit.fit()
-        fit.mcmc(burn=300, steps=600, thin=1, nwalkers=100)
+        fit.mcmc(burn=3000, steps=6000, thin=1, nwalkers=20)
         obj = fit
 
     elif key.count('fitsinc_')==1:

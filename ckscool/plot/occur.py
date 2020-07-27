@@ -564,6 +564,7 @@ def per(per1, per2, prad1, prad2, smass1, smass2, fmtkey):
     )
     fac = 1
     plot_rates('perc', df, fmtkey, fac=fac)
+    return sampler
 
 def sinc(sinc1, sinc2, prad1, prad2, smass1, smass2, fmtkey):
     dlogsinc_bin = 0.5
@@ -702,7 +703,7 @@ class Sampler(object):
         self.compute_samples()
         self.compute_best()
         self.plot_band()
-        self.plot_best()
+        #self.plot_best()
 
     def dict_to_params(self, params):
         _params = lmfit.Parameters()
