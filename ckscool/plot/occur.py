@@ -8,16 +8,17 @@ from scipy import ndimage as nd
 
 import ckscool.io
 import ckscool.plot.planet
+import ckscool.gradient #import R, R_sinc
+
 
 sns.set_style('ticks')
 sns.set_color_codes()
 
-def contour(cp, plot_interval=False, draw_colorbar=True, cax=None, 
+def contour(cp, plot_interval=False, draw_colorbar=True, cax=None,
             plot_completeness=True, ntrials_min=50, levels=None):
     """
     Args:
        cp : contour plotter object
-
     """
 
     ax = gca()
@@ -36,10 +37,10 @@ def contour(cp, plot_interval=False, draw_colorbar=True, cax=None,
     Y = np.array(np.log10(ds.pradc))
     Z = np.array(rate)
     if levels==None:
-        #levels = arange(0,5e-2+eps,0.0025) 
+        #levels = arange(0,5e-2+eps,0.0025)
         b = (
-            (ds.ntrial > ntrials_min) 
-            & (ds.pradc > 1.0) 
+            (ds.ntrial > ntrials_min)
+            & (ds.pradc > 1.0)
             & (ds.pradc < 4.0)
         )
         b = array(b)
@@ -106,12 +107,11 @@ $\Delta \log R_P$ = {:.2f} dex
 # ---------------------------------------------------------------------------- #
 
 def contour_sinc(cp, plot_interval=False, draw_colorbar=True,cax=None,
-                 plot_completeness=True,label=False, normalize=False, 
+                 plot_completeness=True,label=False, normalize=False,
                  ntrials_min=50):
     """
     Args:
        cp : contour plotter object
-
     """
 
     ax = gca()
@@ -132,10 +132,10 @@ def contour_sinc(cp, plot_interval=False, draw_colorbar=True,cax=None,
     levels = None
     cbarlabel=''
     if levels==None:
-        #levels = arange(0,5e-2+eps,0.0025) 
+        #levels = arange(0,5e-2+eps,0.0025)
         b = (
-            (ds.ntrial > ntrials_min) 
-            & (ds.pradc > 1.0) 
+            (ds.ntrial > ntrials_min)
+            & (ds.pradc > 1.0)
             & (ds.pradc < 4.0)
         )
         b = array(b)
@@ -191,6 +191,75 @@ $\Delta \log R_P$ = {:.2f} dex
         )
 #        text(xyaxes[0]+0.07,xyaxes[1],s,**kw)
 
+def gradient_arrays(cp):
+
+    """
+    Args:
+       cp : contour plotter object
+    """
+    # convert into an x-array for plotting
+    ds = cp.rate.groupby(['per1','prad1']).first().to_xarray()
+    rate = ds.rate
+    rate = rate.fillna(4e-6)
+
+    # Smooth out the contours a bit
+    rate = nd.gaussian_filter(rate,(4,2))
+    X, Y = ds.perc, ds.pradc
+    ntrial = np.array(ds.ntrial)
+
+    return X, Y, rate, ntrial
+
+def gradient_arrays_sinc(cp):
+
+    """
+    Args:
+       cp : contour plotter object
+    """
+    # convert into an x-array for plotting
+    ds = cp.rate.groupby(['sinc1','prad1']).first().to_xarray()
+    rate = ds.rate
+    rate = rate.fillna(4e-6)
+
+    # Smooth out the contours a bit
+    rate = nd.gaussian_filter(rate,(4,2))
+    X, Y = ds.sincc, ds.pradc
+    ntrial = np.array(ds.ntrial)
+
+    return X, Y, rate, ntrial
+
+
+def add_gradient(logx, chain, sinc=False):
+
+    m = np.median(chain[:,0])
+    m_sigma = np.percentile(chain[:,0], [16,84])
+    m_err = [m-m_sigma[0], m_sigma[1]-m]
+
+    Rp10 = np.median(chain[:,1])
+    Rp10_sigma = np.percentile(chain[:,1], [16,84])
+    Rp10_err = [Rp10-Rp10_sigma[0], Rp10_sigma[1]-Rp10]
+
+    if sinc:
+        label_str = r"m = {0:.2f}$^{{{1:.2f}}}_{{{2:.2f}}}$, R$_p$(100)={3:.2f}$^{{{4:.2f}}}_{{{5:.2f}}}$".format(m, m_err[1], m_err[0], Rp10, Rp10_err[1], Rp10_err[0])
+        plt.plot(logx, [log10(ckscool.gradient.R_sinc(10**i, m, Rp10)) for i in logx], color='b', label=label_str)
+    else:
+        label_str = r"m = {0:.2f}$^{{{1:.2f}}}_{{{2:.2f}}}$, R$_p$(10)={3:.2f}$^{{{4:.2f}}}_{{{5:.2f}}}$".format(m, m_err[1], m_err[0], Rp10, Rp10_err[1], Rp10_err[0])
+        plt.plot(logx, [log10(ckscool.gradient.R(10**i, m, Rp10)) for i in logx], color='b', label=label_str)
+
+
+    R_upper = []
+    R_lower = []
+
+    for i in logx:
+        if sinc:
+            R_values_i = [ckscool.gradient.R_sinc(10**i, chain[j,0], chain[j,1]) for j in range(len(chain[:,0]))]
+        else:
+            R_values_i = [ckscool.gradient.R(10**i, chain[j,0], chain[j,1]) for j in range(len(chain[:,0]))]
+        R_lim_i = np.percentile(R_values_i, [16,84])
+        R_upper.append(R_lim_i[0])
+        R_lower.append(R_lim_i[1])
+
+    plt.fill_between(logx, log10(R_lower), log10(R_upper), color='b', alpha=0.2)
+    plt.legend(loc='upper right')
 
 def fig_contour_three():
     cp0 = ckscool.io.load_object('cp_smass=0.5-0.7',cache=1)
@@ -214,27 +283,8 @@ def fig_contour_three():
     setp(axL,xlim=xlim,ylim=ylim)
     fig.subplots_adjust(hspace=0.2)
 
-def gradient_arrays(cp):
 
-    """
-    Args:
-       cp : contour plotter object
-
-    """
-    # convert into an x-array for plotting
-    ds = cp.rate.groupby(['per1','prad1']).first().to_xarray()
-    rate = ds.rate
-    rate = rate.fillna(4e-6)
-
-    # Smooth out the contours a bit
-    #rate = nd.gaussian_filter(rate,(4,2))
-    rate = nd.gaussian_filter(rate,(2,2))
-    X, Y = ds.perc, ds.pradc
-    ntrial = np.array(ds.ntrial)
-
-    return X, Y, rate, ntrial
-
-def fig_contour_six():
+def fig_contour_six(gradient=False):
     sns.set_context('paper')
     mass1 = [0.5,0.8,1.1]
     mass2 = [0.8,1.1,1.4]
@@ -245,14 +295,26 @@ def fig_contour_six():
         key = 'cp_smass={}-{}'.format(_mass1,_mass2)
         cp = ckscool.io.load_object(key,cache=1)
 
+        if gradient:
+            logperc = cp.rate['logperc']
+            bootstrap_det_chain = np.loadtxt("./data/chain_detv2_{0}-{1}-smass.csv".format(_mass1, _mass2), delimiter=',')
+            bootstrap_occ_chain = np.loadtxt("./data/chain_occv2_{0}-{1}-smass.csv".format(_mass1, _mass2), delimiter=',')
+
         sca(axL[i,0])
         df = cp.occ.plnt.copy()
         df = df.rename(columns={'prad':'gdir_prad','per':'koi_period'})
         ckscool.plot.planet._per_prad(
             df, nopoints=False, zoom=False, query=None, yerrfac=1, xerrfac=1
         )
+        if gradient:
+            add_gradient(logperc, bootstrap_det_chain)
+
         sca(axL[i,1])
         contour(cp,plot_interval=True,draw_colorbar=True)
+        if gradient:
+            add_gradient(logperc, bootstrap_occ_chain)
+
+
         title = '$M_\star = {}-{}\, M_\odot$ '.format(_mass1,_mass2)
         setp(axL[i,:],title=title)
         i+=1
@@ -272,7 +334,7 @@ def fig_contour_six():
     setp(axL[:-1,:], xlabel='')
     tight_layout(True)
 
-def fig_contour_six_sinc():
+def fig_contour_six_sinc(gradient=False):
     sns.set_context('paper')
     mass1 = [0.5,0.8,1.1]
     mass2 = [0.8,1.1,1.4]
@@ -282,13 +344,24 @@ def fig_contour_six_sinc():
         key = 'cp-sinc_smass={}-{}'.format(_mass1,_mass2)
         cp = ckscool.io.load_object(key,cache=1)
 
+        if gradient:
+            logsinc = cp.rate['logsincc']
+            bootstrap_det_chain = np.loadtxt("./data/chain_det_SincPradv2_{0}-{1}-smass.csv".format(_mass1, _mass2), delimiter=',')
+            bootstrap_occ_chain = np.loadtxt("./data/chain_occ_SincPradv2_{0}-{1}-smass.csv".format(_mass1, _mass2), delimiter=',')
+
         sca(axL[i,0])
         df = cp.occ.plnt.copy()
         df = df.rename(columns={'prad':'gdir_prad','sinc':'giso_sinc'})
         ckscool.plot.planet._sinc_prad(df,nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1)
+        if gradient:
+            add_gradient(logsinc, bootstrap_det_chain, sinc=True)
+
 
         sca(axL[i,1])
         contour_sinc(cp,plot_interval=True,draw_colorbar=True, ntrials_min=100)
+        if gradient:
+            add_gradient(logsinc, bootstrap_occ_chain, sinc=True)
+
         title = '$M_\star = {}-{}\, M_\odot$ '.format(_mass1,_mass2)
         setp(axL[i,:],title=title)
         i+=1
@@ -532,7 +605,7 @@ def fig_contour_bmr(normalize=False):
     yt = [1,2,4]
     yticks([log10(_yt) for _yt in yt],yt)
     ylim(log10(1),log10(4))
-    title(_title) 
+    title(_title)
     xlabel('B-V (mag)')
     ylabel('Planet Size (Earth-radii)')
 
