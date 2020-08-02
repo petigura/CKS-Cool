@@ -4,7 +4,9 @@ import ckscool.io
 import ckscool.cuts
 import numpy as np
 from time import gmtime, strftime
+from astropy.time import Time
 import pandas as pd
+
 
 def val_stat(return_dict=False):
     """
@@ -113,3 +115,63 @@ def val_stat(return_dict=False):
 
     return lines
 
+def val_sample(return_dict=False):
+    # Stars that pass the photometric cuts
+    cxm = ckscool.io.load_table('planets-cuts1')
+    cxm = cxm[~cxm.isany]
+    cxm = cxm[['id_koi']].drop_duplicates()
+    cxm['in_cxm'] = True
+
+    # Superset of spectroscopic parameters 
+    drall = pd.read_csv('data/CKS_Spectroscopic_Parameters.csv')
+    drall['id_koi'] = drall[drall.id_name.str.contains('^K\d{5}$|^CK\d{5}$')].id_name.str.slice(start=-5).astype(int)
+
+    # Identify the spectra that are in DR1 
+    dr1 = pd.read_csv('data/cks1-obs.csv',index_col=None)
+    dr1 = drall.set_index('id_obs').loc[dr1.obs.str.replace('rj','j')]
+    dr1['in_dr1'] = True
+    print("{} spectra in dr1".format(len(dr1)))
+
+    # Identify the spectra that are in DR2
+    dr2 = drall.set_index('id_name').drop(dr1.id_name).reset_index()
+    dr2 = dr2.set_index('id_koi').drop(dr1.id_koi,errors='ignore').reset_index()
+    print("{} spectra of stars not in dr1".format(len(dr2)))
+
+    date = '2018-01-01'
+    dr2 = dr2[(dr2.obs_bjd > Time(date,format='iso').jd) | dr2.id_koi.isin(cxm.id_koi)]
+    print("{} spectra post {}".format(len(dr2),date))
+    dr2 = dr2.sort_values(by='obs_counts').groupby('id_koi',as_index=False).last()
+    print("{} spectra highest snr".format(len(dr2)))
+    dr2 = dr2.query('obs_counts > 2000')
+    print("{} spectra with counts > 2000".format(len(dr2)))
+    dr2['in_dr2'] = True
+
+    _cxm = cxm['id_koi in_cxm'.split()]
+    _dr1 = dr1['id_koi in_dr1'.split()]
+    _dr2 = dr2['id_koi in_dr2'.split()]
+    m = pd.merge(cxm,_dr1,how='outer')
+    m = pd.merge(m,_dr2, how='outer')
+    m = m.fillna(False).sort_values(by='id_koi')
+    
+    d = {}
+    d['nstars dr1'] = m.in_dr1.sum()
+    d['nstars dr2'] = m.in_dr2.sum()
+    d['nstars cxm'] =  m.in_cxm.sum()
+    d['nstars dr1 & cxm'] = (m.in_dr1 & m.in_cxm).sum()
+    d['nstars dr1 & ~cxm'] = (m.in_dr1 & ~m.in_cxm).sum()
+    d['nstars dr2 & cxm'] = (m.in_dr2 & m.in_cxm).sum()
+    d['nstars dr2 & ~cxm'] = (m.in_dr2 & ~m.in_cxm).sum()
+    d['nstars ~dr1 & ~dr2 & cxm'] = (~m.in_dr1 & ~m.in_dr2 & m.in_cxm).sum()
+    d['nstars (dr1 | dr2) & cxm'] = ((m.in_dr1 | m.in_dr2) & m.in_cxm).sum()
+    d['nstars dr1 & dr2'] = (m.in_dr1 & m.in_dr2).sum()
+    d['nstars dr1 | dr2 | cxm'] = (m.in_dr1 | m.in_dr2 | m.in_cxm).sum()
+
+    lines = []
+    for k, v in d.iteritems():
+        line = r"{{{}}}{{{}}}".format(k,v)
+        lines.append(line)
+
+    if return_dict:
+        return d
+
+    return lines

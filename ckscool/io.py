@@ -181,7 +181,8 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         star = load_table('m17+cdpp+gaia2+ber19',cache=1)
         plnt = load_table('koi-thompson18-dr25')
         df = pd.merge(star,plnt)
-        cuttypes = ['none','faint','giant','rizzuto','notreliable','lowsnr']
+        #cuttypes = ['none','faint','giant','rizzuto','notreliable','lowsnr']
+        cuttypes = ['none','faint','giant','ruwe','notreliable','lowsnr']
         df.sample = 'koi-thompson18'
         df = ckscool.cuts.occur.add_cuts(df, cuttypes, 'koi-thompson18')
 
@@ -504,6 +505,7 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
 
         df = df.rename(columns=namemap)[namemap.values()]
         df = add_prefix(df,'ber19_')
+
     elif table == 'ckscool-brewer18':
         cks = load_table('planets-cuts2+iso').groupby('id_koi',as_index=False).nth(0)
         m13 = load_table('brewer18')

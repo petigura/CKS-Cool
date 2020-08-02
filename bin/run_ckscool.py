@@ -249,6 +249,7 @@ def create_workflow():
 
     # val
     w.val['stat'] = ckscool.value.val_stat
+    w.val['sample'] = ckscool.value.val_sample
 
     # planet
     w.csv['star'] = ckscool.table.tab_star_csv
