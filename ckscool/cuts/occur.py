@@ -81,28 +81,47 @@ class CutGiant(CutBase):
     plotstr = 'Not giant'
     texstr = 'Not giant'
     def cut(self):
+        srad = self.df['gaia2_srad']
+        steff = self.df['m17_steff']
+        b = np.log10(srad) > 0.00015 * (steff - 5500) + 0.20
+        return b
+
+class CutGiantCMD(CutBase):
+    """
+    Cut out giants based on CMD
+    """
+    cuttype = 'giantcmd'
+    plotstr = 'Not giant'
+    texstr = 'Not giant'
+
+    points = np.array(
+        [[.8,2],
+         [1.25,5.7],
+         [2.5,9.25]
+        ]
+    )
+    points2 = np.array(
+        [[.5,3.25],
+         [0.8,5.5],
+         [2.5,10.4]
+        ]
+    )
+
+    def fabove(self,x):
+        return np.interp(x,self.points[:,0],self.points[:,1])
+
+    def fbelow(self,x):
+        return np.interp(x,self.points2[:,0],self.points2[:,1])
+
+    def cut(self):
         m = self.df
         m['dmod'] = 5 * log10(m.bj_dist/10)
         xs = 'gaia2_bpmag - gaia2_rpmag'
         ys =  'gaia2_gmag - dmod'
-        points = np.array(
-                 [[.8,2],
-             [1.25,5.8],
-             [2.5,9.25]
-            ]
-        )
-        points2 = np.array(
-            [[.5,3.25],
-             [0.8,5.4],
-             [2.5,10.4]
-            ]
-        )
-
-        fabove = lambda x : np.interp(x,points[:,0],points[:,1])
-        fbelow = lambda x : np.interp(x,points2[:,0],points2[:,1])
-        babove = m.eval(ys) < fabove(m.eval(xs))
-        bbelow = m.eval(ys) > fbelow(m.eval(xs))
+        babove = m.eval(ys) < self.fabove(m.eval(xs))
+        bbelow = m.eval(ys) > self.fbelow(m.eval(xs))
         return babove | bbelow
+
 
 class CutFaint(CutBase):
     cuttype = 'faint'

@@ -10,6 +10,7 @@ import warnings
 import pandas as pd
 import numpy as np
 from astropy.io import ascii
+from astropy.time import Time
 from scipy.io import idl
 import tables
 from astropy.table import Table
@@ -161,6 +162,47 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         days = lc * long_cadence_day
         df['tobs'] = (observed * days).sum(axis=1)
 
+    elif table == 'data-release' :
+        # Stars that pass the photometric cuts
+        cxm = load_table('planets-cuts1',cache=2)
+        cxm = cxm[~cxm.isany]
+        cxm = cxm[['id_koi']].drop_duplicates()
+        cxm['in_cxm'] = True
+
+        # Superset of spectroscopic parameters 
+        drall = pd.read_csv('data/CKS_Spectroscopic_Parameters.csv')
+        drall['id_koi'] = drall[
+            drall.id_name.str.contains('^K\d{5}$|^CK\d{5}$')
+        ].id_name.str.slice(start=-5).astype(int)
+
+        # Identify the spectra that are in DR1 
+        dr1 = pd.read_csv('data/cks1-obs.csv',index_col=None)
+        dr1 = drall.set_index('id_obs').loc[dr1.obs.str.replace('rj','j')]
+        dr1['in_dr1'] = True
+        print("{} spectra in dr1".format(len(dr1)))
+
+        # Identify the spectra that are in DR2
+        dr2 = drall.set_index('id_name').drop(dr1.id_name).reset_index()
+        dr2 = dr2.set_index('id_koi').drop(dr1.id_koi,errors='ignore').reset_index()
+        print("{} spectra of stars not in dr1".format(len(dr2)))
+
+        date = '2018-01-01'
+        dr2 = dr2[(dr2.obs_bjd > Time(date,format='iso').jd) | dr2.id_koi.isin(cxm.id_koi)]
+        print("{} spectra post {}".format(len(dr2),date))
+        dr2 = dr2.sort_values(by='obs_counts').groupby('id_koi',as_index=False).last()
+        print("{} spectra highest snr".format(len(dr2)))
+        dr2 = dr2.query('obs_counts > 2000')
+        print("{} spectra with counts > 2000".format(len(dr2)))
+        dr2['in_dr2'] = True
+
+        _cxm = cxm['id_koi in_cxm'.split()]
+        _dr1 = dr1['id_koi in_dr1'.split()]
+        _dr2 = dr2['id_koi in_dr2'.split()]
+        m = pd.merge(cxm,_dr1,how='outer')
+        m = pd.merge(m,_dr2, how='outer')
+        m = m.fillna(False).sort_values(by='id_koi')
+        df = m
+    
     elif table == 'm17+cdpp+gaia2+ber19':
         m17 = load_table('m17', cache=1)
         # Store to separate cache to prevent long reload times
@@ -174,7 +216,7 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
 
     elif table == 'field-cuts':
         df = load_table('m17+cdpp+gaia2+ber19',cache=1)
-        cuttypes = ['none','faint','giant','rizzuto']
+        cuttypes = ['none','faint','giantcmd','ruwe']
         df = ckscool.cuts.occur.add_cuts(df, cuttypes, 'field')
 
     elif table == 'planets-cuts1':
@@ -182,7 +224,7 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         plnt = load_table('koi-thompson18-dr25')
         df = pd.merge(star,plnt)
         #cuttypes = ['none','faint','giant','rizzuto','notreliable','lowsnr']
-        cuttypes = ['none','faint','giant','ruwe','notreliable','lowsnr']
+        cuttypes = ['none','faint','giantcmd','ruwe','notreliable','lowsnr']
         df.sample = 'koi-thompson18'
         df = ckscool.cuts.occur.add_cuts(df, cuttypes, 'koi-thompson18')
 

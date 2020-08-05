@@ -8,13 +8,14 @@ from ckscool.plot.config import *
 
 errorbar_kw = dict(fmt='.',markersize=5,color='b')
 
-sns.set_style('whitegrid')
+#sns.set_style('whitegrid')
 sns.set_color_codes()
 
 rpticks = [0.2, 0.3, 0.4, 0.5, 0.7, 1, 2, 3, 4, 5, 7, 10, 20]
 texteff = '$\mathregular{T}_{\mathregular{eff}}$'
 texrp = '\mathregular{R}_\mathregular{P}' 
 texre = '\mathregular{R}_\mathregular{E}' 
+texrs = '$R_\star (R_\odot)$' 
 
 rpticks = [0.2, 0.3, 0.4, 0.5, 0.7, 1, 2, 3, 4, 5, 7, 10, 20]
 perticks = [0.3,1,3,10,30,100,300]
@@ -27,8 +28,175 @@ letter_text_props = dict(size='large', weight='bold')
 
 import ckscool.cuts
 
+#def fig_cut_field_steff_srad():
+evalMG = 'gaia2_gmag - 5 * log10(bj_dist/10)'
+evalBR ='gaia2_bpmag - gaia2_rpmag' 
 
-def fig_cuts_field_steff_srad():
+def fig_cuts_all_multi():
+    sns.set_style('ticks')
+    sns.set_context('paper',font_scale=1.0)
+    sns.set_color_codes()
+
+    fig,axL = subplots(nrows=2,ncols=2,figsize=(7,5))
+    sca(axL[0,0])
+    fig_cuts_all('field-cuts','m17_steff','m17_kepmag')
+    sca(axL[0,1])
+    fig_cuts_all('planets-cuts1','m17_steff','m17_kepmag')
+
+    sca(axL[1,0])
+    fig_cuts_all('field-cuts','m17_steff','gaia2_srad')
+    semilogy()
+    sca(axL[1,1])
+    fig_cuts_all('planets-cuts1','m17_steff','gaia2_srad')
+    semilogy()
+    tight_layout()
+
+
+def fig_cuts_all_multi2():
+    """
+    Same as multi1, but plotting 
+    """
+    sns.set_style('ticks')
+    sns.set_context('paper',font_scale=1.0)
+    sns.set_color_codes()
+
+
+    fig,axL = subplots(nrows=2,ncols=2,figsize=(7,5))
+    sca(axL[0,0])
+    fig_cuts_all('field-cuts',evalBR,'m17_kepmag')
+    sca(axL[0,1])
+    fig_cuts_all('planets-cuts1',evalBR,'m17_kepmag')
+
+    sca(axL[1,0])
+    fig_cuts_all('field-cuts',evalBR,evalMG)
+    sca(axL[1,1])
+    fig_cuts_all('planets-cuts1',evalBR,evalMG)
+    tight_layout()
+
+
+def fig_cuts_all_multi3():
+    sns.set_style('ticks')
+    sns.set_context('paper',font_scale=1.0)
+    #sns.set_color_codes()
+    sns.color_palette("bright")
+
+    fig,axL = subplots(nrows=2,ncols=2,figsize=(7,5))
+    starkw = dict(marker=',',lw=0,rasterized=True,color='DarkGray')
+    starselkw = dict(marker=',',lw=0,rasterized=True,color='r')
+
+    planetkw = dict(marker='.',lw=0,ms=4,mew=0,color='DarkGray')
+    planetselkw = dict(marker='.',lw=0,ms=4,mew=0,color='r')
+    
+    sca(axL[0,0])
+    xk = 'm17_steff'
+    yk = 'm17_kepmag'
+    df = ckscool.io.load_table('field-cuts') 
+    plot(df.eval(xk),df.eval(yk),**starkw)
+    df = df[~df.isany]
+    plot(df.eval(xk),df.eval(yk),**starselkw)
+
+    sca(axL[0,1])
+    df = ckscool.io.load_table('planets-cuts1')
+    plot(df.eval(xk),df.eval(yk),**planetkw)
+    df = df[~df.isany]
+    plot(df.eval(xk),df.eval(yk),**planetselkw)
+
+    sca(axL[1,0])
+    cut = ckscool.cuts.occur.CutGiantCMD(df,'field')
+    xk = 'gaia2_bpmag - gaia2_rpmag' 
+    yk = 'gaia2_gmag - 5 * log10(bj_dist/10)'
+    df = ckscool.io.load_table('field-cuts') 
+    plot(df.eval(xk),df.eval(yk),**starkw)
+    df = df[~df.isany]
+    plot(df.eval(xk),df.eval(yk),**starselkw)
+    x = linspace(0.5,2.5,100)
+    
+    sca(axL[1,1])
+    df = ckscool.io.load_table('planets-cuts1')
+    plot(df.eval(xk),df.eval(yk),**planetkw)
+    df = df[~df.isany]
+    plot(df.eval(xk),df.eval(yk),**planetselkw)
+    x = linspace(0.5,2.5,100)
+
+    for i in range(2):
+        sca(axL[1,i])
+        plot(x,cut.fabove(x),color='r',ls='--',lw=0.5)
+        plot(x,cut.fbelow(x),color='r',ls='--',lw=0.5)
+
+    setp(axL[0,:],ylim=(17,8),xlim=(7000,3000),xlabel=texteff,ylabel='$Kp$ (mag)')
+    setp(axL[1,:],ylim=(13,-2),xlim=(0,3),xlabel='$B_p - R_p$ (mag)',ylabel='$M_G$ (mag)')
+    tight_layout()
+
+
+def fig_cuts_all(sample,xk,yk):
+    sns.set_style('ticks')
+    sns.set_context('paper',font_scale=1.1)
+    sns.set_color_codes()
+
+    df = ckscool.io.load_table(sample,cache=2)
+    x = df.eval(xk)
+    y = df.eval(yk)
+    plotkw = dict(ms=3,rasterized=True,alpha=0.4)
+    plot(x, y,'.',color='LightGray', **plotkw)
+    dfcut = df[~df.isany]
+    xcut = dfcut.eval(xk)
+    ycut = dfcut.eval(yk)
+    plot(xcut, ycut,'.', color='b', **plotkw)
+    ax = gca()
+
+    xlim=None
+    ylim=None
+    xlabel=None
+    ylabel=None
+    if xk.count('steff'):
+        xlim=(7000,3000)
+        xlabel=texteff
+    if xk==evalBR:
+        xlabel='$B_p - R_p$ (mag)'
+        xlim=(0,3)
+    
+    if yk.count('srad'):
+        ylabel=texrs
+        ylim=(0.1,10)        
+
+    if yk=='m17_kepmag':
+        ylabel='$Kp$ (mag)'
+        ylim=(17,8)        
+
+    if yk==evalMG:
+        ylabel='$M_G$ (mag)'
+        ylim=(13,-2)
+
+
+    setp(ax,ylim=ylim,xlim=xlim,xlabel=xlabel,ylabel=ylabel)
+    
+    
+
+def fig_cuts_all_field_steff_srad():
+    df = ckscool.io.load_table('field-cuts',cache=2)
+    xk = 'ber19_steff'
+    yk = 'ber19_srad'
+
+
+def fig_cuts_all_plnt_steff_srad():
+    df = ckscool.io.load_table('planet-cuts1',cache=2)
+    xk = 'ber19_steff'
+    yk = 'ber19_srad'
+    x = df.eval(xk)
+    y = df.eval(yk)
+    plotkw = dict(ms=2,rasterized=True,alpha=0.1)
+    plot(x, y,'.',color='LightGray',**plotkw)
+    dfcut = df[~df.isany]
+    xcut = dfcut.eval(xk)
+    ycut = dfcut.eval(yk)
+    semilogy()
+    plot(xcut, ycut,'.', color='blue',**plotkw)
+    ax = gca()
+    setp(ax,ylim=(0.1,10),xlim=(8000,3000),xlabel=texteff,ylabel=texrs)
+
+
+
+def fig_cuts_field_bmv_gmag():
     nrows=2
     ncols=4
     df = ckscool.io.load_table('field-cuts',cache=2)
@@ -41,6 +209,19 @@ def fig_cuts_field_steff_srad():
     #setp(axL,xlim=(10,0))
     setp(axL[1,:],xlabel='$Bp - Rp$ (mag)')
     setp(axL[:,0],ylabel='$M_G$ (mag)')
+
+def fig_cuts_field_steff_srad():
+    nrows=2
+    ncols=4
+    df = ckscool.io.load_table('field-cuts',cache=2)
+    cuts(df,'ber19_steff','ber19_srad',nrows=nrows,ncols=ncols,stars=False)
+    axL = gcf().get_axes()
+    axL = np.array(axL).reshape(nrows,ncols) 
+    setp(axL,ylim=(0.1,10),xlim=(8000,3000))
+    #setp(axL,xlim=(10,0))
+    semilogy()
+    setp(axL[1,:],xlabel=texteff)
+    setp(axL[:,0],ylabel=texrs)
 
 def fig_cuts_kepmag_steff():
     nrows=2
@@ -254,7 +435,7 @@ def fig_compare_with_cks1():
     """Compare CKS-Cool with CKS-I
     """
     fig, axL = subplots(nrows=1,ncols=3,figsize=(9.5,3))
-    cp = ckscool.plot.sample.ComparisonPlotter()
+    cp = ComparisonPlotter()
     sca(axL[0])
     cp.hist_kepmag()
     sca(axL[1])

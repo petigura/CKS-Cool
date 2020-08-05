@@ -11,7 +11,7 @@ source activate ckscool
 conda install numpy==1.15.4 # this avoids the ValueError: cannot set WRITEABLE flag to True of this array #24839
 conda install scipy matplotlib astropy pandas d seaborn scikit-learn pytables
 conda install -c conda-forge healpy # needed for dustmaps also got healpy==1.11 to work
-
+conda install joblib
 #
 pip install h5py # conda doesn't seem to work
 pip install mwdust 

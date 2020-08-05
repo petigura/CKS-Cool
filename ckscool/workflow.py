@@ -46,7 +46,7 @@ class Workflow(object):
                     continue
                     
                 fn = self.key2fn(key, 'plot')
-                plt.gcf().savefig(fn)
+                plt.gcf().savefig(fn,dpi=300)
 
             elif kind=='table':
                 if name=='all':

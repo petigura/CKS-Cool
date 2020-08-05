@@ -192,6 +192,8 @@ def create_workflow():
     w.plot['cuts-stars-hr'] = ckscool.plot.sample.fig_cuts_stars_hr
     w.plot['cuts-planets-per-prad'] = ckscool.plot.sample.fig_cuts_planets_per_prad
     w.plot['cuts-planets-per-prad-zoom'] = lambda : ckscool.plot.sample.fig_cuts_planets_per_prad(zoom=True)
+    w.plot['cuts-all-multi'] = ckscool.plot.sample.fig_cuts_all_multi
+    w.plot['cuts-all-multi3'] = ckscool.plot.sample.fig_cuts_all_multi3
 
     #w.plot['compare-with-cks1'] = ckscool.plot.sample.fig_compare_with_cks1
     w.plot['ferr-hist-star'] = ckscool.plot.hr.fig_ferr_hist_star
@@ -235,7 +237,6 @@ def create_workflow():
     w.plot['occur-contour-three'] = ckscool.plot.occur.fig_contour_three
     w.plot['occur-contour-six'] = ckscool.plot.occur.fig_contour_six
     w.plot['occur-contour-six-sinc'] = ckscool.plot.occur.fig_contour_six_sinc
-
     w.plot['planets-warm-smet-smass'] = ckscool.plot.smet.fig_planets_warm_smet_smass
 
     # table
@@ -256,7 +257,6 @@ def create_workflow():
     w.csv['planet'] = ckscool.table.tab_planet_csv
     w.csv['planet-cuts2+iso'] = ckscool.table.tab_planet_full_csv
     w.csv['field-cuts'] = ckscool.table.tab_field_full_csv
-
     return w
 
 if __name__=="__main__":
