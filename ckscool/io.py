@@ -162,7 +162,20 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         days = lc * long_cadence_day
         df['tobs'] = (observed * days).sum(axis=1)
 
-    elif table == 'data-release' :
+    elif table == 'DR1+DR2+CXM-overlap':
+        # Stars that pass the photometric cuts
+        cxm = load_table('planets-cuts1',cache=2)
+        cxm = cxm[~cxm.isany]
+        cxm = cxm[['id_koi']].drop_duplicates()
+        cxm['in_cxm'] = True
+        dr12 = load_table('DR1+DR2')['id_koi id_name in_dr1 in_dr2'.split()]
+        dr12['id_koi'] = dr12.id_koi.replace(False,np.nan)
+        cxm['id_koi'] = cxm['id_koi'].astype(float)
+        m = pd.merge(cxm, dr12, how='outer', on='id_koi')
+        m['in_cxm'] = m.in_cxm.fillna(False)
+        df = m.sort_values(by='id_koi')
+        
+    elif table == 'DR1+DR2' :
         # Stars that pass the photometric cuts
         cxm = load_table('planets-cuts1',cache=2)
         cxm = cxm[~cxm.isany]
@@ -177,7 +190,7 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
 
         # Identify the spectra that are in DR1 
         dr1 = pd.read_csv('data/cks1-obs.csv',index_col=None)
-        dr1 = drall.set_index('id_obs').loc[dr1.obs.str.replace('rj','j')]
+        dr1 = drall.set_index('id_obs').loc[dr1.obs.str.replace('rj','j')].reset_index()
         dr1['in_dr1'] = True
         print("{} spectra in dr1".format(len(dr1)))
 
@@ -191,18 +204,23 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         print("{} spectra post {}".format(len(dr2),date))
         dr2 = dr2.sort_values(by='obs_counts').groupby('id_koi',as_index=False).last()
         print("{} spectra highest snr".format(len(dr2)))
-        dr2 = dr2.query('obs_counts > 2000')
-        print("{} spectra with counts > 2000".format(len(dr2)))
+        dr2 = dr2.query('obs_counts > 500')
+        print("{} spectra with counts > 500".format(len(dr2)))
         dr2['in_dr2'] = True
+        df = pd.concat([dr1,dr2],sort=True)
+        cm = pd.read_csv(DATADIR+'cumulative_2020.08.05_15.51.48.csv',skiprows=53)
+        cm = cm.rename(columns={'kepid':'id_kic','kepoi_name':'id_koi'})
+        cm = cm['id_kic id_koi'.split()]
+        cm['id_koi'] = cm['id_koi'].str.slice(start=1,stop=6).astype(int)
+        cm = cm.drop_duplicates()
+        df = pd.merge(df,cm,how='left')
+        idx = df[df.id_name.str.contains('KIC')].index
+        df.loc[idx,'id_kic'] = df.loc[idx,'id_name'].str.slice(start=3).astype(int)
+        df['id_kic'] = df.id_kic.astype(int)
+        df = df.fillna(False).sort_values(by='id_koi')
 
-        _cxm = cxm['id_koi in_cxm'.split()]
-        _dr1 = dr1['id_koi in_dr1'.split()]
-        _dr2 = dr2['id_koi in_dr2'.split()]
-        m = pd.merge(cxm,_dr1,how='outer')
-        m = pd.merge(m,_dr2, how='outer')
-        m = m.fillna(False).sort_values(by='id_koi')
-        df = m
-    
+
+        
     elif table == 'm17+cdpp+gaia2+ber19':
         m17 = load_table('m17', cache=1)
         # Store to separate cache to prevent long reload times

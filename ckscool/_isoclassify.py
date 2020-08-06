@@ -9,73 +9,65 @@ def load_stellar_parameters(source):
     """
     Load up stellar properties
     """
-    # needed for the lookup between id_kic and id_koi
-    star = ckscool.io.load_table('m17+cdpp+gaia2+ber19')
-    plnt = ckscool.io.load_table('koi-thompson18-dr25') 
-    plnt = plnt.groupby('id_koi',as_index=False).nth(0)[['id_koi','id_kic']]
-    star = pd.merge(star,plnt)
-
-    kbc = pd.read_csv(ckscool.io.KBCFN)
-    kbc = kbc.groupby('id_koi', as_index=False).nth(-1)
-
     if source=='cks1':
         df = pd.read_csv('data/cks_physical_merged.csv')
         df['id_koi'] = df.id_koicand.str.slice(start=1,stop=6).astype(int)
         df = df.groupby('id_koi',as_index=False).nth(0)
-        df['cks_steff_err'] = 100
-        df['cks_smet_err'] = 0.06
+        df['cks_steff_err'] = 100 # stat+sys uncert
+        df['cks_slogg_err'] = 0.1 # stat+sys uncert
+        df['cks_smet_err'] = 0.06 # stat+sys uncert
         df['cks_svsini_err'] = df['cks_svsini_err1']
         df['cks_sprov'] = 'cks1'
         cols = [
-            'id_koi','cks_steff','cks_steff_err','cks_smet','cks_smet_err',
-            'cks_svsini','cks_svsini_err'
+            'id_kic','id_koi','cks_steff','cks_steff_err','cks_slogg',
+            'cks_slogg_err','cks_smet',
+            'cks_smet_err','cks_svsini','cks_svsini_err'
         ]
         df = df[cols]
 
     # Load up SpecMatch-Syn and set uncertainties 
     elif source=='smsyn':
-        df = pd.read_csv('data/specmatch-syn_results.csv')
+        df = ckscool.io.load_table('DR1+DR2')
         namemap = {
-            'obs':'id_obs',
-            'name':'id_name',
-            'teff':'cks_steff',
-            'teff_err':'cks_steff_err',
-            'fe':'cks_smet',
-            'fe_err':'cks_smet_err',
-            'vsini':'cks_svsini',
+            'id_kic':'id_kic',
+            'id_obs':'id_obs',
+            'id_name':'id_name',
+            'smsyn_teff':'cks_steff',
+            'smsyn_logg':'cks_slogg',
+            'smsyn_fe':'cks_smet',
+            'smsyn_vsini':'cks_svsini',
         }
         df = df.rename(columns=namemap)[namemap.values()]
-        df = pd.merge(kbc, df, on=['id_obs','id_name'], how='left')
-        df = df.dropna(subset=['id_name'])
         df['cks_sprov'] = 'smsyn'
-        df['cks_steff_err'] = 100
+        df['cks_steff_err'] = 100 # stat+sys uncert
+        df['cks_slogg_err'] = 0.1 # stat+sys uncert
+        df['cks_smet_err'] = 0.06 # stat+sys 
 
     # Load SpecMatch-Emp and set uncertainties
     elif source=='smemp':
-        df = pd.read_csv('data/specmatch-emp_results.csv')
-        df = df.dropna(subset=['name'])
+        df = ckscool.io.load_table('DR1+DR2')
         namemap = {
-           'obs':'id_obs',
-           'name':'id_name',
-           'teff':'cks_steff',
-           'teff_err':'cks_steff_err',
-           'fe':'cks_smet',
-           'fe_err':'cks_smet_err',
+            'id_kic':'id_kic',
+            'id_obs':'id_obs',
+            'id_name':'id_name',
+            'smemp_teff':'cks_steff',
+            'smemp_teff_err':'cks_steff_err',
+            'smemp_fe':'cks_smet',
+            'smemp_fe_err':'cks_smet_err',
         }
         df = df.rename(columns=namemap)[namemap.values()]
-        df = pd.merge(kbc, df, on=['id_obs','id_name'], how='left')
-        df = df.dropna(subset=['id_name'])
         df['cks_sprov'] = 'smemp'
-        df['cks_steff_err'] = 60
-        df['cks_smet_err'] = 0.12
-
+        df['cks_slogg'] = -99
+        df['cks_slogg_err'] = -99
+        df['cks_steff_err'] = 60 # valid for cool stars
+        df['cks_smet_err'] = 0.12 # valid for cool stars
     else:
         assert False, "invalid mode"
 
-    star = pd.merge(star,df)
+    star = ckscool.io.load_table('m17+cdpp+gaia2+ber19')
+    star = pd.merge(star,df,on='id_kic')
     star['m17_kmag_err'] = star['m17_kmag_err'].fillna(0.02)
-    star['feh_err'] = 0.12 # Ditto
-    star = star.sort_values(by='id_koi')
+    star = star.sort_values(by='id_kic')
     star = star.reset_index()
     star0 = star.copy() 
     return star0
@@ -107,11 +99,10 @@ def create_iso_batch_frames(source):
             smsyn
 
     """
-
     star = load_stellar_parameters(source)
-    star['id_starname'] = star.id_koi.apply(lambda x : "K{:05d}".format(x))
+    star['id_starname'] = star.id_kic.apply(lambda x : "KIC{}".format(x) )
     star['band'] = 'kmag'
-    star['dust'] = 'allsky'
+    star['dust'] = 'green18'
     star['cks_sprov'] = source
     namemap = {
         'gaia2_ra':'ra',
@@ -122,6 +113,8 @@ def create_iso_batch_frames(source):
         'm17_kmag_err':'kmag_err',
         'cks_steff':'teff',
         'cks_steff_err':'teff_err',
+        'cks_slogg':'logg',
+        'cks_slogg_err':'logg_err',
         'cks_smet':'feh',
         'cks_smet_err':'feh_err',
     }
@@ -139,26 +132,24 @@ def create_iso_batch_frames(source):
     # Direct method. Don't use spectroscopic logg values so as to not
     # pollute the parallax radii
     star = star0.copy()
-    star['logg_err'] = 1 # use large uncertainties
-    star['logg'] = 4.7 
+    star['logg'] = -99 # use large uncertainties
+    star['logg_err'] = -99 
     star = star[cols]
     star_direct = star.copy()
 
     # Grid method with parallax. This will return model-dependent
     # values of Mstar, Rstar, age, density, luminosity
     star = star0.copy()
-    star['logg_err'] = 1 # use large uncertainties
-    star['logg'] = 4.7 
+    star['logg'] = -99 # use large uncertainties
+    star['logg_err'] = -99 
     star = star[cols]
     star_grid_yes = star.copy()
 
     # Grid method. Don't set parallax so we can compare later
     star = star0.copy()
-    star['logg_err'] = 1 # use large uncertainties
-    star['logg'] = 4.7
     star = star[cols]
     star['parallax'] = -99
-    star['parallax_err'] = 0
+    star['parallax_err'] = -99
     star_grid_no = star.copy()
     return star_direct, star_grid_yes, star_grid_no 
 

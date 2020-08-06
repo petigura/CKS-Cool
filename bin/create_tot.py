@@ -27,7 +27,7 @@ for source in sources:
         df.to_csv(csvfn)
         print "{} new files to process".format(len(df))
         
-        cmd = """isoclassify batch {mode:} {csvfn:} -o {outdir:} --plot none | grep mkdir  > isoclassify-{source:}-{suffix:}.tot """.format(**fmt)
+        cmd = """isoclassify batch {mode:} {csvfn:} -o {outdir:} --plot save-png | grep mkdir  > isoclassify-{source:}-{suffix:}.tot """.format(**fmt)
         print cmd
         os.system(cmd)
 

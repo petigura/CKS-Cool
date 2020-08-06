@@ -1,75 +1,56 @@
 # CKS-Cool
 
-## Use conda environment
+## Computing environment
 
-source activate ckscool
+Use the ckscool environment on Petigura's laptop
 
-## Dependencies
-
-### had to install the following packages with conda
-
+```bash
+conda activate ckscool 
+```
 conda install numpy==1.15.4 # this avoids the ValueError: cannot set WRITEABLE flag to True of this array #24839
 conda install scipy matplotlib astropy pandas d seaborn scikit-learn pytables
 conda install -c conda-forge healpy # needed for dustmaps also got healpy==1.11 to work
-conda install joblib
-#
+conda install joblib # needed for occurrence valley work
 pip install h5py # conda doesn't seem to work
 pip install mwdust 
 pip install pyephem
 pip install lmfit
 pip install ebfpy
 
-isoclassify on f6f16ef1f90c57893268f6f9d6da4fddb00142ec
+isoclassify on f6f16e
 
-Note when running on cadence, there was a really weird issue with h5py. Where it was taking 30s to read in the Combined Dustmap
+## Cookbook for target list construction 
+
+- [Construct target list](docs/observing.md)
+- [Plan/execute observations](docs/observing.md)
+
+## Cookbook for occurrence analysis
+
+- Compute stellar/planet parameters
+- Access the CKS-Cool dataset
 
 # Copy over the table cache from CKS-Gaia
 
 $ cp ../CKS-Gaia/load_table_cache.hdf data/cksgaia_cache.hdf
 
-Repo for the CKS-Cool project includes code to
-
-- [Construct target list](docs/observing.md)
-- [Plan/execute observations](docs/observing.md)
-- Compute stellar/planet parameters
-- Access the CKS-Cool dataset
-
-## Cross-match the CKS stars with Gaia IDs.
-
-Follow instructions [here](docs/gaia-xmatch.md)
 
 ## Compute Stellar/Planetary Properties
 
 1. Download smemp and smsyn catalogs to `data/`
 
-```
-rsync -av cadence:/data/user/doppler/public_html/smemp/specmatch_results.csv data/specmatch-emp_results.csv
-rsync -av cadence:/data/user/doppler/public_html/smsyn/specmatch_results.csv data/specmatch-syn_results.csv
-```
+https://jump.caltech.edu/explorer/58/
 
+2. Run the isoclassify code on combined DR1+DR2 dataset.
 
-2. Create kbc table
+Run the isoclassify code in three modes on three different
+spectroscopic parameters. On the combined DR1+DR2 data
 
-A list of all Kepler templates from HIRES
-
-```
-run_ckscool.py create-kbc
-```
-
-2. Run the isoclassify code
-
-First create the batch processing files. In total there are about 900 stars that pass the photometric only cuts.
-
-export DUST_DIR=/data/user/petigura/dustdir/
-```
-run_ckscool.py create-iso-batch 
-```
+First generate the csv files of stellar parameters
 
 ```
-python bin/create_tot.py
+bin/run_ckscool.py create-iso-batch # creates 9 csv files
+python bin/create_tot.py # looks at isoclassfy folder and creates tot files.
 ```
-
-Then run them in parallel. Running isoclassify takes about 3s per star / core. Can process in about 7*3 min with six cores.
 
 ### Test first 9 from each method
 
@@ -77,33 +58,14 @@ Then run them in parallel. Running isoclassify takes about 3s per star / core. C
 head `ls isoclassify*tot` | grep mkdir | parallel
 ```
 
-### Run them in batch on cadence 
+Look at the logs and confirm isoclassify is behaving right. Run them on Erik's laptop.
 
-Create the tot files. See note about h5py. 
 
 ```
-source bin/create_tot.sh
+ls isoclassify*tot` | grep mkdir | parallel -j 8
 ```
 
-Run isoclassify on a screen session. If I run with all the cores on
-cadence I get a seg fault.
-
-```
-cat isoclassify*tot | grep mkdir | parallel -j 48 
-```
-
-I also need to set this environment variable or else I get a resource unavailable error from hdf
-
-export HDF5_USE_FILE_LOCKING=FALSE 
-DUST_DIR=/data/user/petigura/dustdir/
-
-Notes:
-
-I tried to use the bayestar interface, but I got a I get a "too many
-requests" error 
-
-
-### Monitor job progress with
+Sometimes the bayestar query times out and isoclassify crashes. Just keep running create_tot which will clean it up.
 
 ```
  echo "number of log files"; find isoclassify/ -name "*.log" | wc -l  ; echo "number of csv files"; grep csv `find isoclassify/ -name "*.log" ` | grep created | wc -l 
@@ -161,3 +123,17 @@ run_ckscool.py create-chain-summary # stores the precentile summary
 
 Notes 
 - Takes about 30 min to complete.
+
+
+
+# Old notes
+
+## Cross-match the CKS stars with Gaia IDs. This is now accomplished using the Berger designatinos
+
+Follow instructions [here](docs/gaia-xmatch.md)
+
+
+
+# Notes for running isoclassify on cadence
+
+Note when running on cadence, there was a really weird issue with h5py. Where it was taking 30s to read in the Combined Dustmap
