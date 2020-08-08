@@ -118,7 +118,7 @@ def val_stat(return_dict=False):
 def val_sample(return_dict=False):
     d = OrderedDict()
 
-    m = ckscool.io.load_table('data-release')
+    m = ckscool.io.load_table('DR1+DR2+CXM-overlap')
     d['nstars dr1'] = m.in_dr1.sum()
     d['nstars dr2'] = m.in_dr2.sum()
     d['nstars cxm'] =  m.in_cxm.sum()
@@ -130,6 +130,33 @@ def val_sample(return_dict=False):
     d['nstars (dr1 | dr2) & cxm'] = ((m.in_dr1 | m.in_dr2) & m.in_cxm).sum()
     d['nstars dr1 & dr2'] = (m.in_dr1 & m.in_dr2).sum()
     d['nstars dr1 | dr2 | cxm'] = (m.in_dr1 | m.in_dr2 | m.in_cxm).sum()
+
+    d['nstars dr2 & cxm & pre-2018'] = (
+        m.in_dr2
+        & m.in_cxm
+        & (m.obs_bjd < Time('2018-01-01',format='iso').jd)
+    ).sum()
+
+    d['nstars dr2 & cxm & post-2018'] = (
+        m.in_dr2
+        & m.in_cxm
+        & (m.obs_bjd > Time('2018-01-01',format='iso').jd)
+    ).sum()
+
+    d['nstars dr2 & post-2018'] = (
+        m.in_dr2
+        & (m.obs_bjd > Time('2018-01-01',format='iso').jd)
+    ).sum()
+
+    b = ( m.in_dr2
+          & m.in_cxm
+          & (m.obs_bjd < Time('2018-01-01',format='iso').jd)
+          & (m.obs_counts < 1500) )
+
+    d['nstars dr2 & cxm & pre-2018 counts < 1500'] = b.sum()
+    kois = ", ".join(m[b].id_koi.astype(int).astype(str))
+    
+    d['kois dr2 & cxm & pre-2018 counts < 1500'] = kois
 
 
     table = 'planets-cuts1'
@@ -150,7 +177,9 @@ def val_sample(return_dict=False):
         i+=1
 
     table = 'field-cuts'
-    df = ckscool.io.load_table(table,cache=1)
+    df = ckscool.io.load_table(table,cache=2) # needs to be freshly
+                                              # generated to get
+                                              # cuttypes
     i = 0 
     bpass = np.zeros(len(df))
     for cuttype in df.cuttypes:

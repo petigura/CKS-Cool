@@ -168,11 +168,13 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         cxm = cxm[~cxm.isany]
         cxm = cxm[['id_koi']].drop_duplicates()
         cxm['in_cxm'] = True
-        dr12 = load_table('DR1+DR2')['id_koi id_name in_dr1 in_dr2'.split()]
+        dr12 = load_table('DR1+DR2')['id_koi id_name in_dr1 in_dr2 obs_bjd obs_counts'.split()]
         dr12['id_koi'] = dr12.id_koi.replace(False,np.nan)
         cxm['id_koi'] = cxm['id_koi'].astype(float)
         m = pd.merge(cxm, dr12, how='outer', on='id_koi')
-        m['in_cxm'] = m.in_cxm.fillna(False)
+        for k in 'in_cxm in_dr1 in_dr2'.split():
+            m[k] = m[k].fillna(False)
+
         df = m.sort_values(by='id_koi')
         
     elif table == 'DR1+DR2' :
@@ -190,36 +192,51 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
 
         # Identify the spectra that are in DR1 
         dr1 = pd.read_csv('data/cks1-obs.csv',index_col=None)
-        dr1 = drall.set_index('id_obs').loc[dr1.obs.str.replace('rj','j')].reset_index()
+        dr1 = (drall.set_index('id_obs')
+               .loc[dr1.obs.str.replace('rj','j')]
+               .reset_index())
+        
         dr1['in_dr1'] = True
         print("{} spectra in dr1".format(len(dr1)))
 
         # Identify the spectra that are in DR2
         dr2 = drall.set_index('id_name').drop(dr1.id_name).reset_index()
-        dr2 = dr2.set_index('id_koi').drop(dr1.id_koi,errors='ignore').reset_index()
+        dr2 = (dr2.set_index('id_koi')
+               .drop(dr1.id_koi,errors='ignore')
+               .reset_index())
+        
         print("{} spectra of stars not in dr1".format(len(dr2)))
 
         date = '2018-01-01'
-        dr2 = dr2[(dr2.obs_bjd > Time(date,format='iso').jd) | dr2.id_koi.isin(cxm.id_koi)]
+        dr2 = dr2[
+            (dr2.obs_bjd > Time(date,format='iso').jd)
+            | dr2.id_koi.isin(cxm.id_koi)]
+
         print("{} spectra post {}".format(len(dr2),date))
-        dr2 = dr2.sort_values(by='obs_counts').groupby('id_koi',as_index=False).last()
+        dr2 = (dr2.sort_values(by='obs_counts')
+               .groupby('id_koi',as_index=False)
+               .last())
+
         print("{} spectra highest snr".format(len(dr2)))
         dr2 = dr2.query('obs_counts > 500')
         print("{} spectra with counts > 500".format(len(dr2)))
         dr2['in_dr2'] = True
         df = pd.concat([dr1,dr2],sort=True)
-        cm = pd.read_csv(DATADIR+'cumulative_2020.08.05_15.51.48.csv',skiprows=53)
+
+        # merge in id_kic values
+        fn = DATADIR+'cumulative_2020.08.05_15.51.48.csv'
+        cm = pd.read_csv(fn,skiprows=53)
         cm = cm.rename(columns={'kepid':'id_kic','kepoi_name':'id_koi'})
         cm = cm['id_kic id_koi'.split()]
         cm['id_koi'] = cm['id_koi'].str.slice(start=1,stop=6).astype(int)
         cm = cm.drop_duplicates()
         df = pd.merge(df,cm,how='left')
         idx = df[df.id_name.str.contains('KIC')].index
-        df.loc[idx,'id_kic'] = df.loc[idx,'id_name'].str.slice(start=3).astype(int)
-        df['id_kic'] = df.id_kic.astype(int)
+        df.loc[idx,'id_kic'] = (df.loc[idx,'id_name']
+                                .str.slice(start=3)
+                                .astype(int))
+
         df = df.fillna(False).sort_values(by='id_koi')
-
-
         
     elif table == 'm17+cdpp+gaia2+ber19':
         m17 = load_table('m17', cache=1)

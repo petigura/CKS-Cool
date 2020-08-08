@@ -64,12 +64,15 @@ Look at the logs and confirm isoclassify is behaving right. Run them on Erik's l
 ```
 ls isoclassify*tot` | grep mkdir | parallel -j 8
 ```
+Monitor the progress with
 
-Sometimes the bayestar query times out and isoclassify crashes. Just keep running create_tot which will clean it up.
+```bash
+bin/isoclassify_monitor.sh 
+```
 
-```
- echo "number of log files"; find isoclassify/ -name "*.log" | wc -l  ; echo "number of csv files"; grep csv `find isoclassify/ -name "*.log" ` | grep created | wc -l 
-```
+Sometimes the bayestar query times out and isoclassify crashes. Just
+keep running create_tot which will clean it up.
+
 
 First number is number of log files, second numbers is how many csv files created.
 
@@ -77,7 +80,6 @@ First number is number of log files, second numbers is how many csv files create
 run_ckscool.py create-iso-table
 ```
 
-Run it on cadence
 
 3. Generate ReaMatch table
 
@@ -96,6 +98,9 @@ rsync -av --progress --files-from=data/fig_spectra/fig_spectra-files.txt cadence
 The full list of star and planet properties are in `data/ckscool-planets-cuts.csv ` see `data/column-definitions.txt` for a description of the columns.
 
 The `is*` columns correspond to cuts. See the ckscool/cuts.py for additional info. The radius gap be comes more clear when one adopts a koi_impact of > 0.7 or 0.8.
+
+
+
 
 
 
@@ -123,6 +128,9 @@ run_ckscool.py create-chain-summary # stores the precentile summary
 
 Notes 
 - Takes about 30 min to complete.
+
+
+
 
 
 

@@ -2,7 +2,7 @@ import os
 
 import numpy as np
 import pandas as pd
-
+import glob 
 import ckscool.io
 
 def load_stellar_parameters(source):
