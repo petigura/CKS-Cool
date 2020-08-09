@@ -6,6 +6,8 @@ Module for CKS-Cool I/O
 import os
 import cPickle as pickle
 import warnings
+from collections import OrderedDict
+import re
 
 import pandas as pd
 import numpy as np
@@ -14,6 +16,7 @@ from astropy.time import Time
 from scipy.io import idl
 import tables
 from astropy.table import Table
+import astropy.io.ascii
 
 import ckscool.cuts.occur
 import ckscool.calc
@@ -28,7 +31,7 @@ import ckscool.fit
 # Ignore the Natural name warning
 warnings.simplefilter('ignore', tables.NaturalNameWarning)
 warnings.simplefilter('ignore', pd.errors.PerformanceWarning)
-#warnings.simplefilter('ignore', pd.errors.UserWarning)
+warnings.simplefilter(action='ignore', category=UserWarning)
 
 # Define paths to various cache files. DATADIR stores data tables that
 # should not change with different code runs. CACHEDIR stores
@@ -584,6 +587,18 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         df = df['id_koi steff'.split()]
         df = add_prefix(df,'b18_')
 
+    # Silva 2015
+    elif table=='silva15':
+        fn = os.path.join(DATADIR,'silva15/silva-aguirre15.tex')
+        df = read_silva15(fn)
+
+    # Huber 2013
+    elif table=='huber13':
+        fn = os.path.join(DATADIR,'huber13/J_ApJ_767_127/table2.dat')
+        readme = os.path.join(DATADIR,'huber13/J_ApJ_767_127/ReadMe')
+        df = read_huber13(fn,readme)
+
+
     else:
         assert False, "table {} not valid table name".format(table)
     return df
@@ -607,6 +622,83 @@ def read_furlan17_table9(fn):
     df['id_starname'] = ['K'+str(x).rjust(5, '0') for x in df.id_koi] 
     df = add_prefix(df,'f17_rcf_')
     return df 
+
+def read_silva15(fn):
+    with open(fn,'r') as f:
+        lines = f.readlines()
+    header = lines[7]
+
+    lines = lines[9:]
+    _lines = []
+    for line in lines:
+        if line.count('&') > 0:
+            _lines.append(line)
+
+    lines = _lines
+
+    _lines = []
+    i=0
+    df = []
+
+    for line in lines:
+        d = {}
+        line =  line.split('&')
+        d = OrderedDict()
+        d['id_koi'] = line[0]
+        d['id_kic'] = line[1]
+        d['teff'] = line[2].split('$\\pm$')[0]
+        d['teff_err1'] = line[2].split('$\\pm$')[1]
+
+        d['fe'] = line[3].split('$\\pm$')[0]
+        d['fe_err1'] = line[3].split('$\\pm$')[1]
+
+        mass = re.sub(r"\$|\{|\^|\}|\_|\+"," ",line[4]).split()
+        d['smass'] = mass[0]
+        d['smass_err1'] = mass[1]
+        d['smass_err2'] = mass[2]
+
+        radius = re.sub(r"\$|\{|\^|\}|\_|\+"," ",line[5]).split()
+        d['srad'] = radius[0]
+        d['srad_err1'] = radius[1]
+        d['srad_err2'] = radius[2]
+
+        logg = re.sub(r"\$|\{|\^|\}|\_|\+"," ",line[7]).split()
+        d['slogg'] = logg[0]
+        d['slogg_err1'] = logg[1]
+        d['slogg_err2'] = logg[2]
+
+        age = re.sub(r"\$|\{|\^|\}|\_|\+"," ",line[9]).split()
+        d['sage'] = age[0]
+        d['sage_err1'] = age[1]
+        d['sage_err2'] = age[2]
+
+        df.append(d)
+        i+=1
+
+    df = pd.DataFrame(df).convert_objects(convert_numeric=True)
+    df['teff_err2'] = -1.0 * df['teff_err1']
+    df['slogage'] = np.log10(df['sage']) + 9 
+    df['slogage_err1'] = np.log10(df.sage+df.sage_err1)+9 - df.slogage
+    df['slogage_err2'] = np.log10(df.sage+df.sage_err2)+9 - df.slogage
+    df['fe_err2'] = -1.0 * df['fe_err1']
+    df = add_prefix(df,'s15_')
+    return df
+
+def read_huber13(fn, readme):
+    df = astropy.io.ascii.read(fn, readme=readme)
+    df = df.to_pandas()
+    namemap = {
+        'KIC':'id_kic',
+        'KOI':'id_koi',
+        'Mass':'h13_smass',
+        'Rad':'h13_srad',
+        'e_Mass':'h13_smass_err',
+        'e_Rad':'h13_srad_err',
+    }
+    df = df.rename(columns=namemap)[namemap.values()]
+    df = df.query('h13_srad > 0.5')
+    df.loc[:,'id_kic'] = df.id_kic.astype(int)
+    return df
 
 def load_table_koi(table):
     """

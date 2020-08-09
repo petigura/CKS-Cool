@@ -18,6 +18,7 @@ import ckscool.plot.planet
 import ckscool.plot.smet
 from ckscool.plot.compare import fig_compare
 import ckscool.workflow
+from ckscool.plot.compare2 import ComparisonRadius as CR
 
 import numpy as np
 
@@ -205,6 +206,9 @@ def create_workflow():
     w.plot['planet-per-prad-nopoints'] = lambda : ckscool.plot.planet.fig_per_prad(nopoints=True)
     w.plot['planet-per-prad-nopoints-zoom'] = lambda : ckscool.plot.planet.fig_per_prad(nopoints=True,zoom=True)
     w.plot['planet-per-prad-zoom'] = lambda : ckscool.plot.planet.fig_per_prad(zoom=True)
+
+    w.plot['srad-h13'] = lambda: CR('srad-h13').plot_comparison()
+    w.plot['srad-s15'] = lambda: CR('srad-s15').plot_comparison()
 
     kw = dict(zoom=True,xerrfac=0.5,yerrfac=1.5)
     w.plot['planet-per-prad-smass-lo-zoom'] = lambda : ckscool.plot.planet.fig_per_prad(query='giso_smass < 0.75',**kw)
