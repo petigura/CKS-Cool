@@ -71,12 +71,11 @@ bin/isoclassify_monitor.sh
 ```
 
 Sometimes the bayestar query times out and isoclassify crashes. Just
-keep running create_tot which will clean it up.
+keep running `create_tot` which will clean it up.
 
+The create isoclassify tables
 
-First number is number of log files, second numbers is how many csv files created.
-
-```
+```bash
 run_ckscool.py create-iso-table
 ```
 
@@ -84,6 +83,13 @@ run_ckscool.py create-iso-table
 3. Generate ReaMatch table
 
 Run `ReaMatch.ipynb` and copy output file to `reamatch.csv` to `~/Dropbox/CKS-Cool/hires/reamatch.csv`. Howard Isaacson will then add the appropriate RM designations to file.
+
+
+4. Create final table of stellar / planet parameters
+
+
+
+
 
 4. Generate representative spectra figure
 

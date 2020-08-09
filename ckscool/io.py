@@ -36,7 +36,7 @@ warnings.simplefilter('ignore', pd.errors.PerformanceWarning)
 # changes. The CACHEDIR can be set for different git branches
 FILE = os.path.dirname(__file__)
 DATADIR = os.path.join(FILE, '../data/')
-CACHEDIR = os.path.join(FILE, '../cache/field-ber19-plnt-giso_broken/')
+CACHEDIR = os.path.join(FILE, '../cache/')
 CACHEFN = os.path.join(CACHEDIR, 'load_table_cache.hdf')
 os.system('mkdir -p {}'.format(CACHEDIR)) # creates CACHEDIR if doesn't exist
 KBCFN = os.path.join(DATADIR,'kbcvel.csv')
@@ -258,13 +258,13 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         star = load_table('m17+cdpp+gaia2+ber19',cache=1)
         plnt = load_table('koi-thompson18-dr25')
         df = pd.merge(star,plnt)
-        #cuttypes = ['none','faint','giant','rizzuto','notreliable','lowsnr']
         cuttypes = ['none','faint','giantcmd','ruwe','notreliable','lowsnr']
         df.sample = 'koi-thompson18'
         df = ckscool.cuts.occur.add_cuts(df, cuttypes, 'koi-thompson18')
 
     # Results from isoclassify table
     elif table == 'iso':
+        '''
         source = 'cks1'
         star0 = ckscool._isoclassify.load_stellar_parameters(source)
         fn = os.path.join(DATADIR,'isoclassify_{}.csv'.format(source))
@@ -273,48 +273,33 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         cks1 = pd.merge(star0,iso)
         cks1.index = cks1.id_koi
         cks1['cks_sprov'] = 'cks1' # note that obs didn't transfer over here.
-
+        '''
         source = 'smemp'
         star0 = ckscool._isoclassify.load_stellar_parameters(source)
         fn = os.path.join(DATADIR,'isoclassify_{}.csv'.format(source))
         iso = pd.read_csv(fn,index_col=0)
-        iso['id_koi'] = iso.id_starname.str.slice(start=-5).astype(int)
+        iso['id_kic'] = iso.id_starname.str.slice(start=3).astype(int)
         smemp = pd.merge(star0,iso)
-        smemp.index = smemp.id_koi
+        smemp = smemp.set_index('id_kic')
 
         source = 'smsyn'
         star0 = ckscool._isoclassify.load_stellar_parameters(source)
         fn = os.path.join(DATADIR,'isoclassify_{}.csv'.format(source))
         iso = pd.read_csv(fn,index_col=0)
-        iso['id_koi'] = iso.id_starname.str.slice(start=-5).astype(int)
+        iso['id_kic'] = iso.id_starname.str.slice(start=3).astype(int)
         smsyn = pd.merge(star0,iso)
-        smsyn.index = smsyn.id_koi
+        smsyn = smsyn.set_index('id_kic')
         
         df = []
         smemplimit = 4800
-        for id_koi in smemp.id_koi.drop_duplicates():
-            try:
-                smemp_steff = smemp.loc[id_koi,'cks_steff']
-                if smemp_steff < smemplimit:
-                    df.append(smemp.loc[id_koi])
-                    continue
-            except KeyError:
-                continue
 
-            try:
-                df.append(cks1.loc[id_koi])
-                continue
-            except KeyError:
-                pass
+        idx = smemp[smemp.cks_steff < smemplimit].index
+        df.append(smemp.loc[idx])
+        
+        idx = smemp[smemp.cks_steff >= smemplimit].index
+        df.append(smsyn.loc[idx])
 
-            try:
-                df.append(smsyn.loc[id_koi])
-                continue
-            except KeyError:
-                pass
-
-        df = pd.DataFrame(df)
-        #df['cks_svsini'] = df.cks_svsini.fillna(smsyn.cks_svsini)
+        df = pd.concat(df,sort=True)
         df = df.reset_index()
 
     # Stellar sample
@@ -322,7 +307,7 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         #star = load_table('m17+cdpp+gaia2+ber18')
         plnt = load_table('koi-thompson18-dr25')
         iso = load_table('iso',cache=1)
-        df = pd.merge(plnt, iso, how='left',on=['id_koi','id_kic'])
+        df = pd.merge(plnt, iso, how='left',on=['id_kic'])
 
         # Add in ReaMatch parameters. If the provenence of the
         # parameter is CKS-I then in means that the star passed the

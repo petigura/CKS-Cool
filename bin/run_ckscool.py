@@ -194,8 +194,6 @@ def create_workflow():
     w.plot['cuts-planets-per-prad-zoom'] = lambda : ckscool.plot.sample.fig_cuts_planets_per_prad(zoom=True)
     w.plot['cuts-all-multi'] = ckscool.plot.sample.fig_cuts_all_multi
     w.plot['cuts-all-multi3'] = ckscool.plot.sample.fig_cuts_all_multi3
-
-    #w.plot['compare-with-cks1'] = ckscool.plot.sample.fig_compare_with_cks1
     w.plot['ferr-hist-star'] = ckscool.plot.hr.fig_ferr_hist_star
     w.plot['ferr-hist-planet'] = ckscool.plot.hr.fig_ferr_hist_planet
     w.plot['star-steff-srad'] = ckscool.plot.hr.fig_hr
@@ -203,7 +201,6 @@ def create_workflow():
     w.plot['compare-ckscool-mann13'] = lambda : fig_compare('ckscool-mann13')
     w.plot['compare-ckscool-dressing13'] = lambda : fig_compare('ckscool-dressing13')
     w.plot['compare-ckscool-brewer18'] = lambda : fig_compare('ckscool-brewer18')
-
     w.plot['planet-per-prad'] = ckscool.plot.planet.fig_per_prad
     w.plot['planet-per-prad-nopoints'] = lambda : ckscool.plot.planet.fig_per_prad(nopoints=True)
     w.plot['planet-per-prad-nopoints-zoom'] = lambda : ckscool.plot.planet.fig_per_prad(nopoints=True,zoom=True)
