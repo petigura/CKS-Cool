@@ -49,29 +49,36 @@ First generate the csv files of stellar parameters
 
 ```
 bin/run_ckscool.py create-iso-batch # creates 9 csv files
-python bin/create_tot.py # looks at isoclassfy folder and creates tot files.
 ```
 
 ### Test first 9 from each method
 
-```
-head `ls isoclassify*tot` | grep mkdir | parallel
+```bash
+isoclassify multiproc direct -1 data/isoclassify-cks1-direct.csv.16 isoclassify/cks1/direct.csv --baseoutdir isoclassify/cks1/direct/
+isoclassify multiproc grid -1 data/isoclassify-cks1-grid-parallax-yes.csv.16 isoclassify/cks1/grid-parallax-yes.csv --baseoutdir isoclassify/cks1/grid-parallax-yes/
+isoclassify multiproc grid -1 data/isoclassify-cks1-grid-parallax-no.csv.16 isoclassify/cks1/grid-parallax-no.csv --baseoutdir isoclassify/cks1/grid-parallax-no/
+isoclassify multiproc direct -1 data/isoclassify-smsyn-direct.csv.16 isoclassify/smsyn/direct.csv --baseoutdir isoclassify/smsyn/direct/
+isoclassify multiproc grid -1 data/isoclassify-smsyn-grid-parallax-yes.csv.16 isoclassify/smsyn/grid-parallax-yes.csv --baseoutdir isoclassify/smsyn/grid-parallax-yes/
+isoclassify multiproc grid -1 data/isoclassify-smsyn-grid-parallax-no.csv.16 isoclassify/smsyn/grid-parallax-no.csv --baseoutdir isoclassify/smsyn/grid-parallax-no/
+isoclassify multiproc direct -1 data/isoclassify-smemp-direct.csv.16 isoclassify/smemp/direct.csv --baseoutdir isoclassify/smemp/direct/
+isoclassify multiproc grid -1 data/isoclassify-smemp-grid-parallax-yes.csv.16 isoclassify/smemp/grid-parallax-yes.csv --baseoutdir isoclassify/smemp/grid-parallax-yes/
+isoclassify multiproc grid -1 data/isoclassify-smemp-grid-parallax-no.csv.16 isoclassify/smemp/grid-parallax-no.csv --baseoutdir isoclassify/smemp/grid-parallax-no/
 ```
 
 Look at the logs and confirm isoclassify is behaving right. Run them on Erik's laptop.
 
 
-```
-ls isoclassify*tot` | grep mkdir | parallel -j 8
-```
-Monitor the progress with
-
 ```bash
-bin/isoclassify_monitor.sh 
+isoclassify multiproc direct 6 data/isoclassify-cks1-direct.csv isoclassify/cks1/direct.csv --baseoutdir isoclassify/cks1/direct/ --plot none
+isoclassify multiproc grid 6 data/isoclassify-cks1-grid-parallax-yes.csv isoclassify/cks1/grid-parallax-yes.csv --baseoutdir isoclassify/cks1/grid-parallax-yes/ --plot none
+isoclassify multiproc grid 6 data/isoclassify-cks1-grid-parallax-no.csv isoclassify/cks1/grid-parallax-no.csv --baseoutdir isoclassify/cks1/grid-parallax-no/ --plot none
+isoclassify multiproc direct 6 data/isoclassify-smsyn-direct.csv isoclassify/smsyn/direct.csv --baseoutdir isoclassify/smsyn/direct/  --plot none
+isoclassify multiproc grid 6 data/isoclassify-smsyn-grid-parallax-yes.csv isoclassify/smsyn/grid-parallax-yes.csv --baseoutdir isoclassify/smsyn/grid-parallax-yes/ --plot none
+isoclassify multiproc grid 6 data/isoclassify-smsyn-grid-parallax-no.csv isoclassify/smsyn/grid-parallax-no.csv --baseoutdir isoclassify/smsyn/grid-parallax-no/ --plot none
+isoclassify multiproc direct 6 data/isoclassify-smemp-direct.csv isoclassify/smemp/direct.csv --baseoutdir isoclassify/smemp/direct/ --plot none
+isoclassify multiproc grid 6 data/isoclassify-smemp-grid-parallax-yes.csv isoclassify/smemp/grid-parallax-yes.csv --baseoutdir isoclassify/smemp/grid-parallax-yes/ --plot none
+isoclassify multiproc grid 6 data/isoclassify-smemp-grid-parallax-no.csv isoclassify/smemp/grid-parallax-no.csv --baseoutdir isoclassify/smemp/grid-parallax-no/ --plot none
 ```
-
-Sometimes the bayestar query times out and isoclassify crashes. Just
-keep running `create_tot` which will clean it up.
 
 The create isoclassify tables
 

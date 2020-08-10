@@ -102,7 +102,7 @@ def create_iso_batch_frames(source):
     star = load_stellar_parameters(source)
     star['id_starname'] = star.id_kic.apply(lambda x : "KIC{}".format(x) )
     star['band'] = 'kmag'
-    star['dust'] = 'green18'
+    star['dust'] = 'green19'
     star['cks_sprov'] = source
     namemap = {
         'gaia2_ra':'ra',
