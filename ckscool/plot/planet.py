@@ -75,7 +75,8 @@ class ContourPlotter(object):
         self.ds['Z'] /= frac
 
     def plot_contour(self):
-        self.ds.Z.plot.contourf(x='kx', cmap=plt.cm.afmhot_r, levels=20,zorder=0)
+        _vmax = self.ds.Z.max()
+        self.ds.Z.plot.contourf(x='kx', cmap=plt.cm.afmhot_r, levels=15,zorder=0,vmax=1.5*_vmax)
         add_anchored('$N_p$ = {}'.format(len(self.x)),2,prop=dict(size='small'))
         self.xlim(self.xmin,self.xmax)
         self.ylim(self.ymin,self.ymax)
@@ -300,30 +301,32 @@ def fig_intfxuv_prad(nopoints=False,zoom=False):
 
     tight_layout()
 
-def fig_smass_prad(nopoints=False,zoom=False, boost=True):
+def fig_smass_prad(nopoints=False,zoom=False, boost=False):
     """
     Boost: whether to normalize KDE so that each mass bin gets equal weight
     """
     sns.set_context('paper')
     fig, axL = subplots(figsize=(5,4))
     xk = 'giso_smass'
+    xerrk = 'giso_smass_err1'
     yk = 'gdir_prad'
     yerrk = 'gdir_prad_err1'
-    df = ckscool.io.load_table('planets-cuts2+iso',cache=1)
+    df = ckscool.io.load_table('planets-cuts2',cache=1)
     df = df.dropna(subset=['giso_smass'])
     df = df[~df.isany]
 
     x = df[xk]
     y = df[yk]
-    yerr = df[yerrk] * 1.5
-    xerr = x * 0.1
+    yerr = df[yerrk] * 1
+    #xerr = df[xerrk] * 2
+    xerr = x * 0.15
 
     p1 = ContourPlotter(x, xerr, y, yerr,xscale='log',yscale='log')
 
     if zoom:
         p1.xmin = 0.6
         p1.xmax = 1.4
-        p1.ymin = 0.7
+        p1.ymin = 1
         p1.ymax = 4
     else:
         p1.xmin = 0.5
@@ -381,7 +384,7 @@ def fig_smet_prad(nopoints=False,zoom=False):
     yticks = [0.5,0.7,1.0,1.4,2.0,2.8,4.0,5.6,8.0,11.3,16.0]
 
     p1.compute_density()
-    p1.normalize_density()
+    #p1.normalize_density()
 
     p1.plot_contour()
     xlabel('[Fe/H]')

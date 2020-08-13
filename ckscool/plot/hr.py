@@ -72,18 +72,20 @@ def fig_ferr_hist_star():
     bins = arange(0,0.1,0.0025)
     kw = dict(lw=2, bins=bins, histtype='step')
 
-    rat = df.m17_kmag_err.dropna()
-    hist(rat/2,label='$\sigma(m_K$) /2',**kw)
+    rat = df.m17_kmag_err.dropna() # magnitudes so don't divde
+    hist(rat,label='$\sigma(m_K$)',**kw)
 
     rat = (df.gaia2_sparallax_err /  df.gaia2_sparallax).dropna()
     hist(rat,label='$\sigma(\pi) / \pi$',color='m',**kw)
 
-    rat = 60 / df.cks_steff
-    hist([2 * rat],label='2 $\sigma$(teff) / teff',**kw)
+    rat = df.cks_steff_err / df.cks_steff
+    hist([rat],label='$\sigma$(teff) / teff',**kw)
 
     rat = df.gdir_srad_err1/df.gdir_srad
     rat = rat.dropna().tolist()
     hist([rat],label='$\sigma(R_\star) / R_\star$',**kw)
+
+    import pdb;pdb.set_trace()
 
     legend()
     xlabel('Fractional Precision')

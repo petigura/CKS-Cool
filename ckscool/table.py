@@ -1,14 +1,12 @@
 import ckscool.io
+import numpy as np
 
 
 def tab_star():
-    df = ckscool.io.load_table('planets-cuts1+iso',cache=2)
-    df['cks_sprov'] = df.cks_sprov.str.replace('smemp','emp').\
-                      str.replace('smsyn','syn')
 
-    df['rm_sb2'] = df.rm_sb2.fillna(-1)
-
-    df = df.groupby('id_koi',as_index=False).nth(0)
+    df = ckscool.io.load_table('star',cache=2)
+    # Cast id_koi as float so the it renders as nodata
+    df['id_koi'] = df['id_koi'].replace(False,np.nan)
     df = df.sort_values(by='id_koi')
     lines = []
     for i, row in df.iterrows():
@@ -19,14 +17,13 @@ def tab_star():
         s+="{cks_steff:0.0f} & "
         s+="{cks_smet:0.2f} & "
         s+="{cks_svsini:0.1f} & "
+        s+="{cks_sprov:s} & "
         s+="{gdir_srad:0.2f} & "
         s+="{giso_smass:0.2f} & "
         s+="{giso_srad:0.2f} & "
         s+="{giso_srho:0.2f} & "
-        # s+="{giso_slogage:0.2f} & "
-
-        s+="{giso2_sparallax:0.2f} & "
-        s+="{cks_sprov:s} & "
+        s+="{giso_sage:0.1f} & "
+        #s+="{giso2_sparallax:0.2f} & "
         s+="{rm_sb2:0.0f} "
         # s+=r"{gaia2_gflux_ratio:0.2f} & " 
         # s+=r"{fur17_rcorr_avg:.3f} \\"
@@ -40,23 +37,42 @@ def tab_star():
 def tab_planet():
     df = ckscool.io.load_table('planets-cuts1+iso',cache=2)
     df = df.sort_values(by='id_koicand')
+    df['dr25_ror']*=100
     lines = []
     for i, row in df.iterrows():
 
-        s = r""
-        s+=r"{id_koicand:s} & "
-        s+=r"{koi_period:0.1f} & "
-        s+=r"{dr25_ror:.3f}  & "
-        s+=r"{gdir_prad:.2f} & "  
-        s+=r"{giso_sma:.3f} & "
-        s+=r"{giso_sinc:.1f} \\  "
-
+        s = r"""
+{id_koicand:s}
+{koi_period:0.1f}
+{dr25_ror:.1f}
+{dr25_tau:.1f}
+{gdir_prad:.2f}
+{giso_tau0:.1f}
+{giso_sma:.3f}
+{giso_sinc:.1f} \\"""
+        s = s[1:] # remove initial return
+        s = s.replace('\n',' & ')
         s = s.format(**row)
         s = s.replace('nan','\\nodata')
         lines.append(s)
 
-    return lines
 
+        """
+        s = r""
+        s = (r"{id_koicand:s} & "
+             +"{koi_period:0.1f} & "
+             +"{dr25_ror:.3f}  & "
+             +"{dr25_tau:.3f} & "
+             +"{giso_tau0:.3f} < 0.6 &"
+             +r"{gdir_prad:.2f} & "  
+             +r"{giso_sma:.3f} & "
+             +r"{giso_sinc:.1f} \\  ")
+        
+        s = s.format(**row)
+        s = s.replace('nan','\\nodata')
+        lines.append(s)
+        """
+    return lines
 
 def tab_star_csv():
     df = ckscool.io.load_table('planets-cuts1+iso',cache=2)

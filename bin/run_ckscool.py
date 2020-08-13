@@ -23,8 +23,7 @@ from ckscool.plot.compare2 import ComparisonRadius as CR
 import numpy as np
 
 import sys
-#sys.path.append('../Kepler-Radius-Ratio/')
-#import keprat.io
+import keprat.io
 
 def main():
     psr = ArgumentParser()
@@ -215,7 +214,7 @@ def create_workflow():
     w.plot['planet-per-prad-smass-mi-zoom'] = lambda : ckscool.plot.planet.fig_per_prad(query='0.75 < giso_smass < 0.95',**kw)
     w.plot['planet-per-prad-smass-hi-zoom'] = lambda : ckscool.plot.planet.fig_per_prad(query='0.95 < giso_smass',**kw)
 
-    w.plot['planet-smass-prad'] = ckscool.plot.planet.fig_smass_prad
+    w.plot['planet-smass-prad'] = lambda : ckscool.plot.planet.fig_smass_prad()
     w.plot['planet-smass-prad-nopoints'] = lambda : ckscool.plot.planet.fig_smass_prad(nopoints=True)
     w.plot['planet-smass-prad-nopoints-zoom'] = lambda : ckscool.plot.planet.fig_smass_prad(nopoints=True,zoom=True)
     w.plot['planet-smass-prad-zoom'] = lambda : ckscool.plot.planet.fig_smass_prad(zoom=True)
@@ -243,7 +242,12 @@ def create_workflow():
     # table
     f1 = ckscool.table.tab_star
     w.table['star'] = f1
-    w.table['star-stub'] = lambda: f1()[:5] + f1()[-5:]
+
+    def f1_stub():
+        table = f1()
+        return table[:5] + table[-9:-4]
+
+    w.table['star-stub'] = f1_stub
 
     f2 = ckscool.table.tab_planet
     w.table['planet'] = f2

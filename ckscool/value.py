@@ -129,6 +129,7 @@ def val_sample(return_dict=False):
     d['nstars ~dr1 & ~dr2 & cxm'] = (~m.in_dr1 & ~m.in_dr2 & m.in_cxm).sum()
     d['nstars (dr1 | dr2) & cxm'] = ((m.in_dr1 | m.in_dr2) & m.in_cxm).sum()
     d['nstars dr1 & dr2'] = (m.in_dr1 & m.in_dr2).sum()
+    d['nstars dr1 | dr2'] = (m.in_dr1 | m.in_dr2).sum()
     d['nstars dr1 | dr2 | cxm'] = (m.in_dr1 | m.in_dr2 | m.in_cxm).sum()
 
     d['nstars dr2 & cxm & pre-2018'] = (
@@ -155,9 +156,7 @@ def val_sample(return_dict=False):
 
     d['nstars dr2 & cxm & pre-2018 counts < 1500'] = b.sum()
     kois = ", ".join(m[b].id_koi.astype(int).astype(str))
-    
     d['kois dr2 & cxm & pre-2018 counts < 1500'] = kois
-
 
     table = 'planets-cuts1'
     df = ckscool.io.load_table(table,cache=2)
@@ -176,10 +175,10 @@ def val_sample(return_dict=False):
         d[key] = len(dfcut.id_kic.drop_duplicates())
         i+=1
 
+
     table = 'field-cuts'
-    df = ckscool.io.load_table(table,cache=2) # needs to be freshly
-                                              # generated to get
-                                              # cuttypes
+    # needs to be freshly generated to get cuttypes
+    df = ckscool.io.load_table(table,cache=2) 
     i = 0 
     bpass = np.zeros(len(df))
     for cuttype in df.cuttypes:
@@ -192,11 +191,71 @@ def val_sample(return_dict=False):
         d[key] = len(dfcut.id_kic.drop_duplicates())
         i+=1
 
+    table = 'planets-cuts2'
+    # needs to be freshly generated to get cuttypes
+    df = ckscool.io.load_table(table,cache=2) 
+    i = 0 
+    bpass = np.zeros(len(df))
+    for cuttype in df.cuttypes:
+        key = 'is'+cuttype
+        obj = ckscool.cuts.occur.get_cut(cuttype)
+        cut = obj(df,table)
+        bpass += df[key].astype(int)
+        dfcut = df[bpass==0]
+        key = 'nstars {}-cut-{}-{}'.format(table,i,cuttype)
+        d[key] = len(dfcut.id_kic.drop_duplicates())
+        i+=1
+
+    df = ckscool.io.load_table('star')
+    s = df.groupby('cks_sprov').size()
+    d['nstars smemp'] = s.emp
+    d['nstars smsyn'] = s.syn
+
+    faint  = df.query('m17_kepmag>14.2 ')
+    bright  = df.query('m17_kepmag<14.2 ')
+    d['kmag-err-med kepmag<14.2'] = "{:.2f}".format(
+        bright.m17_kmag_err.median()
+    )
+    d['kmag-err-med kepmag>14.2'] = "{:.2f}".format(
+        faint.m17_kmag_err.median()
+    )
+
+    _eval = '100 * gaia2_sparallax_err / gaia2_sparallax'
+    d['parallax-ferr-med kepmag<14.2'] = "{:.1f}".format(
+        bright.eval(_eval).median()
+    )
+    d['parallax-ferr-med kepmag>14.2'] = "{:.1f}".format(
+        faint.eval(_eval).median()
+    )
+
+    av_to_ak = (0.161+0.063)/(2.9197679+0.063) # extinction law
+    d['ak-med kepmag<14.2'] = "{:.2f}".format(bright.gdir_avs.median()
+                                              * av_to_ak)
+    d['ak-med kepmag>14.2'] = "{:.2f}".format(faint.gdir_avs.median()
+                                              * av_to_ak)
+
+    d['ak-max kepmag<14.2'] = "{:.2f}".format(bright.gdir_avs.max()
+                                              * av_to_ak)
+    d['ak-max kepmag>14.2'] = "{:.2f}".format(faint.gdir_avs.max()
+                                              * av_to_ak)
+
+
+    _eval = '100 * 0.5*(gdir_srad_err1 - gdir_srad_err2) / gdir_srad'
+    d['gdir_srad-ferr-med kepmag<14.2'] = "{:.1f}".format(
+        bright.eval(_eval)
+        .median()
+    )
+    d['gdir_srad-ferr-med kepmag>14.2'] = "{:.1f}".format(
+        faint.eval(_eval)
+        .median()
+    )
+
     
     lines = []
     for k, v in d.iteritems():
         line = r"{{{}}}{{{}}}".format(k,v)
         lines.append(line)
+
 
     if return_dict:
         return d

@@ -43,6 +43,7 @@ CACHEDIR = os.path.join(FILE, '../cache/')
 CACHEFN = os.path.join(CACHEDIR, 'load_table_cache.hdf')
 os.system('mkdir -p {}'.format(CACHEDIR)) # creates CACHEDIR if doesn't exist
 KBCFN = os.path.join(DATADIR,'kbcvel.csv')
+SMEMPLIMIT = 4800
 
 def load_table(table, cache=0, verbose=False, cachefn=None):
     """Load tables used in ckscool
@@ -240,6 +241,8 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
                                 .astype(int))
 
         df = df.fillna(False).sort_values(by='id_koi')
+        df['id_kic'] = df['id_kic'].astype(int)
+        
         
     elif table == 'm17+cdpp+gaia2+ber19':
         m17 = load_table('m17', cache=1)
@@ -265,129 +268,116 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         df.sample = 'koi-thompson18'
         df = ckscool.cuts.occur.add_cuts(df, cuttypes, 'koi-thompson18')
 
-    # Results from isoclassify table
-    elif table == 'iso':
-        '''
-        source = 'cks1'
-        star0 = ckscool._isoclassify.load_stellar_parameters(source)
-        fn = os.path.join(DATADIR,'isoclassify_{}.csv'.format(source))
-        iso = pd.read_csv(fn,index_col=0)
-        iso['id_koi'] = iso.id_starname.str.slice(start=-5).astype(int)
-        cks1 = pd.merge(star0,iso)
-        cks1.index = cks1.id_koi
-        cks1['cks_sprov'] = 'cks1' # note that obs didn't transfer over here.
-        '''
-        source = 'smemp'
-        star0 = ckscool._isoclassify.load_stellar_parameters(source)
-        fn = os.path.join(DATADIR,'isoclassify_{}.csv'.format(source))
-        iso = pd.read_csv(fn,index_col=0)
-        iso['id_kic'] = iso.id_starname.str.slice(start=3).astype(int)
-        smemp = pd.merge(star0,iso)
-        smemp = smemp.set_index('id_kic')
 
-        source = 'smsyn'
-        star0 = ckscool._isoclassify.load_stellar_parameters(source)
-        fn = os.path.join(DATADIR,'isoclassify_{}.csv'.format(source))
-        iso = pd.read_csv(fn,index_col=0)
-        iso['id_kic'] = iso.id_starname.str.slice(start=3).astype(int)
-        smsyn = pd.merge(star0,iso)
-        smsyn = smsyn.set_index('id_kic')
+
+    # All columns that appear in star table
+    elif table == 'star':
+        # DR1+DR2 
+        dr12 = load_table('DR1+DR2')
+        df2 = []
+        for i, row in dr12.iterrows():
+            d = dict(row['id_kic id_koi in_dr1 in_dr2'.split()])
+            if row.smemp_teff < SMEMPLIMIT:
+                d['cks_steff'] = row.smemp_teff
+                d['cks_steff_err'] = row.smemp_teff_err
+                d['cks_smet'] = row.smemp_fe
+                d['cks_smet_err'] = row.smemp_fe_err
+                d['cks_sprov'] = 'emp'
+            else:
+                d['cks_steff'] = row.smsyn_teff
+                d['cks_steff_err'] = row.smsyn_teff_err
+                d['cks_slogg'] = row.smsyn_logg
+                d['cks_slogg_err'] = row.smsyn_logg_err
+                d['cks_smet'] = row.smsyn_fe
+                d['cks_smet_err'] = row.smsyn_fe_err
+                d['cks_svsini'] = row.smsyn_vsini
+                d['cks_sprov'] = 'syn'
+
+            df2.append(d)
+            
+        df = pd.DataFrame(df2)
+
+        # Add in m17 parameters
+        cols = ['id_kic m17_kepmag m17_kmag m17_kmag_err'.split()]
+        m17 = load_table('m17', cache=1)
+        df = pd.merge(df,m17,how='left')
+
+        # Add in gaia2 parameters
+        cols = ['id_kic gaia2_sparallax gaia2_sparallax_err'.split()]
+        gaia = load_table('gaia2', cache=1)
+        df = pd.merge(df,gaia,how='left')
+
+        # Add in isoclassify parameters
+        iso2 = []
+        for prov in 'syn emp'.split():
+            source = 'sm'+prov
+            fn = os.path.join(DATADIR,'isoclassify_{}.csv'.format(source))
+            iso = pd.read_csv(fn,index_col=0)
+            iso['id_kic'] = iso.id_starname.str.slice(start=3).astype(int)
+            iso['cks_sprov'] = prov
+            cols = """
+            id_kic cks_sprov 
+            gdir_srad gdir_srad_err1 gdir_srad_err2
+            gdir_avs gdir_avs_err1 gdir_avs_err2
+            giso_smass giso_smass_err1 giso_smass_err2
+            giso_srad giso_srad_err1 giso_srad_err2
+            giso_srho giso_srho_err1 giso_srho_err2
+            giso_sage giso_sage_err1 giso_sage_err2
+            giso2_sparallax giso2_sparallax_err1 giso2_sparallax_err2
+            """.split()
+            iso2.append(iso[cols])
+
+        iso2 = pd.concat(iso2,sort=True).reset_index(drop=True)
+        df = pd.merge(df,iso2,how='left',on=['id_kic','cks_sprov'])
         
-        df = []
-        smemplimit = 4800
-
-        idx = smemp[smemp.cks_steff < smemplimit].index
-        df.append(smemp.loc[idx])
-        
-        idx = smemp[smemp.cks_steff >= smemplimit].index
-        df.append(smsyn.loc[idx])
-
-        df = pd.concat(df,sort=True)
-        df = df.reset_index()
+        # Add in ReaMatch parameters
+        rm = load_table('reamatch')
+        link = dr12['id_koi id_kic'.split()]
+        link['id_koi'] = link.id_koi.astype(int)
+        rm = pd.merge(link,rm)['id_kic rm_sb2'.split()] # merge on kic
+        df = pd.merge(df,rm,how='left')
+        df.loc[df.in_dr1,'rm_sb2'] = 1 # stars in DR1 automatically pass
 
     # Stellar sample
-    elif table=='planets+iso':
-        #star = load_table('m17+cdpp+gaia2+ber18')
-        plnt = load_table('koi-thompson18-dr25')
-        iso = load_table('iso',cache=1)
-        df = pd.merge(plnt, iso, how='left',on=['id_kic'])
+    elif table=='planets-cuts2':
+        plnt = load_table('planets-cuts1')
+        plnt = plnt[~plnt.isany]
+        star = load_table('star')
 
-        # Add in ReaMatch parameters. If the provenence of the
-        # parameter is CKS-I then in means that the star passed the
-        # reamatch pipeline
-        rm = load_table('reamatch')
-        df = pd.merge(df, rm, how='left', on='id_koi')
-        idx = df.query('cks_sprov == "cks1"').index
-        df.loc[idx,'rm_sb2'] = 1
+        # select columns needed for updating parameters and making cuts
+        cols = """
+        cks_steff cks_steff_err cks_svsini rm_sb2
+        id_kic cks_sprov 
+        gdir_srad gdir_srad_err1 gdir_srad_err2
+        gdir_avs gdir_avs_err1 gdir_avs_err2
+        giso_smass giso_smass_err1 giso_smass_err2
+        giso_srad giso_srad_err1 giso_srad_err2
+        giso_srho giso_srho_err1 giso_srho_err2
+        giso_sage giso_sage_err1 giso_sage_err2
+        giso2_sparallax giso2_sparallax_err1 giso2_sparallax_err2
+        """.split()
+        star = star[cols]
 
-        fn = os.path.join(DATADIR,'kolbl15/table9.tex')
-        k15 = pd.read_table(fn,sep='&',skiprows=9,header=None,nrows=64)
-        k15 = k15[[0]]
-        k15 = k15.rename(columns={0:'id_koi'})
-        k15['id_koi'] = k15.id_koi.str.replace('\t','').str.strip().replace('',None).astype(int)
-        k15 = k15.drop_duplicates()
-        temp = pd.merge(k15,df[['id_koi']]).drop_duplicates()
-        df = df.set_index('id_koi')
-        for id_koi in temp.id_koi:
-            df.loc[id_koi,'rm_sb2'] = 5
-
-        # Add in Furlan parameters
-        df = df.reset_index()
-        f17 = load_table('fur17')
-        df = pd.merge(df, f17, how='left',on=['id_kic','id_koi'])
-
-        # Add in Kraus parameters
-        k16 = load_table('kraus16')
-        df = pd.merge(df, k16, how='left', on='id_koi')
-
-        # Add in false positive prob
-        fpp = load_table('fpp')
-        df = pd.merge(df, fpp)
+        df = pd.merge(plnt, star, how='left',on=['id_kic'])
         
         # Add in expected transit duration
-        df['giso_tau0'] = 2.036 * df.koi_period**(1/3.) * df.giso_srho**(-1/3.0)
-        
-        print("updating parameters")
         df = ckscool.calc.update_planet_parameters(df)
-        #df = order_columns(df, verbose=True)
-
-        print("number of planets {}".format(len(df)))
-        df = df.dropna(subset=['cks_steff'])
-        print("number of planets after after removing missing CKS {}".format(len(df)))
-        
-    elif table == 'planets-cuts1+iso':
-        df = load_table('planets+iso',cache=1)
-        planets1 = load_table('planets-cuts1',cache=2)
-        df = ckscool.cuts.occur.add_cuts(df, planets1.cuttypes, 'koi-thompson18')
-        df = df[~df.isany]
-
-    elif table == 'planets-cuts2+iso':
-        df = load_table('planets-cuts1+iso',cache=2)
-        cuttypes = ['none','badvsini','sb2','badspecparallax','badprad','badpradprec','badimpacttau']
+        cuttypes = [
+            'none','badvsini','sb2','badspecparallax',
+            'badprad','badpradprec','badimpacttau'
+        ]
         df = ckscool.cuts.occur.add_cuts(df, cuttypes, 'koi-thompson18')
+        print("updating parameters")
 
+
+    ############################
+    # Tables from other papers #
+    ############################
     elif table == 'reamatch':
         fn = os.path.join(DATADIR, 'reamatch.csv')
         df = pd.read_csv(fn,index_col=None, usecols=range(6))
         df['id_koi'] = df.name.str.slice(start=-5).astype(int)
         namemap = {'id_koi':'id_koi','is_sb2':'rm_sb2'}
-        df = df.rename(columns=namemap)[namemap.values()]
-
-    # Spectroscopic parameters
-    elif table == 'smemp':
-        fn = os.path.join(DATADIR,'specmatch-emp_results.csv'.format(source))
-        iso = pd.read_csv(fn,index_col=0)
-        df = df.dropna(subset=['name'])
-        namemap = {
-            'obs':'id_obs',
-            'name':'id_name',
-            'teff':'sm_steff',
-            'teff_err':'sm_steff_err',
-            'radius':'sm_srad',
-            'radius_err':'sm_srad_err',
-            'fe':'sm_smet',
-            'fe_err':'sm_smet_err',
-        }
         df = df.rename(columns=namemap)[namemap.values()]
 
     elif table == 'nrm-previous':
@@ -397,9 +387,6 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         df['id_koi'] = df.name.str.slice(start=4).astype(int)
         df = df[['id_koi']]
 
-    ############################
-    # Tables from other papers #
-    ############################
     elif table == 'fpp':
         fn = os.path.join(DATADIR,'q1_q17_dr25_koifpp.csv')
         df = pd.read_csv(fn,comment='#')
