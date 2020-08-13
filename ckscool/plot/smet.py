@@ -6,7 +6,7 @@ import ckscool.io
 def fig_planets_warm_smet_smass():
     sns.set_context('paper')
     fig, axL = subplots(ncols=2, figsize=(4.5,6),sharey=True)
-    df = ckscool.io.load_table('planets-cuts2+iso')
+    df = ckscool.io.load_table('planets-cuts2')
     df = df[~df.isany]
     df = df.query(' 10 < giso_sinc < 300')
     query = '-0.2 < cks_smet < 0.2 and 0.6 < giso_smass < 1.2'

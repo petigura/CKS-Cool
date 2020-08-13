@@ -306,7 +306,7 @@ def bootstrap_chain(smass_bins, map, n_iter=10000, n_cores=1, debug=False):
 
         if map=="detections":
 
-            plnt = ckscool.io.load_table('planets-cuts2+iso')
+            plnt = ckscool.io.load_table('planets-cuts2')
             plnt = plnt[~plnt.isany]
             plnt = plnt[plnt.giso_smass.between(smass1,smass2)]
             chain = Parallel(n_jobs=n_cores)(delayed(bootstrap_detection)(plnt, smass1, smass2, seed=i, debug=debug) for i in np.arange(n_iter))
@@ -343,7 +343,7 @@ def bootstrap_chain(smass_bins, map, n_iter=10000, n_cores=1, debug=False):
             comp.create_splines()
 
             # load planet population
-            plnt = ckscool.io.load_table('planets-cuts2+iso')
+            plnt = ckscool.io.load_table('planets-cuts2')
             plnt = plnt[~plnt.isany]
             namemap = {'gdir_prad':'prad','koi_period':'per','giso_smass':'smass'}
             plnt = plnt.rename(columns=namemap)
@@ -370,7 +370,7 @@ def bootstrap_chain_sinc(smass_bins, map, n_iter=10000, n_cores=1, debug=False):
 
         if map=="detections":
 
-            plnt = ckscool.io.load_table('planets-cuts2+iso')
+            plnt = ckscool.io.load_table('planets-cuts2')
             plnt = plnt[~plnt.isany]
             plnt = plnt[plnt.giso_smass.between(smass1,smass2)]
             chain = Parallel(n_jobs=n_cores)(delayed(bootstrap_detection)(plnt, smass1, smass2, seed=i, sinc=True, debug=debug) for i in np.arange(n_iter))
@@ -405,7 +405,7 @@ def bootstrap_chain_sinc(smass_bins, map, n_iter=10000, n_cores=1, debug=False):
             comp.create_splines_sinc()
 
             # load planet population
-            plnt = ckscool.io.load_table('planets-cuts2+iso')
+            plnt = ckscool.io.load_table('planets-cuts2')
             plnt = plnt[~plnt.isany]
             namemap = {'gdir_prad':'prad','koi_period':'per','giso_smass':'smass','giso_sinc':'sinc'}
             plnt = plnt.rename(columns=namemap)

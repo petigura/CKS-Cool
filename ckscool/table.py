@@ -111,7 +111,7 @@ def tab_star_csv():
     return lines
 
 def tab_planet_csv():
-    df = ckscool.io.load_table('planets-cuts2+iso',cache=2)
+    df = ckscool.io.load_table('planets-cuts2',cache=2)
     df = df.sort_values(by='id_koicand')
 
     s = r""
@@ -135,7 +135,7 @@ def tab_planet_csv():
     return lines
 
 def tab_planet_full_csv():
-    df = ckscool.io.load_table('planets-cuts2+iso',cache=2)
+    df = ckscool.io.load_table('planets-cuts2',cache=2)
     df = df.sort_values(by='id_koicand')
     return df.to_csv(index=False).split('\n')
 

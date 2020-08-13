@@ -26,7 +26,7 @@ rstarticks = [0.5,0.7,1.0,1.4,2.0]
 def fig_hr():
     sns.set_context('paper',font_scale=1.0)
     fig,axL = subplots(figsize=(4,3.5))
-    df = ckscool.io.load_table('planets-cuts2+iso',cache=1)
+    df = ckscool.io.load_table('planets-cuts2',cache=1)
     df = df[~df.isany]
     df = df.groupby('id_koi',as_index=False).nth(0)
     plot(df.cks_steff,df.gdir_srad,'.')
@@ -42,7 +42,7 @@ def fig_hr():
 def fig_smet_smass():
     sns.set_context('paper',font_scale=1.0)
     fig,axL = subplots(figsize=(4,3.5))
-    df = ckscool.io.load_table('planets-cuts2+iso',cache=1)
+    df = ckscool.io.load_table('planets-cuts2',cache=1)
     df = df[~df.isany]
     df = df.groupby('id_koi',as_index=False).nth(0)
     semilogy()
@@ -65,7 +65,7 @@ def fig_smet_smass():
 
 def fig_ferr_hist_star():
     fig = subplots(figsize=(4,3))
-    df = ckscool.io.load_table('planets-cuts2+iso')
+    df = ckscool.io.load_table('planets-cuts2')
     df = df[~df.isany]
     df = df.groupby('id_koi',as_index=False).nth(0)
 
@@ -94,7 +94,7 @@ def fig_ferr_hist_star():
 
 def fig_ferr_hist_planet():
     fig = subplots(figsize=(4,3))
-    df = ckscool.io.load_table('planets-cuts2+iso')
+    df = ckscool.io.load_table('planets-cuts2')
 
     bins = arange(0,0.2,0.005)
     kw = dict(lw=2, bins=bins, histtype='step')

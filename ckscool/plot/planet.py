@@ -119,7 +119,7 @@ class ContourPlotter(object):
 def fig_per_prad(**kwargs):
     sns.set_context('paper',font_scale=1.1)
     fig, axL = subplots(figsize=(5,4))
-    df = ckscool.io.load_table('planets-cuts2+iso',cache=2)
+    df = ckscool.io.load_table('planets-cuts2',cache=2)
     df = df[~df.isany]
     _per_prad(df, **kwargs)
 
@@ -226,7 +226,7 @@ def _sinc_prad(df,nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1,for_g
     tight_layout()
 
 def fig_sinc_prad(nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1):
-    df = ckscool.io.load_table('planets-cuts2+iso',cache=1)
+    df = ckscool.io.load_table('planets-cuts2',cache=1)
     df = df[~df.isany]
     if query is not None:
         df = df.query(query)
@@ -359,7 +359,7 @@ def fig_smet_prad(nopoints=False,zoom=False):
     xk = 'cks_smet'
     yk = 'gdir_prad'
     yerrk = 'gdir_prad_err1'
-    df = ckscool.io.load_table('planets-cuts2+iso',cache=1)
+    df = ckscool.io.load_table('planets-cuts2',cache=1)
     df = df[~df.isany]
     df = df.dropna(subset=[xk,yk,yerrk])
 

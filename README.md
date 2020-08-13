@@ -54,9 +54,6 @@ bin/run_ckscool.py create-iso-batch # creates 9 csv files
 ### Test first 9 from each method
 
 ```bash
-isoclassify multiproc direct -1 data/isoclassify-cks1-direct.csv.16 isoclassify/cks1/direct.csv --baseoutdir isoclassify/cks1/direct/
-isoclassify multiproc grid -1 data/isoclassify-cks1-grid-parallax-yes.csv.16 isoclassify/cks1/grid-parallax-yes.csv --baseoutdir isoclassify/cks1/grid-parallax-yes/
-isoclassify multiproc grid -1 data/isoclassify-cks1-grid-parallax-no.csv.16 isoclassify/cks1/grid-parallax-no.csv --baseoutdir isoclassify/cks1/grid-parallax-no/
 isoclassify multiproc direct -1 data/isoclassify-smsyn-direct.csv.16 isoclassify/smsyn/direct.csv --baseoutdir isoclassify/smsyn/direct/
 isoclassify multiproc grid -1 data/isoclassify-smsyn-grid-parallax-yes.csv.16 isoclassify/smsyn/grid-parallax-yes.csv --baseoutdir isoclassify/smsyn/grid-parallax-yes/
 isoclassify multiproc grid -1 data/isoclassify-smsyn-grid-parallax-no.csv.16 isoclassify/smsyn/grid-parallax-no.csv --baseoutdir isoclassify/smsyn/grid-parallax-no/
@@ -69,9 +66,6 @@ Look at the logs and confirm isoclassify is behaving right. Run them on Erik's l
 
 
 ```bash
-isoclassify multiproc direct 6 data/isoclassify-cks1-direct.csv isoclassify/cks1/direct.csv --baseoutdir isoclassify/cks1/direct/ --plot none
-isoclassify multiproc grid 6 data/isoclassify-cks1-grid-parallax-yes.csv isoclassify/cks1/grid-parallax-yes.csv --baseoutdir isoclassify/cks1/grid-parallax-yes/ --plot none
-isoclassify multiproc grid 6 data/isoclassify-cks1-grid-parallax-no.csv isoclassify/cks1/grid-parallax-no.csv --baseoutdir isoclassify/cks1/grid-parallax-no/ --plot none
 isoclassify multiproc direct 6 data/isoclassify-smsyn-direct.csv isoclassify/smsyn/direct.csv --baseoutdir isoclassify/smsyn/direct/  --plot none
 isoclassify multiproc grid 6 data/isoclassify-smsyn-grid-parallax-yes.csv isoclassify/smsyn/grid-parallax-yes.csv --baseoutdir isoclassify/smsyn/grid-parallax-yes/ --plot none
 isoclassify multiproc grid 6 data/isoclassify-smsyn-grid-parallax-no.csv isoclassify/smsyn/grid-parallax-no.csv --baseoutdir isoclassify/smsyn/grid-parallax-no/ --plot none

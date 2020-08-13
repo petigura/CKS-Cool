@@ -58,14 +58,14 @@ def fig_compare(table):
         label2 = 'B18'
 
     elif table=='ckscool-m17':
-        df = ckscool.io.load_table('planets-cuts2+iso')
+        df = ckscool.io.load_table('planets-cuts2')
         df = df.groupby('id_koi',as_index=False).first()
         xk = 'cks_steff'
         yk = 'm17_steff'
         label2 = 'M17'
 
     elif table=='ckscool-ber18':
-        df = ckscool.io.load_table('planets-cuts2+iso')
+        df = ckscool.io.load_table('planets-cuts2')
         df = df.groupby('id_koi',as_index=False).first()
         xk = 'cks_steff'
         yk = 'ber18_steff'

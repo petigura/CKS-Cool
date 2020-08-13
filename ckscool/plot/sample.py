@@ -255,7 +255,7 @@ def fig_cuts_smass_steff():
     )
 
 def fig_cuts_stars_hr():
-    df = ckscool.io.load_table('planets-cuts2+iso',cache=2)
+    df = ckscool.io.load_table('planets-cuts2',cache=2)
     nplots = len(df.cuttypes)
     cuts(
         df, 'cks_steff', 'gdir_srad', nrows=1, ncols=nplots, plot_func=semilogy
@@ -277,7 +277,7 @@ def fig_cuts_planets_per_prad(zoom=False):
     yk = 'gdir_prad'
     nrows = 2
     ncols = 4
-    df = ckscool.io.load_table('planets-cuts2+iso',cache=2)
+    df = ckscool.io.load_table('planets-cuts2',cache=2)
     cuts(df, xk, yk , nrows=nrows, ncols=ncols, stars=False, plot_func=loglog)
     axL = gcf().get_axes()
     axL = np.array(axL).reshape(nrows,ncols) 

@@ -110,11 +110,9 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
 
     # Gaia DR2
     elif table=='gaia2':
-        #fn = os.path.join(DATADIR,'xmatch_m17_gaiadr2-result.csv')
-        #fn = os.path.join(DATADIR,'xmatch_gaia2_m17_ruwe_tmass-result.vot.gz')
         fn = os.path.join(DATADIR,'xmatch_gaia2_m17_ruwe_tmass-result.csv')
         df = pd.read_csv(fn)
-        # Systematic offset from Zinn et al. (2018)
+        # Apply systematic offset from Zinn et al. (2018)
         df['gaia2_sparallax'] += 0.053
 
     # CDPP table
@@ -262,7 +260,7 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
 
     elif table == 'planets-cuts1':
         star = load_table('m17+cdpp+gaia2+ber19',cache=1)
-        plnt = load_table('koi-thompson18-dr25')
+        plnt = load_table('koi-thompson18')
         df = pd.merge(star,plnt)
         cuttypes = ['none','faint','giantcmd','ruwe','notreliable','lowsnr']
         df.sample = 'koi-thompson18'
@@ -361,7 +359,7 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         df = pd.merge(plnt, star, how='left',on=['id_kic'])
         
         # Add in expected transit duration
-        df = ckscool.calc.update_planet_parameters(df)
+        df, samp = ckscool.calc.update_planet_parameters(df)
         cuttypes = [
             'none','badvsini','sb2','badspecparallax',
             'badprad','badpradprec','badimpacttau'
@@ -396,38 +394,6 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
     # KOI tables
     elif table=='koi-thompson18':
         df = load_table_koi(table)
-
-    # KOI tables
-    elif table == 'koi-thompson18-dr25-chains':
-        df = load_table_koi(table)
-        t18.index = t18.id_koicand
-        fn = os.path.join(DATADIR,'dr25-mcmc-chains_missing.txt' )
-        df = pd.read_csv(fn,sep=' ',names=['s','x'])
-        df['id_koicand'] = df.s.apply(lambda x : x.split('-')[-1]).str.upper()
-        t18 = t18.drop(df.id_koicand)
-        df = t18
-        
-    elif table == 'koi-thompson18-dr25':
-        df = load_table_koi('koi-thompson18')
-        fn = os.path.join(DATADIR,'dr25-mcmc-summary.hdf')
-        dr25 = pd.read_hdf(fn ,'dr25',)
-        namemap = {
-            'dr25_RD1_cum':'dr25_ror',
-            'dr25_RD1_cum_err1':'dr25_ror_err1',
-            'dr25_RD1_cum_err2':'dr25_ror_err2',
-            'dr25_BB1_cum':'dr25_impact',
-            'dr25_BB1_cum_err1':'dr25_impact_err1',
-            'dr25_BB1_cum_err2':'dr25_impact_err2',
-            'dr25_TAU1_cum':'dr25_tau',
-            'dr25_TAU1_cum_err1':'dr25_tau_err1',
-            'dr25_TAU1_cum_err2':'dr25_tau_err2',
-            'fgraz':'dr25_fgraz',
-            'autocorr_over_length':'dr25_autocorr_over_length',
-        }
-
-        cols = ['id_koicand'] +  namemap.values()
-        dr25 = dr25.rename(columns=namemap)[cols]
-        df = pd.merge(df,dr25)
 
     elif table == 'koi-coughlin16':
         df = load_table_koi(table)
@@ -491,7 +457,7 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         df = add_prefix(df,'m13_')
 
     elif table=='ckscool-mann13':
-        cks = load_table('planets-cuts2+iso').groupby('id_koi',as_index=False).nth(0)
+        cks = load_table('planets-cuts2').groupby('id_koi',as_index=False).nth(0)
         m13 = load_table('mann13')
         df = pd.merge(cks,m13,on='id_koi')
 
@@ -518,7 +484,7 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         df = add_prefix(df,'d13_')
 
     elif table == 'ckscool-dressing13':
-        cks = load_table('planets-cuts2+iso').groupby('id_koi',as_index=False).nth(0)
+        cks = load_table('planets-cuts2').groupby('id_koi',as_index=False).nth(0)
         d13 = load_table('dressing13')
         df = pd.merge(cks,d13,on='id_kic')
 
@@ -559,7 +525,7 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         df = add_prefix(df,'ber19_')
 
     elif table == 'ckscool-brewer18':
-        cks = load_table('planets-cuts2+iso').groupby('id_koi',as_index=False).nth(0)
+        cks = load_table('planets-cuts2').groupby('id_koi',as_index=False).nth(0)
         m13 = load_table('brewer18')
         df = pd.merge(cks,m13,on='id_koi')
 

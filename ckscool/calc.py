@@ -3,10 +3,8 @@ from collections import OrderedDict
 import numpy as np
 import pandas as pd
 
-SEED = 0  # reproducability
-np.random.RandomState(SEED)
-
 TAU_CONST = 2.036 # duration [hr] of a P = 1 day planet orbiting a 1 g/cc star
+
 
 def update_planet_parameters(df):
     """Update planet parameters
@@ -28,16 +26,27 @@ def update_planet_parameters(df):
 
     # load up chains:
     samp = dict(dr25_ror=[],dr25_rho=[],dr25_b=[],dr25_period=[]) 
-    print("loading up {} chains".format(df))
+    print("loading up {} chains".format(len(df)))
+    drop = []
     for i, row in df.iterrows():
+        if i % 100 == 0:
+            print(i)
         fn = '../Kepler-Radius-Ratio/test_trimmed-thinned_comp.hdf'
-        chain = pd.read_hdf(fn,row.id_koicand)
+        try:
+            with pd.HDFStore(fn) as store:
+                chain = pd.read_hdf(store,row.id_koicand)
+        except KeyError:
+            drop.append(row.id_koicand)
+            print("no chains for {}".format(row.id_koicand))
+            continue
+
+        
         samp['dr25_ror'].append(chain['RD1'].sample(nsamp,replace=True))
         samp['dr25_rho'].append(chain['RHO'].sample(nsamp,replace=True))
         samp['dr25_b'].append(chain['BB1'].sample(nsamp,replace=True))
         samp['dr25_period'].append(chain['PE1'].sample(nsamp,replace=True))
-        #if i % 100 == 0:
-        print(i)
+
+    df = df.set_index('id_koicand').drop(drop).reset_index()
             
     for k in samp.keys():
         samp[k] = np.vstack(samp[k]).astype(float)
@@ -48,36 +57,38 @@ def update_planet_parameters(df):
         * samp['dr25_period']**0.33
         * samp['dr25_rho']**-0.33
     )
-
-    def sample(loc, scale):
+    def sample(loc, scale, seed):
+        np.random.RandomState(seed)
         loc = np.array(loc).reshape(-1, 1)
         scale = np.array(scale).reshape(-1, 1)
         return loc + scale * np.random.randn(1, nsamp)
 
+    import pdb;pdb.set_trace()
+
     # stellar radius direct method
     loc = df.gdir_srad
     scale = df.eval('0.5 * (gdir_srad_err1 - gdir_srad_err2)')
-    samp['gdir_srad'] = sample(loc, scale)
+    samp['gdir_srad'] = sample(loc, scale, 0)
 
     # stellar radius grid method
     loc = df.giso_srad
     scale = df.eval('0.5 * (giso_srad_err1 - giso_srad_err2)')
-    samp['giso_srad'] = sample(loc, scale)
+    samp['giso_srad'] = sample(loc, scale, 1)
 
     # stellar mass
     loc = df.giso_smass
     scale = df.eval('0.5 * (giso_smass_err1 - giso_smass_err2)')
-    samp['smass'] = sample(loc, scale)
+    samp['smass'] = sample(loc, scale, 2)
 
     # Teff
     loc = df.cks_steff
     scale = df.cks_steff_err
-    samp['steff'] = sample(loc, scale)
+    samp['steff'] = sample(loc, scale, 3)
 
     # density
     loc = df.giso_srho
     scale = df.eval('0.5 * (giso_srho_err1 - giso_srho_err2)')
-    samp['giso_srho'] = sample(loc, scale)
+    samp['giso_srho'] = sample(loc, scale, 4)
     
     # Planet radius
     samp['gdir_prad'] = samp['dr25_ror'] * samp['gdir_srad'] * 109.245
@@ -95,7 +106,7 @@ def update_planet_parameters(df):
     period = np.array(df[['koi_period']])
     samp['giso_tau0'] = (TAU_CONST * period**0.33 * samp['giso_srho']**-0.33)
 
-    keys = 'dr25_ror dr25_rho dr25_b gdir_prad giso_prad giso_sinc giso_sma giso_tau0'.split()
+    keys = 'dr25_period dr25_ror dr25_rho dr25_b dr25_tau gdir_prad giso_prad giso_sinc giso_sma giso_tau0'.split()
     for k in keys:
         kerr1 = k+'_err1'
         kerr2 = k+'_err2'
@@ -105,4 +116,4 @@ def update_planet_parameters(df):
 
     df['dr25_fgraz'] = ((samp['dr25_b'] > 1.0).sum(axis=1).astype(float)
                         / samp['dr25_b'].shape[1])
-    return df
+    return df, samp

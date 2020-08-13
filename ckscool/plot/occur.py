@@ -536,7 +536,7 @@ def fig_contour_smass(per1, per2, normalize=False,):
     xticks([log10(_xt) for _xt in xt],xt)
     yticks([log10(_yt) for _yt in yt],yt)
 
-    df = ckscool.io.load_table('planets-cuts2+iso')
+    df = ckscool.io.load_table('planets-cuts2')
     df = df[~df.isany]
     df = df[df.koi_period.between(per1,per2)]
     plot(log10(df.giso_smass), log10(df.gdir_prad),'.')
