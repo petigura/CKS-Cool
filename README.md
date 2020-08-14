@@ -36,9 +36,12 @@ $ cp ../CKS-Gaia/load_table_cache.hdf data/cksgaia_cache.hdf
 
 ## Compute Stellar/Planetary Properties
 
-1. Download smemp and smsyn catalogs to `data/`
+1. Download smemp and smsyn catalogs to `data/CKS_Spectroscopic_Parameters.csv`
 
+```
 https://jump.caltech.edu/explorer/58/
+mv ~/Downloads/CKS_Spectroscopic_Parameters.csv data/
+```
 
 2. Run the isoclassify code on combined DR1+DR2 dataset.
 
@@ -87,8 +90,6 @@ Run `ReaMatch.ipynb` and copy output file to `reamatch.csv` to `~/Dropbox/CKS-Co
 
 
 4. Create final table of stellar / planet parameters
-
-
 
 
 

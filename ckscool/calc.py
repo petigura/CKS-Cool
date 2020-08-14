@@ -63,7 +63,6 @@ def update_planet_parameters(df):
         scale = np.array(scale).reshape(-1, 1)
         return loc + scale * np.random.randn(1, nsamp)
 
-    import pdb;pdb.set_trace()
 
     # stellar radius direct method
     loc = df.gdir_srad
