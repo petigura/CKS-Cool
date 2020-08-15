@@ -10,6 +10,8 @@ from astropy import units as u
 from sklearn.utils import resample
 
 
+figsize=(4,3)
+font_scale = 1.0
 
 class ContourPlotter(object):
     def __init__(self, x, xerr, y, yerr, xscale='log', yscale='log'):
@@ -117,8 +119,8 @@ class ContourPlotter(object):
         errorbar(self.x,self.y,yerr=self.yerr,fmt='.',elinewidth=0.5,ms=4)
 
 def fig_per_prad(**kwargs):
-    sns.set_context('paper',font_scale=1.1)
-    fig, axL = subplots(figsize=(5,4))
+    sns.set_context('paper',font_scale=font_scale)
+    fig, axL = subplots(figsize=figsize)
     df = ckscool.io.load_table('planets-cuts2',cache=2)
     df = df[~df.isany]
     _per_prad(df, **kwargs)
@@ -183,6 +185,8 @@ def _per_prad(df,nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1,for_gr
     tight_layout()
 
 def _sinc_prad(df,nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1,for_gradient=False):
+    sns.set_context('paper',font_scale=font_scale)
+    fig, axL = subplots(figsize=figsize)
     xk = 'giso_sinc'
     yk = 'gdir_prad'
     yerrk = 'gdir_prad_err1'
@@ -231,9 +235,12 @@ def fig_sinc_prad(nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1):
     if query is not None:
         df = df.query(query)
 
+    _sinc_prad(df)
+
+        
 def fig_intfxuv_prad(nopoints=False,zoom=False):
     sns.set_context('paper')
-    fig, axL = subplots(figsize=(5,4))
+    fig, axL = subplots(figsize=figsize)
     xk = 'giso_sintfxuv'
     yk = 'gdir_prad'
     yerrk = 'gdir_prad_err1'
@@ -301,12 +308,12 @@ def fig_intfxuv_prad(nopoints=False,zoom=False):
 
     tight_layout()
 
-def fig_smass_prad(nopoints=False,zoom=False, boost=False):
+def fig_smass_prad(nopoints=False,zoom=False, normalize=False):
     """
-    Boost: whether to normalize KDE so that each mass bin gets equal weight
+    normalize: whether to normalize KDE so that each mass bin gets equal weight
     """
     sns.set_context('paper')
-    fig, axL = subplots(figsize=(5,4))
+    fig, axL = subplots(figsize=figsize)
     xk = 'giso_smass'
     xerrk = 'giso_smass_err1'
     yk = 'gdir_prad'
@@ -337,8 +344,10 @@ def fig_smass_prad(nopoints=False,zoom=False, boost=False):
     xticks = [0.5,0.7,1.0,1.4]
     yticks = [0.5,0.7,1.0,1.4,2.0,2.8,4.0,5.6,8.0,11.3,16.0]
 
+    
     p1.compute_density()
-    p1.normalize_density()
+    if normalize:
+        p1.normalize_density()
     p1.xticks(xticks)
     p1.yticks(yticks)
     p1.plot_contour()
@@ -354,8 +363,8 @@ def fig_smass_prad(nopoints=False,zoom=False, boost=False):
 
 
 def fig_smet_prad(nopoints=False,zoom=False):
-    sns.set_context('paper',font_scale=1.1)
-    fig, axL = subplots(figsize=(5,4))
+    sns.set_context('paper',font_scale=font_scale)
+    fig, axL = subplots(figsize=figsize)
     xk = 'cks_smet'
     yk = 'gdir_prad'
     yerrk = 'gdir_prad_err1'
@@ -399,7 +408,7 @@ def fig_smet_prad(nopoints=False,zoom=False):
         p1.xlim(-0.5,0.5)
         p1.ylim(1,4)
 
-    #tight_layout()
+    tight_layout()
 
 
 def add_anchored(*args,**kwargs):

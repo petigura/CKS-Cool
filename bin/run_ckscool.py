@@ -203,39 +203,42 @@ def create_workflow():
     w.plot['compare-ckscool-mann13'] = lambda : fig_compare('ckscool-mann13')
     w.plot['compare-ckscool-dressing13'] = lambda : fig_compare('ckscool-dressing13')
     w.plot['compare-ckscool-brewer18'] = lambda : fig_compare('ckscool-brewer18')
-    w.plot['planet-per-prad'] = ckscool.plot.planet.fig_per_prad
-    w.plot['planet-per-prad-nopoints'] = lambda : ckscool.plot.planet.fig_per_prad(nopoints=True)
-    w.plot['planet-per-prad-nopoints-zoom'] = lambda : ckscool.plot.planet.fig_per_prad(nopoints=True,zoom=True)
-    w.plot['planet-per-prad-zoom'] = lambda : ckscool.plot.planet.fig_per_prad(zoom=True)
 
     w.plot['srad-h13'] = lambda: CR('srad-h13').plot_comparison()
     w.plot['srad-s15'] = lambda: CR('srad-s15').plot_comparison()
 
     kw = dict(zoom=True,xerrfac=0.5,yerrfac=1.5)
-    w.plot['planet-per-prad-smass-lo-zoom'] = lambda : ckscool.plot.planet.fig_per_prad(query='giso_smass < 0.75',**kw)
-    w.plot['planet-per-prad-smass-mi-zoom'] = lambda : ckscool.plot.planet.fig_per_prad(query='0.75 < giso_smass < 0.95',**kw)
-    w.plot['planet-per-prad-smass-hi-zoom'] = lambda : ckscool.plot.planet.fig_per_prad(query='0.95 < giso_smass',**kw)
+
+    w.plot['planet-per-prad'] = ckscool.plot.planet.fig_per_prad
+    #w.plot['planet-per-prad-nopoints'] = lambda : ckscool.plot.planet.fig_per_prad(nopoints=True)
+    #w.plot['planet-per-prad-nopoints-zoom'] = lambda : ckscool.plot.planet.fig_per_prad(nopoints=True,zoom=True)
+    #w.plot['planet-per-prad-zoom'] = lambda : ckscool.plot.planet.fig_per_prad(zoom=True)
+
+    #w.plot['planet-per-prad-smass-lo-zoom'] = lambda : ckscool.plot.planet.fig_per_prad(query='giso_smass < 0.75',**kw)
+    #w.plot['planet-per-prad-smass-mi-zoom'] = lambda : ckscool.plot.planet.fig_per_prad(query='0.75 < giso_smass < 0.95',**kw)
+    #w.plot['planet-per-prad-smass-hi-zoom'] = lambda : ckscool.plot.planet.fig_per_prad(query='0.95 < giso_smass',**kw)
 
     w.plot['planet-smass-prad'] = lambda : ckscool.plot.planet.fig_smass_prad()
-    w.plot['planet-smass-prad-nopoints'] = lambda : ckscool.plot.planet.fig_smass_prad(nopoints=True)
-    w.plot['planet-smass-prad-nopoints-zoom'] = lambda : ckscool.plot.planet.fig_smass_prad(nopoints=True,zoom=True)
-    w.plot['planet-smass-prad-zoom'] = lambda : ckscool.plot.planet.fig_smass_prad(zoom=True)
+    #w.plot['planet-smass-prad-nopoints'] = lambda : ckscool.plot.planet.fig_smass_prad(nopoints=True)
+    #w.plot['planet-smass-prad-nopoints-zoom'] = lambda : ckscool.plot.planet.fig_smass_prad(nopoints=True,zoom=True)
+    #w.plot['planet-smass-prad-zoom'] = lambda : ckscool.plot.planet.fig_smass_prad(zoom=True)
 
     w.plot['planet-sinc-prad'] = ckscool.plot.planet.fig_sinc_prad
-    w.plot['planet-sinc-prad-nopoints'] = lambda : ckscool.plot.planet.fig_sinc_prad(nopoints=True)
-    w.plot['planet-sinc-prad-nopoints-zoom'] = lambda : ckscool.plot.planet.fig_sinc_prad(nopoints=True,zoom=True)
-    w.plot['planet-sinc-prad-zoom'] = lambda : ckscool.plot.planet.fig_sinc_prad(zoom=True)
+    #w.plot['planet-sinc-prad-nopoints'] = lambda : ckscool.plot.planet.fig_sinc_prad(nopoints=True)
+    #w.plot['planet-sinc-prad-nopoints-zoom'] = lambda : ckscool.plot.planet.fig_sinc_prad(nopoints=True,zoom=True)
+    #w.plot['planet-sinc-prad-zoom'] = lambda : ckscool.plot.planet.fig_sinc_prad(zoom=True)
 
     kw = dict(zoom=True,xerrfac=0.5,yerrfac=1.5)
-    w.plot['planet-sinc-prad-smass-lo-zoom'] = lambda : ckscool.plot.planet.fig_sinc_prad(query='giso_smass < 0.75',**kw)
-    w.plot['planet-sinc-prad-smass-mi-zoom'] = lambda : ckscool.plot.planet.fig_sinc_prad(query='0.75 < giso_smass < 0.95',**kw)
-    w.plot['planet-sinc-prad-smass-hi-zoom'] = lambda : ckscool.plot.planet.fig_sinc_prad(query='0.95 < giso_smass',**kw)
+    #w.plot['planet-sinc-prad-smass-lo-zoom'] = lambda : ckscool.plot.planet.fig_sinc_prad(query='giso_smass < 0.75',**kw)
+    #w.plot['planet-sinc-prad-smass-mi-zoom'] = lambda : ckscool.plot.planet.fig_sinc_prad(query='0.75 < giso_smass < 0.95',**kw)
+    #w.plot['planet-sinc-prad-smass-hi-zoom'] = lambda : ckscool.plot.planet.fig_sinc_prad(query='0.95 < giso_smass',**kw)
 
 
     w.plot['planet-smet-prad'] = ckscool.plot.planet.fig_smet_prad
-    w.plot['planet-smet-prad-nopoints'] = lambda : ckscool.plot.planet.fig_smet_prad(nopoints=True)
-    w.plot['planet-smet-prad-nopoints-zoom'] = lambda : ckscool.plot.planet.fig_smet_prad(nopoints=True,zoom=True)
-    w.plot['planet-smet-prad-zoom'] = lambda : ckscool.plot.planet.fig_smet_prad(zoom=True)
+    #w.plot['planet-smet-prad-nopoints'] = lambda : ckscool.plot.planet.fig_smet_prad(nopoints=True)
+    #w.plot['planet-smet-prad-nopoints-zoom'] = lambda : ckscool.plot.planet.fig_smet_prad(nopoints=True,zoom=True)
+    #w.plot['planet-smet-prad-zoom'] = lambda : ckscool.plot.planet.fig_smet_prad(zoom=True)
+
     w.plot['occur-contour-three'] = ckscool.plot.occur.fig_contour_three
     w.plot['occur-contour-six'] = ckscool.plot.occur.fig_contour_six
     w.plot['occur-contour-six-sinc'] = ckscool.plot.occur.fig_contour_six_sinc

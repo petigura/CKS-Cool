@@ -168,15 +168,24 @@ class CutPrad(CutBase):
 
 class CutNotReliable(CutBase):
     """Remove stars Remove stars with a FP designation from a number of catalogs
+
+    koi_disposition is the disposition on the exoplanet archive.
+    koi_disposition_sup is the disposition on the exoplanet archive.
+    koi_pdisposition is the disposition based on kepler data
+
+    must not be listed as a false positive based on kepler project,
+    with a score of > 0.75. Must also not be listed as a false positive on exoplanet archive
+
     """
     cuttype = 'notreliable'
     plotstr = 'Reliable KOI'
     texstr = plotstr
     def cut(self):
         if self.sample=='koi-thompson18':
-            b1 = self.df.koi_disposition.str.contains('FALSE')  
+            b1 = self.df.koi_pdisposition.str.contains('FALSE')  
             b2 = self.df.koi_score < cd['max-score']
-            return b1 | b2
+            b3 = self.df.koi_disposition_sup.str.contains('FALSE')
+            return b1 | b2 | b3
         elif self.sample=='koi-mullally15':
             b1 = self.df.koi_disposition.str.contains('FALSE')  
             return b1
@@ -186,10 +195,10 @@ class CutNotReliable(CutBase):
 class CutImpact(CutBase):
     """Remove planets with high impact parameters"""
     cuttype = 'badimpact'
-    texstr = r'$b$ < 0.7'
+    texstr = r'$b$ < 0.8'
     plotstr = texstr
     def cut(self):
-        b = self.df.koi_impact > 0.7
+        b = self.df.dr25_b > 0.8
         return b
 
 class CutImpactTau(CutBase):
@@ -198,7 +207,7 @@ class CutImpactTau(CutBase):
     texstr = r'$\tau / \tau_0$ > 0.6'
     plotstr = texstr
     def cut(self):
-        b = (self.df.dr25_tau / self.df.giso_tau0) < 0.6
+        b = self.df.eval('dr25_period > 3 and dr25_tau / giso_tau0 < 0.6')
         return b
 
 class CutPradPrecision(CutBase):
@@ -207,7 +216,7 @@ class CutPradPrecision(CutBase):
     texstr = r'$\sigma(R_p) / R_p $ < 0.2'
     plotstr = texstr
     def cut(self):
-        b = self.df.eval('gdir_prad_err1/gdir_prad') > 0.2
+        b = self.df.eval('gdir_prad_err1/gdir_prad > 0.2') 
         return b
 
 # Not really necessary

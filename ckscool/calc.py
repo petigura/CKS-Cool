@@ -25,6 +25,7 @@ def update_planet_parameters(df):
     nsamp = 10000
 
     # load up chains:
+    namemap = {'RD1':'dr25_ror','RHO':'dr25_rho','BB1':'dr25_b','PE1':'dr25_period'}
     samp = dict(dr25_ror=[],dr25_rho=[],dr25_b=[],dr25_period=[]) 
     print("loading up {} chains".format(len(df)))
     drop = []
@@ -35,16 +36,20 @@ def update_planet_parameters(df):
         try:
             with pd.HDFStore(fn) as store:
                 chain = pd.read_hdf(store,row.id_koicand)
+                chain2 = chain.dropna(subset=namemap.keys())
+                diff = len(chain) - len(chain2) 
+                if diff > 0:
+                    print("dropped {} nan rows from {} chains"
+                          .format(diff,row.id_koicand))
+                chain = chain2
+
         except KeyError:
             drop.append(row.id_koicand)
             print("no chains for {}".format(row.id_koicand))
             continue
 
-        
-        samp['dr25_ror'].append(chain['RD1'].sample(nsamp,replace=True))
-        samp['dr25_rho'].append(chain['RHO'].sample(nsamp,replace=True))
-        samp['dr25_b'].append(chain['BB1'].sample(nsamp,replace=True))
-        samp['dr25_period'].append(chain['PE1'].sample(nsamp,replace=True))
+        for key,val in namemap.iteritems():
+            samp[val].append(chain[key].sample(nsamp,replace=True))
 
     df = df.set_index('id_koicand').drop(drop).reset_index()
             

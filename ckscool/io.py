@@ -336,15 +336,18 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         df = pd.merge(df,rm,how='left')
         df.loc[df.in_dr1,'rm_sb2'] = 1 # stars in DR1 automatically pass
 
+
     # Stellar sample
-    elif table=='planets-cuts2':
+    elif table=='planets-cuts1+iso+dr25':
         plnt = load_table('planets-cuts1')
         plnt = plnt[~plnt.isany]
         star = load_table('star')
 
         # select columns needed for updating parameters and making cuts
         cols = """
-        cks_steff cks_steff_err cks_svsini rm_sb2
+        cks_steff cks_steff_err 
+        cks_smet cks_smet_err 
+        cks_svsini rm_sb2
         id_kic cks_sprov 
         gdir_srad gdir_srad_err1 gdir_srad_err2
         gdir_avs gdir_avs_err1 gdir_avs_err2
@@ -356,18 +359,19 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         """.split()
         star = star[cols]
 
-        df = pd.merge(plnt, star, how='left',on=['id_kic'])
+        df = pd.merge(plnt, star, on=['id_kic'])
         
         # Add in expected transit duration
         df, samp = ckscool.calc.update_planet_parameters(df)
+
+    elif table=='planets-cuts2':
+        df = load_table('planets-cuts1+iso+dr25',cache=1)
         cuttypes = [
             'none','badvsini','sb2','badspecparallax',
-            'badprad','badpradprec','badimpacttau'
+            'badimpact','badimpacttau','badprad','badpradprec'
         ]
         df = ckscool.cuts.occur.add_cuts(df, cuttypes, 'koi-thompson18')
-        print("updating parameters")
-
-
+        
     ############################
     # Tables from other papers #
     ############################
@@ -662,6 +666,7 @@ def load_table_koi(table):
         df = pd.read_csv(csvfn,comment='#',index_col=0)
         names = [
             'koi_disposition',
+            'koi_pdisposition',
             'koi_score',
             'koi_period',
             'koi_period_err1',
@@ -691,6 +696,14 @@ def load_table_koi(table):
         ]
         df = df[names]
 
+        csvfn = 'q1_q17_dr25_sup_koi_2020.08.14_12.09.28.csv'
+        csvfn = os.path.join(DATADIR,csvfn)
+        df2 = pd.read_csv(csvfn,comment='#',index_col=0)
+        df = pd.merge(df,df2[['kepoi_name','koi_disposition']],
+                      on=['kepoi_name'],how='left',suffixes=['','_sup'])
+
+        
+        
     elif table=='koi-coughlin16':
         csvfn = os.path.join(DATADIR,'q1_q17_dr24_koi.csv')
         df = pd.read_csv(csvfn,comment='#',index_col=0)

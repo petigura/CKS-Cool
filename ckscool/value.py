@@ -204,8 +204,16 @@ def val_sample(return_dict=False):
         dfcut = df[bpass==0]
         key = 'nstars {}-cut-{}-{}'.format(table,i,cuttype)
         d[key] = len(dfcut.id_kic.drop_duplicates())
+        key = 'nplanets {}-cut-{}-{}'.format(table,i,cuttype)
+        d[key] = len(dfcut.id_kic)
         i+=1
 
+    key = 'nstars {}-cut-all'.format(table)
+    d[key] = len(dfcut.id_kic.drop_duplicates())
+    key = 'nplanets {}-cut-all'.format(table)
+    d[key] = len(dfcut.id_kic)
+
+    
     df = ckscool.io.load_table('star')
     s = df.groupby('cks_sprov').size()
     d['nstars smemp'] = s.emp
