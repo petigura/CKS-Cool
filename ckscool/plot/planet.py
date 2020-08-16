@@ -10,8 +10,8 @@ from astropy import units as u
 from sklearn.utils import resample
 
 
-figsize=(4,3)
-font_scale = 1.0
+figsize=(3.5,2.5)
+font_scale = 0.8
 
 class ContourPlotter(object):
     def __init__(self, x, xerr, y, yerr, xscale='log', yscale='log'):
@@ -66,6 +66,7 @@ class ContourPlotter(object):
         pos[:, :, 1] = _ky
         Z = gaussian(pos, mu, cov)
         ds['Z'] = (['kx','ky'],Z)
+        ds['Z'] /= ds['Z'].max() # rescale
         self.ds = ds
 
         if for_gradient:
@@ -78,7 +79,9 @@ class ContourPlotter(object):
 
     def plot_contour(self):
         _vmax = self.ds.Z.max()
-        self.ds.Z.plot.contourf(x='kx', cmap=plt.cm.afmhot_r, levels=15,zorder=0,vmax=1.5*_vmax)
+        fac = 1.5 
+        Z = self.ds.Z / fac
+        Z.plot.contourf(x='kx', cmap=plt.cm.afmhot_r, levels=15,zorder=0,vmax=1)
         add_anchored('$N_p$ = {}'.format(len(self.x)),2,prop=dict(size='small'))
         self.xlim(self.xmin,self.xmax)
         self.ylim(self.ymin,self.ymax)
@@ -116,7 +119,64 @@ class ContourPlotter(object):
         pass
 
     def plot_points(self):
-        errorbar(self.x,self.y,yerr=self.yerr,fmt='.',elinewidth=0.5,ms=4)
+        #errorbar(self.x,self.y,yerr=self.yerr,fmt='o',mfc='none',elinewidth=0,ms=2,mew=0.5,errorevery=0)
+        errorbar(self.x,self.y,yerr=None,fmt='o',mfc='none',elinewidth=0,ms=2,mew=0.4,mec='w',zorder=9)
+        errorbar(self.x,self.y,yerr=None,fmt='o',mfc='none',elinewidth=0,ms=2,mew=0.2,mec='k',zorder=10)
+
+def fig_planet(xk,nopoints=False,zoom=False,normalize=False,query=None,
+               yerrfac=1,xerrfac=1,for_gradient=False):
+
+    sns.set_context('paper',font_scale=font_scale)
+    figure(figsize=figsize)
+    df = ckscool.io.load_table('planets-cuts2',cache=1)
+    df = df[~df.isany]
+    yk = 'gdir_prad'
+    x = df[xk]
+    y = df[yk]
+
+    if xk=='koi_period':
+        yerrk = 'gdir_prad_err1'
+        xerr = x * xerrfac
+        yerr = df[yerrk] * yerrfac
+
+        p1 = ContourPlotter(x, xerr, y, yerr,xscale='log',yscale='log')
+        if zoom:
+            p1.xmin = 1
+            p1.xmax = 100
+            p1.ymin = 1
+            p1.ymax = 4
+        else:
+            p1.xmin = 0.3
+            p1.xmax = 300
+            p1.ymin = 0.5
+            p1.ymax = 16
+
+        xticks = [0.3,1,3,10,30,100,300]
+        yticks = [0.5,0.7,1.0,1.4,2.0,2.8,4.0,5.6,8.0,11.3,16.0]
+        xlabel = 'Orbital Period (days)'
+        ylabel = 'Planet Size (Earth-radii)'
+
+
+        
+    if for_gradient:
+        X, Y, Z = p1.compute_density(for_gradient=True)
+        return X, Y, Z
+
+    ion()
+    p1.compute_density()
+    if normalize:
+        p1.normalize_density()
+
+    p1.plot_contour()
+    p1.xticks(xticks)
+    p1.yticks(yticks)
+    if not nopoints:
+        p1.plot_points()
+
+    p1.xlim(p1.xmin,p1.xmax)
+    p1.ylim(p1.ymin,p1.ymax)
+    setp(gca(),xlabel=xlabel,ylabel=ylabel)
+    tight_layout()
 
 def fig_per_prad(**kwargs):
     sns.set_context('paper',font_scale=font_scale)
@@ -208,7 +268,7 @@ def _sinc_prad(df,nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1,for_g
         p1.ymin = 0.5
         p1.ymax = 16
 
-    xticks = [1,3,10,30,100,300,1000,3000,1e4]
+    xticks = [1,3,10,30,100,300,1000,3000,10000]
     yticks = [0.5,0.7,1.0,1.4,2.0,2.8,4.0,5.6,8.0,11.3,16.0]
 
     if for_gradient:
@@ -239,7 +299,7 @@ def fig_sinc_prad(nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1):
 
         
 def fig_intfxuv_prad(nopoints=False,zoom=False):
-    sns.set_context('paper')
+    sns.set_context('paper',font_scale=font_scale)
     fig, axL = subplots(figsize=figsize)
     xk = 'giso_sintfxuv'
     yk = 'gdir_prad'
@@ -312,7 +372,7 @@ def fig_smass_prad(nopoints=False,zoom=False, normalize=False):
     """
     normalize: whether to normalize KDE so that each mass bin gets equal weight
     """
-    sns.set_context('paper')
+    sns.set_context('paper',font_scale=font_scale)
     fig, axL = subplots(figsize=figsize)
     xk = 'giso_smass'
     xerrk = 'giso_smass_err1'

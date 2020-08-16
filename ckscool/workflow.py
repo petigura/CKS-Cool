@@ -1,7 +1,7 @@
 import os
 from collections import OrderedDict
 from matplotlib import pylab as plt
-
+import re
 class Workflow(object):
     def __init__(self):
         self.plot = OrderedDict()
@@ -38,9 +38,11 @@ class Workflow(object):
         os.system('mkdir -p {}'.format(self.build_dir))
         for key, func in all_dict[kind].iteritems():
             if kind=='plot':
+                
+
                 if name=='all':
                     func()
-                elif key.count(name)==1:
+                elif re.search(name,key):
                     func()
                 else:
                     continue
