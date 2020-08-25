@@ -79,9 +79,10 @@ class ContourPlotter(object):
 
     def plot_contour(self):
         _vmax = self.ds.Z.max()
-        fac = 1.5 
+        fac = 1.2
         Z = self.ds.Z / fac
-        Z.plot.contourf(x='kx', cmap=plt.cm.afmhot_r, levels=15,zorder=0,vmax=1)
+        Z.plot.contourf(x='kx', cmap=plt.cm.afmhot_r, levels=15,zorder=0,vmax=1,cbar_kwargs=dict(shrink=0.5,format='%.2f'))
+        
         add_anchored('$N_p$ = {}'.format(len(self.x)),2,prop=dict(size='small'))
         self.xlim(self.xmin,self.xmax)
         self.ylim(self.ymin,self.ymax)
@@ -123,6 +124,8 @@ class ContourPlotter(object):
         errorbar(self.x,self.y,yerr=None,fmt='o',mfc='none',elinewidth=0,ms=2,mew=0.4,mec='w',zorder=9)
         errorbar(self.x,self.y,yerr=None,fmt='o',mfc='none',elinewidth=0,ms=2,mew=0.2,mec='k',zorder=10)
 
+
+        
 def fig_planet(xk,nopoints=False,zoom=False,normalize=False,query=None,
                yerrfac=1,xerrfac=1,for_gradient=False):
 
@@ -131,14 +134,15 @@ def fig_planet(xk,nopoints=False,zoom=False,normalize=False,query=None,
     df = ckscool.io.load_table('planets-cuts2',cache=1)
     df = df[~df.isany]
     yk = 'gdir_prad'
-    x = df[xk]
+    yerrk = 'gdir_prad_err1'
     y = df[yk]
+    x = df[xk]
+    yerr = df[yerrk] * yerrfac
 
+    
     if xk=='koi_period':
-        yerrk = 'gdir_prad_err1'
-        xerr = x * xerrfac
-        yerr = df[yerrk] * yerrfac
 
+        xerr = 0.5 * x # plottting purposes
         p1 = ContourPlotter(x, xerr, y, yerr,xscale='log',yscale='log')
         if zoom:
             p1.xmin = 1
@@ -151,18 +155,93 @@ def fig_planet(xk,nopoints=False,zoom=False,normalize=False,query=None,
             p1.ymin = 0.5
             p1.ymax = 16
 
+        xlim = (p1.xmin,p1.xmax)
+        ylim = (p1.ymin,p1.ymax)
         xticks = [0.3,1,3,10,30,100,300]
-        yticks = [0.5,0.7,1.0,1.4,2.0,2.8,4.0,5.6,8.0,11.3,16.0]
         xlabel = 'Orbital Period (days)'
-        ylabel = 'Planet Size (Earth-radii)'
 
+    if xk=='giso_sinc':
+        xerr = x # plottting purposes
+        p1 = ContourPlotter(x, xerr, y, yerr,xscale='log',yscale='log')
+        if zoom:
+            p1.xmin = 3e0
+            p1.xmax = 3e3
+            p1.ymin = 1.0
+            p1.ymax = 4
+        else:
+            p1.xmin = 1
+            p1.xmax = 1e4
+            p1.ymin = 0.5
+            p1.ymax = 16
 
+        xlim = (p1.xmax,p1.xmin)
+        ylim = (p1.ymin,p1.ymax)
+        xticks = [1,3,10,30,100,300,1000,3000,10000]
+        xlabel = 'Incident Bolometric Flux (Earth-units)'
+
+    if xk=='giso_smass':
+        xerr = 0.2 * x # plottting purposes
+        p1 = ContourPlotter(x, xerr, y, yerr,xscale='log',yscale='log')
+        if zoom:
+            p1.xmin = 0.5
+            p1.xmax = 1.4
+            p1.ymin = 1
+            p1.ymax = 4
+        else:
+            p1.xmin = 0.5
+            p1.xmax = 1.5
+            p1.ymin = 0.5
+            p1.ymax = 16
+
+        xlim = (p1.xmin,p1.xmax)
+        ylim = (p1.ymin,p1.ymax)
+        xticks = [0.5,0.7,1.0,1.4]
+        xlabel = 'Stellar Mass (Solar-masses)'
+
+    if xk=='cks_smet':
+        xerr = 0.15
+        p1 = ContourPlotter(x, xerr, y, yerr,xscale='lin',yscale='log')
+        if zoom:
+            p1.xmin = -0.4
+            p1.xmax = 0.4
+            p1.ymin = 1
+            p1.ymax = 4
+        else:
+            p1.xmin = -0.5
+            p1.xmax = 0.5
+            p1.ymin = 0.5
+            p1.ymax = 16
+
+        xlim = (p1.xmin,p1.xmax)
+        ylim = (p1.ymin,p1.ymax)
+        xticks = [-0.5,-0.4,-0.3,-0.2,-0.1,0.0,0.1,0.2,0.3,0.4,0.5]
+        xlabel = '[Fe/H]'
         
+    if xk=='giso_slogage':
+        xerr = 0.15
+        p1 = ContourPlotter(x, xerr, y, yerr,xscale='lin',yscale='log')
+        if zoom:
+            p1.xmin = 8.8
+            p1.xmax = 10.2
+            p1.ymin = 1
+            p1.ymax = 4
+        else:
+            p1.xmin = 8.5
+            p1.xmax = 10.5
+            p1.ymin = 0.5
+            p1.ymax = 16
+
+        xlim = (p1.xmin,p1.xmax)
+        ylim = (p1.ymin,p1.ymax)
+        xticks = [8.0,8.5,9.0,9.5,10.0,10.5]
+        xlabel = 'logage'
+        
+    yticks = [0.5,0.7,1.0,1.4,2.0,2.8,4.0,5.6,8.0,11.3,16.0]
+    ylabel = 'Planet Size (Earth-radii)'
     if for_gradient:
         X, Y, Z = p1.compute_density(for_gradient=True)
         return X, Y, Z
 
-    ion()
     p1.compute_density()
     if normalize:
         p1.normalize_density()
@@ -172,130 +251,88 @@ def fig_planet(xk,nopoints=False,zoom=False,normalize=False,query=None,
     p1.yticks(yticks)
     if not nopoints:
         p1.plot_points()
-
-    p1.xlim(p1.xmin,p1.xmax)
-    p1.ylim(p1.ymin,p1.ymax)
+    p1.xlim(*xlim)
+    p1.ylim(*ylim)
     setp(gca(),xlabel=xlabel,ylabel=ylabel)
     tight_layout()
+ 
 
-def fig_per_prad(**kwargs):
+
+def fig_smass_prad(nopoints=False,zoom=False, normalize=False):
+    """
+    normalize: whether to normalize KDE so that each mass bin gets equal weight
+    """
     sns.set_context('paper',font_scale=font_scale)
     fig, axL = subplots(figsize=figsize)
-    df = ckscool.io.load_table('planets-cuts2',cache=2)
+    xk = 'giso_smass'
+    xerrk = 'giso_smass_err1'
+    yk = 'gdir_prad'
+    yerrk = 'gdir_prad_err1'
+    df = ckscool.io.load_table('planets-cuts2',cache=1)
+    df = df.dropna(subset=['giso_smass'])
     df = df[~df.isany]
-    _per_prad(df, **kwargs)
-
-# def gradient_per_prad(plnt, bootstrap=False, **kwargs):
-#
-#     if bootstrap:
-#         resample_indices = resample(np.arange(len(plnt)))
-#         plnt =  plnt.iloc[resample_indices, :]
-#
-#     X, Y, Z = _per_prad(plnt, **kwargs)
-#     return X, Y, Z
-#
-# def gradient_sinc_prad(plnt, bootstrap=False, **kwargs):
-#
-#     if bootstrap:
-#         resample_indices = resample(np.arange(len(plnt)))
-#         plnt =  plnt.iloc[resample_indices, :]
-#
-#     X, Y, Z = _sinc_prad(plnt, **kwargs)
-#     return X, Y, Z
-
-
-def _per_prad(df,nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1,for_gradient=False):
-    if query is not None:
-        df = df.query(query)
-    print len(df)
-    xk = 'koi_period'
-    yk = 'gdir_prad'
-    yerrk = 'gdir_prad_err1'
-    x = df[xk]
-    y = df[yk]
-    xerr = x * xerrfac
-    yerr = df[yerrk] * yerrfac
-
-    p1 = ContourPlotter(x, xerr, y, yerr,xscale='log',yscale='log')
-    p1.xmin = 0.3
-    p1.xmax = 300
-    p1.ymin = 0.5
-    p1.ymax = 16
-    xticks = [0.3,1,3,10,30,100,300]
-    yticks = [0.5,0.7,1.0,1.4,2.0,2.8,4.0,5.6,8.0,11.3,16.0]
-
-    if for_gradient:
-        X, Y, Z = p1.compute_density(for_gradient=True)
-        return X, Y, Z
-    else:
-        p1.compute_density()
-
-    p1.plot_contour()
-    xlabel('Orbital Period (days)')
-    ylabel('Planet Size (Earth-radii)')
-    p1.xticks(xticks)
-    p1.yticks(yticks)
-
-    if not nopoints:
-        p1.plot_points()
-    if zoom:
-        p1.xlim(1,100)
-        p1.ylim(1,4)
-
-    tight_layout()
-
-def _sinc_prad(df,nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1,for_gradient=False):
-    sns.set_context('paper',font_scale=font_scale)
-    fig, axL = subplots(figsize=figsize)
-    xk = 'giso_sinc'
-    yk = 'gdir_prad'
-    yerrk = 'gdir_prad_err1'
 
     x = df[xk]
     y = df[yk]
-    xerr = x * xerrfac
-    yerr = df[yerrk] * yerrfac
+    yerr = df[yerrk] * 1
+    #xerr = df[xerrk] * 2
+    xerr = x * 0.15
 
     p1 = ContourPlotter(x, xerr, y, yerr,xscale='log',yscale='log')
+
     if zoom:
-        p1.xmin = 1e1
-        p1.xmax = 3e3
-        p1.ymin = 1.0
+        p1.xmin = 0.6
+        p1.xmax = 1.4
+        p1.ymin = 1
         p1.ymax = 4
     else:
-        p1.xmin = 1
-        p1.xmax = 1e4
+        p1.xmin = 0.5
+        p1.xmax = 1.5
         p1.ymin = 0.5
         p1.ymax = 16
 
-    xticks = [1,3,10,30,100,300,1000,3000,10000]
+    xticks = [0.5,0.7,1.0,1.4]
     yticks = [0.5,0.7,1.0,1.4,2.0,2.8,4.0,5.6,8.0,11.3,16.0]
 
+    
+    p1.compute_density()
+    if normalize:
+        p1.normalize_density()
+    p1.xticks(xticks)
+    p1.yticks(yticks)
+    p1.plot_contour()
+    xlabel('Stellar Mass (Solar-masses)')
+    ylabel('Planet Size (Earth-radii)')
+    p1.xlim(p1.xmin,p1.xmax)
+    p1.ylim(p1.ymin,p1.ymax)
+
+    if not nopoints:
+        p1.plot_points()
+
+    tight_layout()
+
+
+
+    
     if for_gradient:
         X, Y, Z = p1.compute_density(for_gradient=True)
         return X, Y, Z
     else:
         p1.compute_density()
 
+    if normalize:
+        p1.normalize_density()
+ 
     p1.plot_contour()
-    xlabel('Incident Bolometric Flux (Earth-units)')
-    ylabel('Planet Size (Earth-radii)')
     p1.xticks(xticks)
     p1.yticks(yticks)
-    p1.xlim(p1.xmax,p1.xmin)
-    p1.ylim(p1.ymin,p1.ymax)
     if not nopoints:
         p1.plot_points()
-
+ 
+    p1.xlim(*xlim)
+    p1.ylim(p1.ymin,p1.ymax)
+    setp(gca(),xlabel=xlabel,ylabel=ylabel)
     tight_layout()
-
-def fig_sinc_prad(nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1):
-    df = ckscool.io.load_table('planets-cuts2',cache=1)
-    df = df[~df.isany]
-    if query is not None:
-        df = df.query(query)
-
-    _sinc_prad(df)
 
         
 def fig_intfxuv_prad(nopoints=False,zoom=False):
@@ -367,60 +404,6 @@ def fig_intfxuv_prad(nopoints=False,zoom=False):
         p1.plot_points()
 
     tight_layout()
-
-def fig_smass_prad(nopoints=False,zoom=False, normalize=False):
-    """
-    normalize: whether to normalize KDE so that each mass bin gets equal weight
-    """
-    sns.set_context('paper',font_scale=font_scale)
-    fig, axL = subplots(figsize=figsize)
-    xk = 'giso_smass'
-    xerrk = 'giso_smass_err1'
-    yk = 'gdir_prad'
-    yerrk = 'gdir_prad_err1'
-    df = ckscool.io.load_table('planets-cuts2',cache=1)
-    df = df.dropna(subset=['giso_smass'])
-    df = df[~df.isany]
-
-    x = df[xk]
-    y = df[yk]
-    yerr = df[yerrk] * 1
-    #xerr = df[xerrk] * 2
-    xerr = x * 0.15
-
-    p1 = ContourPlotter(x, xerr, y, yerr,xscale='log',yscale='log')
-
-    if zoom:
-        p1.xmin = 0.6
-        p1.xmax = 1.4
-        p1.ymin = 1
-        p1.ymax = 4
-    else:
-        p1.xmin = 0.5
-        p1.xmax = 1.5
-        p1.ymin = 0.5
-        p1.ymax = 16
-
-    xticks = [0.5,0.7,1.0,1.4]
-    yticks = [0.5,0.7,1.0,1.4,2.0,2.8,4.0,5.6,8.0,11.3,16.0]
-
-    
-    p1.compute_density()
-    if normalize:
-        p1.normalize_density()
-    p1.xticks(xticks)
-    p1.yticks(yticks)
-    p1.plot_contour()
-    xlabel('Stellar Mass (Solar-masses)')
-    ylabel('Planet Size (Earth-radii)')
-    p1.xlim(p1.xmin,p1.xmax)
-    p1.ylim(p1.ymin,p1.ymax)
-
-    if not nopoints:
-        p1.plot_points()
-
-    tight_layout()
-
 
 def fig_smet_prad(nopoints=False,zoom=False):
     sns.set_context('paper',font_scale=font_scale)
