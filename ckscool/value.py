@@ -269,3 +269,29 @@ def val_sample(return_dict=False):
         return d
 
     return lines
+
+
+def val_fit(return_dict=False):
+    d = OrderedDict()
+
+    keys = ['fitdetected_sn-mass','fitdetected_se-mass','fitdetected_sn-mass-met','fitdetected_se-mass-met']
+    for key in keys:
+        fitter = ckscool.io.load_object(key,cache=1)
+        samp = fitter.samples
+        samp['R0'] = 10**(fitter.samples.logR_0)
+        desc = samp.describe()
+        d[key+'-R0'] = "{:.2f} \pm {:.2f}".format(*desc.loc[['mean','std'],'R0'].tolist())
+        d[key+'-alpha-mass'] = "{:.2f} \pm {:.2f}".format(*desc.loc[['mean','std'],'alpha_mass'].tolist())
+        d[key+'-alpha-met'] = "{:.2f} \pm {:.2f}".format(*desc.loc[['mean','std'],'alpha_met'].tolist())
+    
+    lines = []
+    for k, v in d.iteritems():
+        line = r"{{{}}}{{{}}}".format(k,v)
+        lines.append(line)
+
+
+    if return_dict:
+        return d
+
+    return lines
+
