@@ -27,6 +27,7 @@ import ckscool.occur
 import ckscool.plot.occur
 import ckscool._isoclassify
 import ckscool.fit
+import ckscool.fitplane
 
 # Ignore the Natural name warning
 warnings.simplefilter('ignore', tables.NaturalNameWarning)
@@ -266,8 +267,6 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         df.sample = 'koi-thompson18'
         df = ckscool.cuts.occur.add_cuts(df, cuttypes, 'koi-thompson18')
 
-
-
     # All columns that appear in star table
     elif table == 'star':
         # DR1+DR2 
@@ -326,7 +325,15 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
             iso2.append(iso[cols])
 
         iso2 = pd.concat(iso2,sort=True).reset_index(drop=True)
+        iso2['giso_slogage'] = iso2.eval('log10(1e9 * giso_sage)')
+        iso2['giso_slogage_err1'] = (
+            iso2.eval('log10(giso_sage + giso_sage_err1) - log10(giso_sage)')
+        )
+        iso2['giso_slogage_err2'] = (
+            iso2.eval('log10(giso_sage + giso_sage_err2) - log10(giso_sage)')
+        )
         df = pd.merge(df,iso2,how='left',on=['id_kic','cks_sprov'])
+
         
         # Add in ReaMatch parameters
         rm = load_table('reamatch')
@@ -355,6 +362,7 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         giso_srad giso_srad_err1 giso_srad_err2
         giso_srho giso_srho_err1 giso_srho_err2
         giso_sage giso_sage_err1 giso_sage_err2
+        giso_slogage giso_slogage_err1 giso_slogage_err2
         giso2_sparallax giso2_sparallax_err1 giso2_sparallax_err2
         """.split()
         star = star[cols]
@@ -880,6 +888,12 @@ def load_object(key,cache=0,verbose=1):
         fit.fit()
         fit.mcmc(burn=300, steps=600, thin=1, nwalkers=100)
         obj = fit
+
+    elif key.count('fitdetected_')==1:
+        mode = key.split('_')[-1]
+        fitter = ckscool.fitplane.Fitter(mode)
+        fitter.compute_samples()
+        obj = fitter
 
     return obj
 
