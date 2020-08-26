@@ -191,19 +191,22 @@ def create_workflow():
     w = ckscool.workflow.Workflow()
 
     # register different plots here
-    w.plot['cuts-kepmag-steff'] = ckscool.plot.sample.fig_cuts_kepmag_steff
-    w.plot['cuts-period-prad'] = ckscool.plot.sample.fig_cuts_period_prad
-    w.plot['cuts-smass-steff'] = ckscool.plot.sample.fig_cuts_smass_steff
+    w.plot['cuts-kepmag-steff'] = plot.sample.fig_cuts_kepmag_steff
+    w.plot['cuts-period-prad'] = plot.sample.fig_cuts_period_prad
+    w.plot['cuts-smass-steff'] = plot.sample.fig_cuts_smass_steff
     #w.plot['cuts-stars-hr'] = lambda : plot.star.Plotter().hr()
-    w.plot['cuts-planets-per-prad'] = ckscool.plot.sample.fig_cuts_planets_per_prad
+    w.plot['cuts-planets-per-prad'] = plot.sample.fig_cuts_planets_per_prad
     w.plot['cuts-planets-per-prad-zoom'] = (
-        lambda : ckscool.plot.sample.fig_cuts_planets_per_prad(zoom=True)
+        lambda : plot.sample.fig_cuts_planets_per_prad(zoom=True)
     )
-    w.plot['cuts-all-multi'] = ckscool.plot.sample.fig_cuts_all_multi
-    w.plot['cuts-all-multi3'] = ckscool.plot.sample.fig_cuts_all_multi3
-    w.plot['ferr-hist-star'] = ckscool.plot.hr.fig_ferr_hist_star
-    w.plot['ferr-hist-planet'] = ckscool.plot.hr.fig_ferr_hist_planet
+    w.plot['cuts-all-multi'] = plot.sample.fig_cuts_all_multi
+    w.plot['cuts-all-multi3'] = plot.sample.fig_cuts_all_multi3
+    w.plot['ferr-hist-star'] = plot.hr.fig_ferr_hist_star
+    w.plot['ferr-hist-planet'] = plot.hr.fig_ferr_hist_planet
     w.plot['star-sample'] =  plot.star.fig_sample
+    w.plot['planet-prad'] =  plot.planet.fig_sample
+    w.plot['planet-prad-zoom'] =  lambda : plot.planet.fig_sample(zoom=True)
+
     w.plot['compare-ckscool-mann13'] = lambda : fig_compare('ckscool-mann13')
     w.plot['compare-ckscool-dressing13'] = (
         lambda : fig_compare('ckscool-dressing13')
@@ -218,32 +221,13 @@ def create_workflow():
     kw = dict(zoom=True,xerrfac=0.5,yerrfac=1.5)
 
     # contour plots of planet detections
-    w.plot['planet-per-prad'] = lambda : ckscool.plot.planet.fig_planet('koi_period') 
-    w.plot['planet-per-prad-zoom'] = lambda : ckscool.plot.planet.fig_planet('koi_period',zoom=True,normalize=True)
-    w.plot['planet-smass-prad'] = lambda : ckscool.plot.planet.fig_planet('giso_smass')
-    w.plot['planet-smass-prad-zoom'] = lambda : ckscool.plot.planet.fig_planet('giso_smass',zoom=True,normalize=True)
-    w.plot['planet-sinc-prad'] = lambda : ckscool.plot.planet.fig_planet('giso_sinc')
-    w.plot['planet-sinc-prad-zoom'] = lambda : ckscool.plot.planet.fig_planet('giso_sinc',zoom=True,normalize=True)
-    w.plot['planet-smet-prad'] = lambda : ckscool.plot.planet.fig_planet('cks_smet')
-    w.plot['planet-smet-prad-zoom'] = lambda : ckscool.plot.planet.fig_planet('cks_smet',zoom=True,normalize=True)
-    w.plot['planet-slogage-prad'] = lambda : ckscool.plot.planet.fig_planet('giso_slogage')
-    w.plot['planet-slogage-prad-zoom'] = lambda : ckscool.plot.planet.fig_planet('giso_slogage',zoom=True,normalize=True)
-
     
     kw = dict(zoom=True,xerrfac=0.5,yerrfac=1.5)
 
-    #w.plot['planet-per-prad-smass-lo-zoom'] = lambda : ckscool.plot.planet.fig_per_prad(query='giso_smass < 0.75',**kw)
-    #w.plot['planet-per-prad-smass-mi-zoom'] = lambda : ckscool.plot.planet.fig_per_prad(query='0.75 < giso_smass < 0.95',**kw)
-    #w.plot['planet-per-prad-smass-hi-zoom'] = lambda : ckscool.plot.planet.fig_per_prad(query='0.95 < giso_smass',**kw)
-
-    #w.plot['planet-sinc-prad-smass-lo-zoom'] = lambda : ckscool.plot.planet.fig_sinc_prad(query='giso_smass < 0.75',**kw)
-    #w.plot['planet-sinc-prad-smass-mi-zoom'] = lambda : ckscool.plot.planet.fig_sinc_prad(query='0.75 < giso_smass < 0.95',**kw)
-    #w.plot['planet-sinc-prad-smass-hi-zoom'] = lambda : ckscool.plot.planet.fig_sinc_prad(query='0.95 < giso_smass',**kw)
-
-    w.plot['occur-contour-three'] = ckscool.plot.occur.fig_contour_three
-    w.plot['occur-contour-six'] = ckscool.plot.occur.fig_contour_six
-    w.plot['occur-contour-six-sinc'] = ckscool.plot.occur.fig_contour_six_sinc
-    w.plot['planets-warm-smet-smass'] = ckscool.plot.smet.fig_planets_warm_smet_smass
+    w.plot['occur-contour-three'] = plot.occur.fig_contour_three
+    w.plot['occur-contour-six'] = plot.occur.fig_contour_six
+    w.plot['occur-contour-six-sinc'] = plot.occur.fig_contour_six_sinc
+    w.plot['planets-warm-smet-smass'] = plot.smet.fig_planets_warm_smet_smass
 
     # table
     f1 = ckscool.table.tab_star
