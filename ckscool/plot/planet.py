@@ -128,8 +128,6 @@ class ContourPlotter(object):
         errorbar(self.x,self.y,yerr=None,fmt='o',mfc='none',elinewidth=0,ms=2,mew=0.4,mec='w',zorder=9)
         errorbar(self.x,self.y,yerr=None,fmt='o',mfc='none',elinewidth=0,ms=2,mew=0.2,mec='k',zorder=10)
 
-
-
 class Plotter(object):
     def __init__(self,xk,nopoints=False,zoom=False,normalize=False,query=None,
                    yerrfac=1,xerrfac=1,for_gradient=False):
