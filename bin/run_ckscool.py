@@ -11,6 +11,9 @@ import ckscool.io     # module for reading and writing datasets
 import ckscool.value  # module for computing creating table
 import ckscool.table  # module for computing scalar values for table
 import ckscool._isoclassify
+
+from ckscool import plot as plot
+
 import ckscool.plot.sample   # submodule for including plots
 import ckscool.plot.spectra
 import ckscool.plot.hr
@@ -191,7 +194,7 @@ def create_workflow():
     w.plot['cuts-kepmag-steff'] = ckscool.plot.sample.fig_cuts_kepmag_steff
     w.plot['cuts-period-prad'] = ckscool.plot.sample.fig_cuts_period_prad
     w.plot['cuts-smass-steff'] = ckscool.plot.sample.fig_cuts_smass_steff
-    w.plot['cuts-stars-hr'] = ckscool.plot.sample.fig_cuts_stars_hr
+    #w.plot['cuts-stars-hr'] = lambda : plot.star.Plotter().hr()
     w.plot['cuts-planets-per-prad'] = ckscool.plot.sample.fig_cuts_planets_per_prad
     w.plot['cuts-planets-per-prad-zoom'] = (
         lambda : ckscool.plot.sample.fig_cuts_planets_per_prad(zoom=True)
@@ -200,8 +203,7 @@ def create_workflow():
     w.plot['cuts-all-multi3'] = ckscool.plot.sample.fig_cuts_all_multi3
     w.plot['ferr-hist-star'] = ckscool.plot.hr.fig_ferr_hist_star
     w.plot['ferr-hist-planet'] = ckscool.plot.hr.fig_ferr_hist_planet
-    w.plot['star-steff-srad'] = ckscool.plot.hr.fig_hr
-    w.plot['star-smet-smass'] = ckscool.plot.hr.fig_smet_smass
+    w.plot['star-sample'] =  plot.star.fig_sample
     w.plot['compare-ckscool-mann13'] = lambda : fig_compare('ckscool-mann13')
     w.plot['compare-ckscool-dressing13'] = (
         lambda : fig_compare('ckscool-dressing13')
