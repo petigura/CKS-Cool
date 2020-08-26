@@ -6,17 +6,24 @@ import pandas as pd
 
 class Fitter(object):
     def __init__(self, mode, ):
+        self.mode = mode
         self.nsamples = 1000
         df = ckscool.io.load_table('planets-cuts2')
         df = df[~df.isany]
+
+        self.logage0 = np.log10(5e9)
+        self.met0 = 0
+        self.logmass0 = 0 
+        self.logR_0 = np.log10(2)
+
         params = Parameters()
-        params.add('logR_0', value=np.log10(2))
+        params.add('logR_0', value=self.logR_0)
         params.add('alpha_mass', value=0.00)
         params.add('alpha_met', value=0.0)
         params.add('alpha_age', value=0.0)
-        params.add('logmass0', value=0)
-        params.add('met0', value=0)
-        params.add('logage0', value=np.log10(5e9))
+        params.add('logmass0', value=self.logmass0)
+        params.add('met0', value=self.met0)
+        params.add('logage0', value=self.logage0)
 
         size, fit_method = mode[:2],mode[3:]
         if size=='sn':
@@ -26,18 +33,19 @@ class Fitter(object):
         else:
             assert False
             
-        if fit_method=='mass':
+        if fit_method=='m':
             params['alpha_mass'].vary = True 
             params['alpha_met'].vary = False
             params['alpha_age'].vary = False
-        elif fit_method=='mass-met':
+        elif fit_method=='mm':
             params['alpha_mass'].vary = True 
             params['alpha_met'].vary = True
             params['alpha_age'].vary = False
-        elif fit_method=='mass-met-age':
+        elif fit_method=='mma':
             params['alpha_mass'].vary = True 
             params['alpha_met'].vary = True
             params['alpha_age'].vary = True
+            df = df.query('cks_steff > 5500')
         else:
             assert False
 
@@ -61,7 +69,7 @@ class Fitter(object):
 
     def objective(self, params, df):
         _model = self.model(
-            params, np.log10(df.giso_smass), df.cks_smet,df.giso_slogage
+            params, np.log10(df.giso_smass), df.cks_smet, df.giso_slogage
         )
         resid = np.log10(df['gdir_prad']) - _model
         return resid 
@@ -76,10 +84,10 @@ class Fitter(object):
             result = mini.minimize(method='leastsq')
             d = result.params.valuesdict()
             samples.append(d)
-            
+         
         samples = pd.DataFrame(samples)
+        samples['R0'] = samples.eval('10**logR_0')
         self.samples = samples
-
 
 '''
 df = df.query('koi_period < 300')

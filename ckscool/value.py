@@ -271,18 +271,27 @@ def val_sample(return_dict=False):
     return lines
 
 
-def val_fit(return_dict=False):
+def val_fitd(return_dict=False):
     d = OrderedDict()
 
-    keys = ['fitdetected_sn-mass','fitdetected_se-mass','fitdetected_sn-mass-met','fitdetected_se-mass-met']
+    keys = [
+        'fitdetected_sn-m',
+        'fitdetected_se-m',
+        'fitdetected_sn-mm',
+        'fitdetected_se-mm',
+        'fitdetected_sn-mma',
+        'fitdetected_se-mma'
+    ]
     for key in keys:
         fitter = ckscool.io.load_object(key,cache=1)
+        mode = fitter.mode
         samp = fitter.samples
         samp['R0'] = 10**(fitter.samples.logR_0)
         desc = samp.describe()
-        d[key+'-R0'] = "{:.2f} \pm {:.2f}".format(*desc.loc[['mean','std'],'R0'].tolist())
-        d[key+'-alpha-mass'] = "{:.2f} \pm {:.2f}".format(*desc.loc[['mean','std'],'alpha_mass'].tolist())
-        d[key+'-alpha-met'] = "{:.2f} \pm {:.2f}".format(*desc.loc[['mean','std'],'alpha_met'].tolist())
+        d[mode+'-R0'] = "{:.2f} \pm {:.2f}".format(*desc.loc[['mean','std'],'R0'].tolist())
+        d[mode+'-alpha-mass'] = "{:.2f} \pm {:.2f}".format(*desc.loc[['mean','std'],'alpha_mass'].tolist())
+        d[mode+'-alpha-met'] = "{:.2f} \pm {:.2f}".format(*desc.loc[['mean','std'],'alpha_met'].tolist())
+        d[mode+'-alpha-age'] = "{:.2f} \pm {:.2f}".format(*desc.loc[['mean','std'],'alpha_age'].tolist())
     
     lines = []
     for k, v in d.iteritems():

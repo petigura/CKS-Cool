@@ -27,7 +27,7 @@ import ckscool.occur
 import ckscool.plot.occur
 import ckscool._isoclassify
 import ckscool.fit
-import ckscool.fitplane
+import ckscool.fitdetected
 
 # Ignore the Natural name warning
 warnings.simplefilter('ignore', tables.NaturalNameWarning)
@@ -891,7 +891,7 @@ def load_object(key,cache=0,verbose=1):
 
     elif key.count('fitdetected_')==1:
         mode = key.split('_')[-1]
-        fitter = ckscool.fitplane.Fitter(mode)
+        fitter = ckscool.fitdetected.Fitter(mode)
         fitter.compute_samples()
         obj = fitter
 
