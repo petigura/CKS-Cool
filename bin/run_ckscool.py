@@ -251,8 +251,7 @@ def create_workflow():
     # planet
     w.csv['star'] = ckscool.table.tab_star_csv
     w.csv['planet'] = ckscool.table.tab_planet_csv
-    w.csv['planet-cuts2+iso'] = ckscool.table.tab_planet_full_csv
-    w.csv['field-cuts'] = ckscool.table.tab_field_full_csv
+    #w.csv['field-cuts'] = ckscool.table.tab_field_full_csv
     return w
 
 if __name__=="__main__":

@@ -1,144 +1,154 @@
 import ckscool.io
 import numpy as np
 
+class Table(object):
+    """
+    Helper to create ascii tables
+    """
+    def to_latex(self,cols,header=True):
+        # create formatted string
+        ncols = len(cols)
+        lines = []
+        if header:
+            s = ' & '.join(cols)
+            s = '%' + s 
+            lines.append(s)
+
+        for irow,row in self.df.iterrows():
+            s = r""
+            for icol,c in enumerate(cols):
+                s+=('{:' +self.formats[c] + '}').format(row[c])
+                if icol==(ncols-1):
+                    s+=' \\\\ '
+                else:
+                    s+=' & '
+
+            s = s.replace('nan','\\nodata')
+            lines.append(s)
+
+        return lines
+
+    def to_csv(self,cols,header=True):
+        # create formatted string
+        ncols = len(cols)
+        lines = []
+        if header:
+            s = ','.join(cols)
+            lines.append(s)
+
+        for irow,row in self.df.iterrows():
+            s = r""
+            for icol,c in enumerate(cols):
+                s+=('{:' +self.formats[c] + '}').format(row[c])
+                if icol==(ncols-1):
+                    s+=''
+                else:
+                    s+=','
+
+            lines.append(s)
+
+        return lines
+
+class TableStar(Table):
+    def __init__(self):
+        df = ckscool.io.load_table('star',cache=1)
+        df['id_koi'] = df['id_koi'].replace(False,np.nan)
+        df = df.sort_values(by='id_koi')
+        self.df = df
+        self.formats = {
+            'id_koi':'0.0f',
+            'm17_kmag':'0.1f',
+            'm17_kmag_err':'0.1f',
+            'gaia2_sparallax':'0.2f',
+            'gaia2_sparallax_err':'0.2f',
+            'cks_steff':'0.0f',
+            'cks_steff_err':'0.0f',
+            'cks_smet':'0.2f',
+            'cks_smet_err':'0.2f',
+            'cks_svsini':'0.1f',
+            'cks_svsini_err':'0.1f',
+            'cks_sprov':'s',
+            'gdir_srad':'0.2f',
+            'gdir_srad_err1':'0.2f',
+            'gdir_srad_err2':'0.2f',
+            'giso_smass':'0.2f',
+            'giso_smass_err1':'0.2f',
+            'giso_smass_err2':'0.2f',
+            'giso_srad':'0.2f',
+            'giso_srad_err1':'0.2f',
+            'giso_srad_err2':'0.2f',
+            'giso_srho':'0.2f',
+            'giso_srho_err1':'0.2f',
+            'giso_srho_err2':'0.2f',
+            'giso_sage':'0.1f',
+            'giso_sage_err1':'0.1f',
+            'giso_sage_err2':'0.1f',
+            'giso2_sparallax':'0.2f',
+            'giso2_sparallax_err1':'0.2f',
+            'giso2_sparallax_err2':'0.2f',
+            'rm_sb2':'0.0f'
+        }
+        
+
+
 
 def tab_star():
-
-    df = ckscool.io.load_table('star',cache=2)
-    # Cast id_koi as float so the it renders as nodata
-    df['id_koi'] = df['id_koi'].replace(False,np.nan)
-    df = df.sort_values(by='id_koi')
-    lines = []
-    for i, row in df.iterrows():
-        s = r""
-        s+="{id_koi:0.0f} & "
-        s+="{m17_kmag:0.1f} & "
-        s+="{gaia2_sparallax:0.2f} & "
-        s+="{cks_steff:0.0f} & "
-        s+="{cks_smet:0.2f} & "
-        s+="{cks_svsini:0.1f} & "
-        s+="{cks_sprov:s} & "
-        s+="{gdir_srad:0.2f} & "
-        s+="{giso_smass:0.2f} & "
-        s+="{giso_srad:0.2f} & "
-        s+="{giso_srho:0.2f} & "
-        s+="{giso_sage:0.1f} & "
-        #s+="{giso2_sparallax:0.2f} & "
-        s+="{rm_sb2:0.0f} "
-        # s+=r"{gaia2_gflux_ratio:0.2f} & " 
-        # s+=r"{fur17_rcorr_avg:.3f} \\"
-        s+=r" \\"
-        s = s.format(**row)
-        s = s.replace('nan','\\nodata')
-        lines.append(s)
-
-    return lines
-
-def tab_planet():
-    df = ckscool.io.load_table('planets-cuts1+iso',cache=2)
-    df = df.sort_values(by='id_koicand')
-    df['dr25_ror']*=100
-    lines = []
-    for i, row in df.iterrows():
-
-        s = r"""
-{id_koicand:s}
-{koi_period:0.1f}
-{dr25_ror:.1f}
-{dr25_tau:.1f}
-{gdir_prad:.2f}
-{giso_tau0:.1f}
-{giso_sma:.3f}
-{giso_sinc:.1f} \\"""
-        s = s[1:] # remove initial return
-        s = s.replace('\n',' & ')
-        s = s.format(**row)
-        s = s.replace('nan','\\nodata')
-        lines.append(s)
-
-
-        """
-        s = r""
-        s = (r"{id_koicand:s} & "
-             +"{koi_period:0.1f} & "
-             +"{dr25_ror:.3f}  & "
-             +"{dr25_tau:.3f} & "
-             +"{giso_tau0:.3f} < 0.6 &"
-             +r"{gdir_prad:.2f} & "  
-             +r"{giso_sma:.3f} & "
-             +r"{giso_sinc:.1f} \\  ")
-        
-        s = s.format(**row)
-        s = s.replace('nan','\\nodata')
-        lines.append(s)
-        """
-    return lines
+    t = TableStar()
+    cols = """id_koi m17_kmag gaia2_sparallax cks_steff cks_smet cks_svsini cks_sprov gdir_srad giso_smass giso_srad giso_srho giso_sage giso2_sparallax rm_sb2""".split()
+    return t.to_latex(cols)
 
 def tab_star_csv():
-    df = ckscool.io.load_table('planets-cuts1+iso',cache=2)
-    df['cks_sprov'] = df.cks_sprov.str.replace('smemp','emp').\
-                      str.replace('smsyn','syn')
+    t = TableStar()
+    cols = """id_koi m17_kmag m17_kmag_err gaia2_sparallax gaia2_sparallax_err
+cks_steff cks_steff_err cks_smet cks_smet_err cks_svsini gdir_srad
+gdir_srad_err1 gdir_srad_err2 giso_smass giso_smass_err1
+giso_smass_err2 giso_srad giso_srad_err1 giso_srad_err2 giso_srho
+giso_srho_err1 giso_srho_err2 giso2_sparallax giso2_sparallax_err1
+giso2_sparallax_err2 cks_sprov rm_sb2"""
+    cols = cols.split()
+    return t.to_csv(cols)
 
-    df['rm_sb2'] = df.rm_sb2.fillna(-1)
-    df = df.groupby('id_koi',as_index=False).nth(0)
-    df = df.sort_values(by='id_koi')
+    
+class TablePlanet(Table):
+    def __init__(self):
+        df = ckscool.io.load_table('planets-cuts2',cache=1)
+        df = df.sort_values(by='id_koicand')
+        df['dr25_ror']*=100
+        self.df = df
+        self.formats = {
+            'id_koicand':'s',
+            'koi_period':'0.6f',
+            'koi_period_err1':'0.6f',
+            'koi_period_err2':'0.6f',
+            'dr25_ror':'0.2f',
+            'dr25_ror_err1':'0.2f',
+            'dr25_ror_err2':'0.2f',
+            'dr25_tau':'0.2f',
+            'dr25_tau_err1':'0.2f',
+            'dr25_tau_err2':'0.2f',
+            'gdir_prad':'0.2f',
+            'gdir_prad_err1':'0.2f',
+            'gdir_prad_err2':'0.2f',
+            'giso_sma':'0.3f',
+            'giso_sma_err1':'0.3f',
+            'giso_sma_err2':'0.3f',
+            'giso_tau0':'0.2f',
+            'giso_tau0_err1':'0.2f',
+            'giso_tau0_err2':'0.2f',
+            'giso_sinc':'0.2f',
+            'giso_sinc_err1':'0.2f',
+            'giso_sinc_err2':'0.2f',
+        }
 
-    s = r""
-    s+="{id_koi:0.0f} "
-    s+="{m17_kmag:0.1f} {m17_kmag_err:0.1f} "
-    s+="{gaia2_sparallax:0.2f} {gaia2_sparallax_err:0.2f} "
-    s+="{cks_steff:0.0f} {cks_steff_err:0.0f} "
-    s+="{cks_smet:0.2f} {cks_smet_err:0.2f} "
-    s+="{cks_svsini:0.1f} {cks_svsini_err:0.1f} "
-    s+="{gdir_srad:0.2f} {gdir_srad_err1:0.2f} {gdir_srad_err2:0.2f} "
-    s+="{giso_smass:0.2f} {giso_smass_err1:0.2f} {giso_smass_err2:0.2f} "
-    s+="{giso_srad:0.2f} {giso_srad_err1:0.2f} {giso_srad_err2:0.2f} "
-    s+="{giso_srho:0.2f} {giso_srho_err1:0.2f} {giso_srho_err2:0.2f} "
-    s+="{giso2_sparallax:0.2f} {giso2_sparallax_err1:0.2f} {giso2_sparallax_err2:0.2f} "
-    s+="{cks_sprov:s} "
-    s+="{rm_sb2:0.0f}" # last line no space
-
-    cols = s.split(' ')
-    header = [c.split(':')[0][1:] for c in cols]
-    header = ",".join(header)
-    lines = []
-    lines.append(header)
-    for i, row in df.iterrows():
-        fmt = s.replace(' ',',')
-        l = fmt.format(**row)
-        lines.append(l)
-
-    return lines
+def tab_planet():
+    t = TablePlanet()
+    t.formats['dr25_ror'] = '0.2f'
+    t.formats['koi_period'] = '0.1f'
+    cols = 'id_koicand koi_period dr25_ror dr25_tau gdir_prad giso_tau0 giso_sma giso_sinc'.split()
+    return t.to_latex(cols)
 
 def tab_planet_csv():
-    df = ckscool.io.load_table('planets-cuts2',cache=2)
-    df = df.sort_values(by='id_koicand')
+    t = TablePlanet()
+    cols = 'id_koicand koi_period koi_period_err1 koi_period_err2 dr25_ror dr25_ror_err1 dr25_ror_err2 dr25_tau dr25_tau_err1 dr25_tau_err2 gdir_prad gdir_prad_err1 gdir_prad_err2 giso_tau0 giso_tau0_err1 giso_tau0_err2 giso_sma giso_sma_err1 giso_sma_err2 giso_sinc giso_sinc_err1 giso_sinc_err2'.split()
+    return t.to_csv(cols)
 
-    s = r""
-    s+="{id_koicand:s} "
-    s+="{koi_period:0.6f} {koi_period_err1:0.6f} {koi_period_err2:0.6f} "
-    s+="{dr25_ror:0.6f} {dr25_ror_err1:0.6f} {dr25_ror_err2:0.6f} "
-    s+="{gdir_prad:0.3f} {gdir_prad_err1:0.3f} {gdir_prad_err2:0.3f} "
-    s+="{giso_sma:0.3f} {giso_sma_err1:0.3f} {giso_sma_err2:0.3f} "
-    s+="{giso_sinc:0.3f} {giso_sinc_err1:0.3f} {giso_sinc_err2:0.3f}"
-
-    cols = s.split(' ')
-    header = [c.split(':')[0][1:] for c in cols]
-    header = ",".join(header)
-    lines = []
-    lines.append(header)
-    for i, row in df.iterrows():
-        fmt = s.replace(' ',',')
-        l = fmt.format(**row)
-        lines.append(l)
-
-    return lines
-
-def tab_planet_full_csv():
-    df = ckscool.io.load_table('planets-cuts2',cache=2)
-    df = df.sort_values(by='id_koicand')
-    return df.to_csv(index=False).split('\n')
-
-def tab_field_full_csv():
-    df = ckscool.io.load_table('field-cuts')
-    return df.to_csv(index=False).split('\n')
