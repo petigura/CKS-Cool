@@ -56,7 +56,7 @@ class Plotter(object):
             if zoom:
                 cp = ContourPlotter(-0.4, 0.4, 1, 4,xscale='lin',yscale='log')
             else:
-                cp = ContourPlotter(-0.5, 0.5, 0.5,16,xscale='log',yscale='log')
+                cp = ContourPlotter(-0.5, 0.5, 0.5,16,xscale='lin',yscale='log')
             xticks = [-0.5,-0.4,-0.3,-0.2,-0.1,0.0,0.1,0.2,0.3,0.4,0.5]
             xlabel = '[Fe/H]'
             self.bwx = 0.1
@@ -76,9 +76,6 @@ class Plotter(object):
         self.yticks = yticks
         self.ylabel = ylabel
         self.xlabel = xlabel
-        if for_gradient:
-            X, Y, Z = cp.compute_density(for_gradient=True)
-            return X, Y, Z
 
     def plot(self):
         ds = self.cp.meshgrid()
