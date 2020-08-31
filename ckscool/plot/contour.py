@@ -46,6 +46,8 @@ class ContourPlotter(object):
             qc = Z.plot.contourf(
                 x='kx', levels=arange(0,1.001,0.05),zorder=0,
                 vmax=1,add_colorbar=False,**kwargs)
+        else:
+            qc = Z.plot.contourf(x='kx', zorder=0,add_colorbar=False,**kwargs)
             
         return qc
 

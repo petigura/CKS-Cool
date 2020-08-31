@@ -9,6 +9,7 @@ from scipy import ndimage as nd
 import ckscool.io
 import ckscool.plot.planet
 import ckscool.gradient #import R, R_sinc
+from .contour import ContourPlotter
 
 from . import planet
 
@@ -299,22 +300,31 @@ def fig_contour_six_per(gradient=False):
         axo = axL[i,1]
         
         # Detected planets
-        key = 'cp_smass={}-{}'.format(_mass1,_mass2)
-        cp = ckscool.io.load_object(key,cache=1)
+        key = 'occur_smass={}-{}'.format(_mass1,_mass2)
+        occ = ckscool.io.load_object(key,cache=1)
 
         sca(axd)
-        df = cp.occ.plnt.copy()
+        df = occ.plnt.copy()
         df = df.rename(columns={'prad':'gdir_prad','per':'koi_period'})
-
-        pl = planet.Plotter(df,'koi_period')
-        pl.p1.compute_density()
-        pl.p1.plot_points()
-        qm = pl.p1.plot_contour()
-        pl.setp()
-
+        pl = planet.Plotter(df,'koi_period',zoom=True)
+        pl.plot()
+        cbar = colorbar(pl.qc,shrink=0.5,format='%.1f')
+        cbar.set_label('$dN/d \log P/ d \log R_p$',size='x-small')
+        cbar.ax.tick_params(labelsize='xx-small')
+        
+        
         # Occurrence rate 
         sca(axo)
-        contour(cp,plot_interval=True,draw_colorbar=True)
+        cp = ContourPlotter(1, 100 , 1, 4, xscale='log', yscale='log')
+        ds = cp.meshgrid()
+        Z = occ.occurrence_rate_density_idem(array(ds.kxc), array(ds.kyc))
+        Z = Z.reshape(ds.kxc.shape)
+        ds['Z'] = (['kx','ky'],Z)
+        qc = cp.contour(ds['Z'], cmap='YlGn',levels=20)
+        cbar = colorbar(qc,shrink=0.5,format='%.1f')
+        cbar.set_label('$df/ d \log P / d \log R_p$',size='x-small')
+        cbar.ax.tick_params(labelsize='xx-small')
+        xlabel('Orbotal Period (days)')
         '''
         if gradient:
             sca(axd)
@@ -338,8 +348,8 @@ def fig_contour_six_per(gradient=False):
         yticks([log10(_yt) for _yt in yt],yt)
         grid()
 
-    xlim = log10(0.5),log10(300)
-    ylim = log10(0.5),log10(4)
+    xlim = log10(1),log10(100)
+    ylim = log10(1),log10(4)
     setp(axL, xlim=xlim, ylim=ylim)
     setp(axL[:,1:], ylabel='')
     setp(axL[:-1,:], xlabel='')

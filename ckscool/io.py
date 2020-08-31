@@ -895,5 +895,8 @@ def load_object(key,cache=0,verbose=1):
         fitter.compute_samples()
         obj = fitter
 
+    else:
+        assert False, "could not resolve key"
+
     return obj
 

@@ -124,7 +124,7 @@ class Occurrence(object):
         yi = np.log10(self.plnt.prad)
         xbw = log10(1 + 1)
         ybw = log10(1 + 0.05)
-        occrd = gaussian_2d_kde(x, y, xi, yi, xbw, ybw ) / self.nstars
+        occrd = gaussian_2d_kde(x, y, xi, yi, xbw, ybw ,w = w) / self.nstars
         occrd = occrd.reshape(logper.shape)
         return occrd
 
