@@ -102,7 +102,6 @@ class Occurrence(object):
                 _out['perc'] = np.sqrt(_per1*_per2)
                 _out['pradc'] = np.sqrt(_prad1*_prad2)
                 df.append(_out)
-
         df = pd.DataFrame(df)
         return df
 
@@ -114,21 +113,34 @@ class Occurrence(object):
         logprad : log10 of the 
         """
         assert logper.shape ==logprad.shape
-        logperbw = log10(1 + 1)
-        logpradbw = log10(1 + 0.05)
 
         plnt = self.plnt.copy()
         w = 1/self.comp.prob_trdet_interp(array(plnt.per),array(plnt.prad))
         nplnt = len(plnt)
-        pos = np.vstack([logper.flatten(),logprad.flatten()]).T
-        mu = np.log10(np.array(plnt['per prad'.split()]))
-        cov = np.array(nplnt * [np.eye(2)])
-        cov[:,0,0] *= logperbw**2
-        cov[:,1,1] *= logpradbw**2
-        occrd = gaussian(pos, mu, cov, w=w) / self.nstars
+
+        x = logper
+        y = logprad 
+        xi = np.log10(self.plnt.per)
+        yi = np.log10(self.plnt.prad)
+        xbw = log10(1 + 1)
+        ybw = log10(1 + 0.05)
+        occrd = gaussian_2d_kde(x, y, xi, yi, xbw, ybw ) / self.nstars
         occrd = occrd.reshape(logper.shape)
         return occrd
-    
+
+def gaussian_2d_kde(x, y, xi, yi, xbw, ybw, w=None):
+    """
+    Convenience function to compute gaussian KDE
+    """
+    pos = np.vstack([x.flatten(),y.flatten()]).T
+    ni = len(xi)
+    mu = np.vstack([xi, yi]).T
+    cov = np.array(ni * [np.eye(2)])
+    cov[:,0,0] *= xbw**2
+    cov[:,1,1] *= ybw**2
+    return gaussian(pos, mu, cov, w=w) 
+
+
 class Occurrence_SincPrad(Occurrence):
     def occurence_box(self, limits):
         """Compute occurrence in a little box
