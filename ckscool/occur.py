@@ -2,13 +2,13 @@
 grid
 """
 import numpy as np
-from numpy import log10, logspace, arange, round
+from numpy import log10, logspace, arange, round, array
 from scipy.special import gammaln as gamln
 from scipy import special
 from sklearn.utils import resample
 import pandas as pd 
 
-
+import calc
 import ckscool.io
 import ckscool.grid
 
@@ -71,14 +71,13 @@ class Occurrence(object):
         out = dict(out,**rate)
         return out
 
-
     def occurrence_grid(self, per1=None, per2=None, dlogper=None, 
                             prad1=None, prad2=None, dlogprad=None):
-
         """
         A convenience function to compute occurrence over a grid in period and radius
         """
         eps = 1e-9
+
         if dlogper is None:
             per = [per1,per2]
         else:
@@ -107,6 +106,29 @@ class Occurrence(object):
         df = pd.DataFrame(df)
         return df
 
+    def occurrence_rate_density_idem(self, logper, logprad):
+        """
+        Occurrence rate density (ORD) at logper logprad
+
+        logper : log10 of the period at which to compute occurrence rate density
+        logprad : log10 of the 
+        """
+        assert logper.shape ==logprad.shape
+        logperbw = log10(1 + 1)
+        logpradbw = log10(1 + 0.05)
+
+        plnt = self.plnt.copy()
+        w = 1/self.comp.prob_trdet_interp(array(plnt.per),array(plnt.prad))
+        nplnt = len(plnt)
+        pos = np.vstack([logper.flatten(),logprad.flatten()]).T
+        mu = np.log10(np.array(plnt['per prad'.split()]))
+        cov = np.array(nplnt * [np.eye(2)])
+        cov[:,0,0] *= logperbw**2
+        cov[:,1,1] *= logpradbw**2
+        occrd = gaussian(pos, mu, cov, w=w) / self.nstars
+        occrd = occrd.reshape(logper.shape)
+        return occrd
+    
 class Occurrence_SincPrad(Occurrence):
     def occurence_box(self, limits):
         """Compute occurrence in a little box
@@ -290,6 +312,12 @@ def samples_to_rate(samples, uplim=False):
         d['rate_str'] = "{rate:.4f} +/- {rate_err1:.4f}/{rate_err2:.4f}".format(**d)
     return d
 
+def load_comp3d():
+    """
+    Iterate over a bunch of 2D completeness 
+    """
+    
+
 def load_occur(limits, debug=False, sinc=False):
     """
     Constructs occurrence object
@@ -372,3 +400,39 @@ def load_occur_resample(smass1, smass2, plnt, comp, nstars):
     plnt_resampled =  plnt.iloc[resample_indices, :]
     occ = ckscool.occur.Occurrence(plnt_resampled, comp, nstars)
     return occ
+
+
+def gaussian(pos, mu, cov, w=None):
+
+    """
+    Compute the sum of 2D gaussians
+
+    last dimension of x must equal len(mu)
+    """
+    assert mu.shape[0]==cov.shape[0]
+    assert mu.shape[1]==cov.shape[1]
+
+    if type(w) is type(None):
+        w = np.ones(mu.shape[0])
+
+    nres = pos.shape[0] # number of resulting points
+    ndim = pos.shape[1] # number of dimensions
+    npts = mu.shape[0] # number of points used for KDE
+    
+    invcov = np.linalg.inv(cov) # (npts x ndim)
+    detcov = np.linalg.det(cov) # (npts)
+    norm = (2 * np.pi)**(-0.5 * ndim) * (detcov**-0.5) # npts
+    if type(w) != type(None):
+        norm *= w
+
+    res = np.zeros(nres) # provision results array 
+    # Iterate over 
+    for i in range(npts):
+        _invcov = invcov[i]
+        _mu = mu[i]
+        _norm = norm[i]
+        resid = _mu - pos
+        dist = np.matmul(resid.reshape(-1,1,ndim),np.matmul(_invcov,resid.reshape(-1,ndim,1))).reshape(-1)
+        res += _norm * np.exp(-0.5 * dist )
+
+    return res

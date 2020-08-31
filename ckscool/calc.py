@@ -121,3 +121,5 @@ def update_planet_parameters(df):
     df['dr25_fgraz'] = ((samp['dr25_b'] > 1.0).sum(axis=1).astype(float)
                         / samp['dr25_b'].shape[1])
     return df, samp
+
+

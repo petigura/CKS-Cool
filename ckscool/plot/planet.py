@@ -11,7 +11,7 @@ figsize=(3.5,2.5)
 font_scale = 0.8
 
 class ContourPlotter(object):
-    def __init__(self, x, xerr, y, yerr, xscale='log', yscale='log'):
+    def __init__(self, x, xerr, y, yerr, w=None, xscale='log', yscale='log'):
         self._kde_nx = 200
         self._kde_ny = 400
         #self._kde_nx = 10
@@ -19,11 +19,11 @@ class ContourPlotter(object):
         self.xscale = xscale
         self.yscale = yscale
 
-        if xscale=='log':
+        if self.xscale=='log':
             xerr = log10(1 + xerr / x)
             x = log10(x)
 
-        if yscale=='log':
+        if self.yscale=='log':
             yerr = log10(1 + yerr / y)
             y = log10(y)
 
@@ -32,9 +32,25 @@ class ContourPlotter(object):
         self.xerr = xerr
         self.yerr = yerr
         self.n = len(self.x)
+        self.w = np.array(w)
+        self.ndim = 2
 
-    def compute_density(self, for_gradient=False):
-        ndim = 2
+        # midpoints
+        mu = np.zeros((self.n,self.ndim))
+        mu[:,0] = self.x
+        mu[:,1] = self.y
+        self.mu = mu
+
+        # construct covarience matrix
+        cov = zeros((self.n,self.ndim,self.ndim))
+        cov[:,0,0] = self.xerr**2
+        cov[:,1,1] = self.yerr**2
+        self.cov = cov
+
+    def kde(self,pos):
+        return gaussian(pos, self.mu, self.cov, w=self.w)
+        
+    def compute_density(self):
         kx = np.linspace(self.xmin, self.xmax, self._kde_nx)
         ky = np.linspace(self.ymin, self.ymax, self._kde_ny)
         if self.xscale=='log':
@@ -49,28 +65,15 @@ class ContourPlotter(object):
             'kyc': (['kx', 'ky'], _ky),
         }
         ds = xr.Dataset(data,coords=coords)
-
-        # midpoints
-        mu = np.zeros((self.n,ndim))
-        mu[:,0] = self.x
-        mu[:,1] = self.y
-
-        # construct covarience matrix
-        cov = zeros((self.n,ndim,ndim))
-        cov[:,0,0] = self.xerr**2
-        cov[:,1,1] = self.yerr**2
-
         pos = np.empty(_kx.shape + (2,))
         pos[:, :, 0] = _kx
         pos[:, :, 1] = _ky
-        Z = gaussian(pos, mu, cov)
+        pos = pos.reshape(-2,self.ndim)
+        Z = self.kde(pos)
+        Z = Z.reshape(_kx.shape)
         ds['Z'] = (['kx','ky'],Z)
-        ds['Z'] /= ds['Z'].max() # rescale
         self.ds = ds
-
-        if for_gradient:
-            return kx, ky, Z
-
+        
     def normalize_density(self):
         frac = self.ds['Z'].sum(dim='ky')
         frac = frac / frac.mean()
@@ -82,15 +85,13 @@ class ContourPlotter(object):
         Z = self.ds.Z / fac
 
         qc = Z.plot.contourf(
-            x='kx', cmap=plt.cm.afmhot_r, levels=arange(0,1.001,0.1),zorder=0,vmax=1,
+            x='kx', cmap=plt.cm.afmhot_r, levels=arange(0,1.001,0.05),zorder=0,vmax=1,
             add_colorbar=False
         )
-        #add_anchored('$N_p$ = {}'.format(len(self.x)),2,prop=dict(size='small'))
         self.xlim(self.xmin,self.xmax)
         self.ylim(self.ymin,self.ymax)
         return qc
         
-
     def xlim(self, *args):
         if self.xscale=='log':
             args2 = (log10(args[0]),log10(args[1]))
@@ -112,7 +113,6 @@ class ContourPlotter(object):
             args2 = (ticks,ticks)
         xticks(*args2)
 
-
     def yticks(self, ticks):
         if self.yscale=='log':
             args2 = (log10(ticks),ticks)
@@ -124,16 +124,13 @@ class ContourPlotter(object):
         pass
 
     def plot_points(self):
-        #errorbar(self.x,self.y,yerr=self.yerr,fmt='o',mfc='none',elinewidth=0,ms=2,mew=0.5,errorevery=0)
         errorbar(self.x,self.y,yerr=None,fmt='o',mfc='none',elinewidth=0,ms=2,mew=0.4,mec='w',zorder=9)
         errorbar(self.x,self.y,yerr=None,fmt='o',mfc='none',elinewidth=0,ms=2,mew=0.2,mec='k',zorder=10)
 
 class Plotter(object):
-    def __init__(self,xk,nopoints=False,zoom=False,normalize=False,query=None,
-                   yerrfac=1,xerrfac=1,for_gradient=False):
+    def __init__(self, df, xk, nopoints=False, zoom=False,normalize=False,query=None,
+                   yerrfac=1, xerrfac=1, for_gradient=False):
 
-        df = ckscool.io.load_table('planets-cuts2',cache=1)
-        df = df[~df.isany]
         yk = 'gdir_prad'
         yerrk = 'gdir_prad_err1'
         y = df[yk]
@@ -260,9 +257,12 @@ def fig_sample(**kwargs):
     sns.set_context('paper',font_scale=1.0)
     fig,axL = subplots(ncols=2,nrows=2,figsize=(7,6))
 
+    df = ckscool.io.load_table('planets-cuts2',cache=1)
+    df = df[~df.isany]
+
     # Period, radius
     sca(axL[0,0])
-    pl = Plotter('koi_period',**kwargs)
+    pl = Plotter(df,'koi_period',**kwargs)
     pl.p1.compute_density()
     pl.p1.plot_points()
     qm = pl.p1.plot_contour()
@@ -275,7 +275,7 @@ def fig_sample(**kwargs):
 
     # Sinc, radius
     sca(axL[0,1])
-    pl = Plotter('giso_sinc',**kwargs)
+    pl = Plotter(df,'giso_sinc',**kwargs)
     pl.p1.compute_density()
     pl.p1.plot_points()
     pl.p1.plot_contour()
@@ -284,16 +284,16 @@ def fig_sample(**kwargs):
 
     # Metallicity and age
     sca(axL[1,0])
-    pl = Plotter('giso_smass',**kwargs)
+    pl = Plotter(df,'giso_smass',**kwargs)
     pl.p1.compute_density()
     pl.p1.plot_points()
     pl.p1.plot_contour()
     pl.setp()
-    fig_label('d')
+    fig_label('c')
     
     # Mass and age
     sca(axL[1,1])
-    pl = Plotter('cks_smet',**kwargs)
+    pl = Plotter(df,'cks_smet',**kwargs)
     pl.p1.compute_density()
     pl.p1.plot_points()
     pl.p1.plot_contour()
@@ -302,21 +302,3 @@ def fig_sample(**kwargs):
 
     tight_layout(True)
 
-def gaussian(pos, mu, cov):
-
-    """
-    Compute the sum of 2D gaussians
-
-    last dimension of x must equal len(mu)
-    """
-    assert mu.shape[0]==cov.shape[0]
-    assert mu.shape[1]==cov.shape[1]
-
-    out = []
-    for i in range(mu.shape[0]):
-        _out = scipy.stats.multivariate_normal(mu[i], cov[i]).pdf(pos)
-        out.append(_out)
-
-    out = np.array(out)
-    out = np.sum(out,axis=0)
-    return out

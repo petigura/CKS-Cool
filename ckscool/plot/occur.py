@@ -10,6 +10,7 @@ import ckscool.io
 import ckscool.plot.planet
 import ckscool.gradient #import R, R_sinc
 
+from . import planet
 
 sns.set_style('ticks')
 sns.set_color_codes()
@@ -284,40 +285,50 @@ def fig_contour_three():
     fig.subplots_adjust(hspace=0.2)
 
 
-def fig_contour_six(gradient=False):
+def fig_contour_six_per(gradient=False):
     sns.set_context('paper')
-    mass1 = [0.5,0.8,1.1]
-    mass2 = [0.8,1.1,1.4]
+    #mass1 = [0.5,0.8,1.1]
+    #mass2 = [0.8,1.1,1.4]
+    mass1 = [0.5,0.7,1.0]
+    mass2 = [0.7,1.0,1.4]
     fig, axL = subplots(nrows=3,ncols=2,figsize=(8.5,9))
 
     i = 0
     for _mass1, _mass2 in zip(mass1,mass2):
+        axd = axL[i,0]
+        axo = axL[i,1]
+        
+        # Detected planets
         key = 'cp_smass={}-{}'.format(_mass1,_mass2)
         cp = ckscool.io.load_object(key,cache=1)
 
+        sca(axd)
+        df = cp.occ.plnt.copy()
+        df = df.rename(columns={'prad':'gdir_prad','per':'koi_period'})
+
+        pl = planet.Plotter(df,'koi_period')
+        pl.p1.compute_density()
+        pl.p1.plot_points()
+        qm = pl.p1.plot_contour()
+        pl.setp()
+
+        # Occurrence rate 
+        sca(axo)
+        contour(cp,plot_interval=True,draw_colorbar=True)
+        '''
         if gradient:
+            sca(axd)
             logperc = cp.rate['logperc']
             bootstrap_det_chain = np.loadtxt("./data/chain_detv2_{0}-{1}-smass.csv".format(_mass1, _mass2), delimiter=',')
             bootstrap_occ_chain = np.loadtxt("./data/chain_occv2_{0}-{1}-smass.csv".format(_mass1, _mass2), delimiter=',')
-
-        sca(axL[i,0])
-        df = cp.occ.plnt.copy()
-        df = df.rename(columns={'prad':'gdir_prad','per':'koi_period'})
-        ckscool.plot.planet._per_prad(
-            df, nopoints=False, zoom=False, query=None, yerrfac=1, xerrfac=1
-        )
-        if gradient:
             add_gradient(logperc, bootstrap_det_chain)
-
-        sca(axL[i,1])
-        contour(cp,plot_interval=True,draw_colorbar=True)
-        if gradient:
             add_gradient(logperc, bootstrap_occ_chain)
 
-
+        '''
         title = '$M_\star = {}-{}\, M_\odot$ '.format(_mass1,_mass2)
         setp(axL[i,:],title=title)
         i+=1
+
 
     for ax in axL.flatten():
         sca(ax)
@@ -327,8 +338,8 @@ def fig_contour_six(gradient=False):
         yticks([log10(_yt) for _yt in yt],yt)
         grid()
 
-    xlim = log10(1),log10(300)
-    ylim = log10(1),log10(4)
+    xlim = log10(0.5),log10(300)
+    ylim = log10(0.5),log10(4)
     setp(axL, xlim=xlim, ylim=ylim)
     setp(axL[:,1:], ylabel='')
     setp(axL[:-1,:], xlabel='')
@@ -336,8 +347,10 @@ def fig_contour_six(gradient=False):
 
 def fig_contour_six_sinc(gradient=False):
     sns.set_context('paper')
-    mass1 = [0.5,0.8,1.1]
-    mass2 = [0.8,1.1,1.4]
+    #mass1 = [0.5,0.8,1.1]
+    #mass2 = [0.8,1.1,1.4]
+    mass1 = [0.5,0.7,1.0]
+    mass2 = [0.7,1.0,1.4]
     fig, axL = subplots(nrows=3,ncols=2,figsize=(8.5,9))
     i = 0
     for _mass1, _mass2 in zip(mass1,mass2):
