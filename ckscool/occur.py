@@ -138,8 +138,8 @@ class OccurrencePerPrad(Occurrence2D):
     ybw = log10(1 + 0.05)
 
 class OccurrenceSincPrad(Occurrence2D):
-    xk = 'per'
-    yk = 'sinc'
+    xk = 'sinc'
+    yk = 'prad'
     xbw = log10(1 + 1)
     ybw = log10(1 + 0.05)
 

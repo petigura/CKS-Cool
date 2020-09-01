@@ -24,8 +24,6 @@ __STARS_REQUIRED_COLUMNS__ = (
 class Completeness2D(object):
     def __init__(self, stars, grid, method, impact, mesfac=None):
         """
-        
-        
         Args:
             stars (pandas.DataFrame): Sample of stars from which planets
                 are detected. Must be as close as possible to be sample of

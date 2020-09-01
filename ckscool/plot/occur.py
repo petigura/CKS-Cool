@@ -18,12 +18,12 @@ sns.set_color_codes()
 
 def fig_contour_six_per(gradient=False):
     sns.set_context('paper')
-    pl = SixPlotterPer()
+    pl = SixPlotterPerPrad()
     pl.plot()
 
 def fig_contour_six_sinc(gradient=False):
     sns.set_context('paper')
-    pl = SixPlotterSinc()
+    pl = SixPlotterSincPrad()
     pl.plot()
 
 class SixPlotter(object):
@@ -53,7 +53,7 @@ class SixPlotter(object):
             # Occurrence rate 
             sca(axo)
             cp = pl.cp
-            pl = ORDPlotterPerPrad(occ, cp)
+            pl = self.ORDPlotter(occ, cp)
             pl.plot_ord()
             pl.plot_completeness()
             title = '$M_\star = {}-{}\, M_\odot$ '.format(_mass1,_mass2)
@@ -67,113 +67,36 @@ class SixPlotter(object):
             grid()
 
         setp(axL, xlim=self.xlim, ylim=self.ylim)
-        setp(axL[:,1:], ylabel='')
-        setp(axL[:-1,:], xlabel='')
+        setp(axL, ylabel='')
+        setp(axL, xlabel='')
+        setp(axL[:,0], ylabel=self.ylabel)
+        setp(axL[-1,:], xlabel=self.xlabel)
         tight_layout(True)
 
-class SixPlotterPer(SixPlotter):
+
+class SixPlotterPerPrad(SixPlotter):
     def __init__(self):
-        super(SixPlotterPer,self).__init__()
+        super(SixPlotterPerPrad,self).__init__()
         self.xt = [1,3,10,30,100,300]
         self.yt = [1.0,1.4,2.0,2.8,4.0]
         self.xlim = log10(1),log10(300)
         self.ylim = log10(1),log10(4)
         self.occur_prefix = 'occur-per-prad'
-
-class SixPlotterSinc(SixPlotter):
+        self.ORDPlotter = ORDPlotterPerPrad
+        self.xlabel='Orbital Period (days)'
+        self.ylabel='Planet Size (Earth-radii)'
+        
+class SixPlotterSincPrad(SixPlotter):
     def __init__(self):
-        super(SixPlotterSinc,self).__init__()
+        super(SixPlotterSincPrad,self).__init__()
         self.xt = [3000,1000,300,100,30,10,3]
         self.yt = [1.0,1.4,2.0,2.8,4.0]
         self.xlim=log10(3000),log10(3)
         self.ylim=log10(1),log10(4)
         self.occur_prefix = 'occur-sinc-prad'
-    
-def contour_sinc(cp, plot_interval=False, draw_colorbar=True,cax=None,
-                 plot_completeness=True,label=False, normalize=False,
-                 ntrials_min=50):
-    """
-    Args:
-       cp : contour plotter object
-    """
-
-    ax = gca()
-    tax = gca().transAxes
-
-    # convert into an x-array for plotting
-    ds = cp.rate.groupby(['sinc1','prad1']).first().to_xarray()
-    norm = cp.rate.query('10 < sincc < 1000 and 2 < pradc < 4').rate.sum()
-    rate = ds.rate
-    rate = rate.fillna(4e-6)
-
-    # Smooth out the contours a bit
-    rate = nd.gaussian_filter(rate,(4,2))
-    eps = 1e-10
-    X, Y = np.log10(ds.sincc), np.log10(ds.pradc)
-    Z = np.array(rate)
-    cmap = 'YlGn' #,None #'hot_r'
-    levels = None
-    cbarlabel=''
-    if levels==None:
-        #levels = arange(0,5e-2+eps,0.0025)
-        b = (
-            (ds.ntrial > ntrials_min)
-            & (ds.pradc > 1.0)
-            & (ds.pradc < 4.0)
-        )
-        b = array(b)
-        maxz = np.max(rate[b])
-        maxz = np.round(maxz*1.1,3)
-        levels = linspace(0,maxz+eps,14)
-
-    cbarticks = levels[::2]
-    cbarticklabels = ["{:.1f}".format(1e2*_yt) for _yt in cbarticks]
-    kw = dict(levels=levels,extend='neither',cmap=cmap,zorder=0)
-    cbarlabel = r"""Planets per 100 Stars per $Sinc-R_P$ interval"""
-    X = np.array(X)
-    Y = np.array(Y)
-    Z = np.array(Z)
-    qcs = contourf(X,Y,Z, **kw)
-
-    # plot straight contours
-    if draw_colorbar:
-        cbar = colorbar(qcs,cax=cax,ticks=cbarticks,)
-        t = cbar.ax.set_yticklabels(cbarticklabels)
-        setp(t,size='x-small')
-        cbar.set_label(cbarlabel,size='small')
-
-    # Completeness
-    if plot_completeness:
-        Z = np.array(ds.ntrial)
-        cmap = sns.light_palette("gray",as_cmap=True)
-        contourf(X,Y,Z,[0,ntrials_min],zorder=2.5,cmap=cmap,vmax=1)
-
-    xt = [1,3,10,30,100,1000,10000]
-    yt = [0.5,1,2,4,8,16,32]
-    xticks([log10(_xt) for _xt in xt],xt)
-    yticks([log10(_yt) for _yt in yt],yt)
-    xlim(log10(10000),log10(1))
-    ylim(log10(1),log10(4))
-    xlabel('Stellar Incident Flux (Earth Units)')
-    ylabel('Planet Size (Earth-radii)')
-
-    if plot_interval:
-        #inv = ax.transAxes.inverted()
-        xy = 3.1, 0.52
-        w = cp.sincwid
-        h = cp.pradwid
-        rect = Rectangle(xy, w, h,lw=1,ec='r',fc='none',zorder=4)
-        ax.add_patch(rect)
-        s = """\
-$P-R_P$ Interval
-$\Delta \log Sinc$ = {:.2f} dex
-$\Delta \log R_P$ = {:.2f} dex
-""".format(w,h)
-        kw = dict(
-            size='x-small',zorder=5,va='top',ha='left',transform=ax.transAxes,
-        )
-#        text(xyaxes[0]+0.07,xyaxes[1],s,**kw)
-
+        self.ORDPlotter = ORDPlotterSincPrad
+        self.xlabel='Orbital Period (days)'
+        self.ylabel='Planet Size (Earth-radii)'
 
 class ORDPlotter(object):
     """
@@ -238,10 +161,10 @@ class ORDPlotterSincPrad(ORDPlotter):
     """
     """
     def __init__(self, occ, cp):
-        super(ORDPlotterPerPrad,self).__init__(occ,cp)
-        self.xlabel = 'Orbital Period (days)'
+        super(ORDPlotterSincPrad,self).__init__(occ,cp)
+        self.xlabel = 'Incident Flux (Earth-units)'
         self.ylabel = 'Planet size (Earth-radii)'
-        self.cbarlabel = '$df/ d \log P / d \log R_p$'
+        self.cbarlabel = '$df/ d \log Sinc / d \log R_p$'
 
 def gradient_arrays(cp):
 
