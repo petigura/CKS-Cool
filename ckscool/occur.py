@@ -11,7 +11,6 @@ import pandas as pd
 import calc
 import ckscool.io
 import ckscool.grid
-
 #import ckscool.gradient
 
 class Occurrence2D(object):
@@ -25,18 +24,6 @@ class Occurrence2D(object):
         self.comp = comp
         self.nstars = nstars
 
-class OccurrencePerPrad(Occurrence2D):
-    """Occurrence
-
-    Args:
-        plnt (pandas DataFrame): table with planet parameters must contain
-            following keys:
-            - prad: planet radius
-            - per: planet period
-        comp (ckscool.comp.Completeness): see docs
-        nstars (int): number of stars in parent stellar population
-
-    """
     def occurence_box(self, limits):
         """Compute occurrence in a little box
 
@@ -111,28 +98,50 @@ class OccurrencePerPrad(Occurrence2D):
         df = pd.DataFrame(df)
         return df
 
-    def occurrence_rate_density_idem(self, logper, logprad):
+    def occurrence_rate_density_idem(self, logx, logy):
         """
-        Occurrence rate density (ORD) at logper logprad
+        Occurrence rate density (ORD) at logx logy
 
-        logper : log10 of the period at which to compute ord
-        logprad : log10 of the planet radius at which to compute ord
+        logx : log10 of the period at which to compute ord
+        logy : log10 of the planet radius at which to compute ord
         """
-        assert logper.shape ==logprad.shape
-
+        assert logx.shape ==logy.shape
         plnt = self.plnt.copy()
-        w = 1/self.comp.prob_trdet_interp(array(plnt.per),array(plnt.prad))
+        plntx = array(plnt[self.xk])
+        plnty = array(plnt[self.yk])
+        w = 1 / self.comp.prob_trdet_interp(plntx,plnty)
         nplnt = len(plnt)
-
-        x = logper
-        y = logprad 
-        xi = np.log10(self.plnt.per)
-        yi = np.log10(self.plnt.prad)
-        xbw = log10(1 + 1)
-        ybw = log10(1 + 0.05)
-        occrd = gaussian_2d_kde(x, y, xi, yi, xbw, ybw ,w = w) / self.nstars
-        occrd = occrd.reshape(logper.shape)
+        logxi = np.log10(plntx)
+        logyi = np.log10(plnty)
+        occrd = gaussian_2d_kde(
+            logx, logy, logxi, logyi, self.xbw, self.ybw ,w=w
+        )
+        occrd /= self.nstars
+        occrd = occrd.reshape(logx.shape)
         return occrd
+
+class OccurrencePerPrad(Occurrence2D):
+    """Occurrence
+
+    Args:
+        plnt (pandas DataFrame): table with planet parameters must contain
+            following keys:
+            - prad: planet radius
+            - per: planet period
+        comp (ckscool.comp.Completeness): see docs
+        nstars (int): number of stars in parent stellar population
+
+    """
+    xk = 'per'
+    yk = 'prad'
+    xbw = log10(1 + 1)
+    ybw = log10(1 + 0.05)
+
+class OccurrenceSincPrad(Occurrence2D):
+    xk = 'per'
+    yk = 'sinc'
+    xbw = log10(1 + 1)
+    ybw = log10(1 + 0.05)
 
 def gaussian_2d_kde(x, y, xi, yi, xbw, ybw, w=None):
     """
@@ -145,82 +154,6 @@ def gaussian_2d_kde(x, y, xi, yi, xbw, ybw, w=None):
     cov[:,0,0] *= xbw**2
     cov[:,1,1] *= ybw**2
     return gaussian(pos, mu, cov, w=w) 
-
-class OccurrenceSincPrad(Occurrence2D):
-    def occurence_box(self, limits):
-        """Compute occurrence in a little box
-
-        We make the assumption that the dN/dlogSinc and dN/lopRp is constant
-        within a box.
-
-        Args:
-            limits (dict): must contain, sinc1, sinc2, prad1, prad2
-        """
-        out = dict()
-        prad1 = limits['prad1']
-        prad2 = limits['prad2']
-        sinc1 = limits['sinc1']
-        sinc2 = limits['sinc2']
-
-        # Get planet sample and number of stars
-        cut = self.plnt.copy()
-        cut = cut[cut.prad.between(prad1,prad2)]
-        cut = cut[cut.sinc.between(sinc1,sinc2)]
-        nplnt = len(cut)
-        prob_trdet_mean, prob_det_mean = self.comp.mean_prob_trdet(
-            sinc1, sinc2, prad1, prad2
-        )
-        ntrial = self.nstars * prob_trdet_mean
-        rate = nplnt / ntrial
-
-        nsample = int(1e4)
-        binom = Binomial(ntrial, nplnt)
-        samples = binom.sample(nsample)
-
-        uplim = nplnt==0
-        rate = samples_to_rate(samples,uplim=uplim)
-        out['ntrial'] = ntrial
-        out['nplnt'] = nplnt
-        out['prob_trdet_mean'] = prob_trdet_mean
-        out['prob_det_mean'] = prob_det_mean
-        out = dict(out,**rate)
-        return out
-
-    def occurrence_grid(self, sinc1=None, sinc2=None, dlogsinc=None, 
-                             prad1=None, prad2=None, dlogprad=None):
-        
-        """
-        A convenience function to compute occurrence over a grid in period and radius
-        """
-        eps = 1e-9
-        if dlogsinc is None:
-            sinc = [sinc1,sinc2]
-        else:
-            sinc = 10**np.arange(log10(sinc1),log10(sinc2)+eps,dlogsinc)
-            
-        if dlogprad is None:
-            prad = [prad1,prad2]
-        else:
-            prad = 10**np.arange(log10(prad1),log10(prad2)+eps,dlogprad)
-        
-        df = []
-        for i in range(len(sinc)-1):
-            _sinc1 = sinc[i]
-            _sinc2 = sinc[i+1]
-            for j in range(len(prad)-1):
-                _prad1 = prad[j]
-                _prad2 = prad[j+1]
-                limits = dict(
-                    sinc1=_sinc1, sinc2=_sinc2, prad1=_prad1, prad2=_prad2
-                )
-                _out = self.occurence_box(limits)
-                _out['sincc'] = np.sqrt(_sinc1*_sinc2)
-                _out['pradc'] = np.sqrt(_prad1*_prad2)
-                df.append(_out)
-
-        df = pd.DataFrame(df)
-        return df
-
 
 class Binomial(object):
     """Class that computes binomial statistics
@@ -386,7 +319,12 @@ def load_occur(objkey, limits, debug=False, sinc=False):
 
     else:
         assert False, "{} not supported objkey".format(objkey)
-        
+
+    debug=1
+    if debug:
+        xbins = xbins[::2]
+        ybins = ybins[::2]
+
     comp_bins_dict = {xk: xbins,yk: ybins}
     spacing_dict = {xk:xscale, yk:yscale}
     grid = ckscool.grid.Grid(comp_bins_dict,spacing_dict)
@@ -428,13 +366,15 @@ def gaussian(pos, mu, cov, w=None):
         norm *= w
 
     res = np.zeros(nres) # provision results array 
-    # Iterate over 
+    # Iterate over points
     for i in range(npts):
         _invcov = invcov[i]
         _mu = mu[i]
         _norm = norm[i]
         resid = _mu - pos
-        dist = np.matmul(resid.reshape(-1,1,ndim),np.matmul(_invcov,resid.reshape(-1,ndim,1))).reshape(-1)
+        temp = np.matmul(_invcov,resid.reshape(-1,ndim,1))
+        temp = np.matmul(resid.reshape(-1,1,ndim),temp)
+        dist = temp.reshape(-1)
         res += _norm * np.exp(-0.5 * dist )
 
     return res
