@@ -166,75 +166,6 @@ class ORDPlotterSincPrad(ORDPlotter):
         self.ylabel = 'Planet size (Earth-radii)'
         self.cbarlabel = '$df/ d \log Sinc / d \log R_p$'
 
-def gradient_arrays(cp):
-
-    """
-    Args:
-       cp : contour plotter object
-    """
-    # convert into an x-array for plotting
-    ds = cp.rate.groupby(['per1','prad1']).first().to_xarray()
-    rate = ds.rate
-    rate = rate.fillna(4e-6)
-
-    # Smooth out the contours a bit
-    rate = nd.gaussian_filter(rate,(4,2))
-    X, Y = ds.perc, ds.pradc
-    ntrial = np.array(ds.ntrial)
-
-    return X, Y, rate, ntrial
-
-def gradient_arrays_sinc(cp):
-
-    """
-    Args:
-       cp : contour plotter object
-    """
-    # convert into an x-array for plotting
-    ds = cp.rate.groupby(['sinc1','prad1']).first().to_xarray()
-    rate = ds.rate
-    rate = rate.fillna(4e-6)
-
-    # Smooth out the contours a bit
-    rate = nd.gaussian_filter(rate,(4,2))
-    X, Y = ds.sincc, ds.pradc
-    ntrial = np.array(ds.ntrial)
-
-    return X, Y, rate, ntrial
-
-
-def add_gradient(logx, chain, sinc=False):
-
-    m = np.median(chain[:,0])
-    m_sigma = np.percentile(chain[:,0], [16,84])
-    m_err = [m-m_sigma[0], m_sigma[1]-m]
-
-    Rp10 = np.median(chain[:,1])
-    Rp10_sigma = np.percentile(chain[:,1], [16,84])
-    Rp10_err = [Rp10-Rp10_sigma[0], Rp10_sigma[1]-Rp10]
-
-    if sinc:
-        label_str = r"m = {0:.2f}$^{{{1:.2f}}}_{{{2:.2f}}}$, R$_p$(100)={3:.2f}$^{{{4:.2f}}}_{{{5:.2f}}}$".format(m, m_err[1], m_err[0], Rp10, Rp10_err[1], Rp10_err[0])
-        plt.plot(logx, [log10(ckscool.gradient.R_sinc(10**i, m, Rp10)) for i in logx], color='b', label=label_str)
-    else:
-        label_str = r"m = {0:.2f}$^{{{1:.2f}}}_{{{2:.2f}}}$, R$_p$(10)={3:.2f}$^{{{4:.2f}}}_{{{5:.2f}}}$".format(m, m_err[1], m_err[0], Rp10, Rp10_err[1], Rp10_err[0])
-        plt.plot(logx, [log10(ckscool.gradient.R(10**i, m, Rp10)) for i in logx], color='b', label=label_str)
-
-
-    R_upper = []
-    R_lower = []
-
-    for i in logx:
-        if sinc:
-            R_values_i = [ckscool.gradient.R_sinc(10**i, chain[j,0], chain[j,1]) for j in range(len(chain[:,0]))]
-        else:
-            R_values_i = [ckscool.gradient.R(10**i, chain[j,0], chain[j,1]) for j in range(len(chain[:,0]))]
-        R_lim_i = np.percentile(R_values_i, [16,84])
-        R_upper.append(R_lim_i[0])
-        R_lower.append(R_lim_i[1])
-
-    plt.fill_between(logx, log10(R_lower), log10(R_upper), color='b', alpha=0.2)
-    plt.legend(loc='upper right')
 
 def fig_contour_three():
     cp0 = ckscool.io.load_object('cp_smass=0.5-0.7',cache=1)
@@ -585,14 +516,10 @@ def plot_rates(xk, occur, fmtkey, fac=1.0, **kw):
     
     yerr = np.array(occur['rate_err2 rate_err1'.split()]).T
     yerr[0] *= -1 
-
-    #semilogy()
-    
     x = occur[xk]
     y = occur.rate
     errorbar(x,y*fac,yerr=yerr*fac, **ebkw1)
     errorbar(x,y*fac,yerr=yerr*fac, **ebkw2)
-
     occurul = occur.dropna(subset=['rate_ul'])
     if len(occurul) >0:
         plot(x,occur.rate_ul*fac,**ulkw)
