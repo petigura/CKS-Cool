@@ -9,9 +9,7 @@ from scipy import ndimage as nd
 import ckscool.io
 import ckscool.plot.planet
 import ckscool.gradient #import R, R_sinc
-from .contour import ContourPlotter
 from .planet import NDPlotter
-from . import planet
 
 sns.set_style('ticks')
 sns.set_color_codes()
@@ -72,7 +70,6 @@ class SixPlotter(object):
         setp(axL[:,0], ylabel=self.ylabel)
         setp(axL[-1,:], xlabel=self.xlabel)
         tight_layout(True)
-
 
 class SixPlotterPerPrad(SixPlotter):
     def __init__(self):
@@ -142,7 +139,8 @@ class ORDPlotter(object):
         """
         ds = self.ds
         cmap = sns.light_palette("gray",as_cmap=True)
-        contourf(ds.kxc,ds.kyc,ds.ntrial,[0,self.ntrials_min],zorder=2.5,cmap=cmap,vmax=1)
+        contourf(ds.kxc, ds.kyc, ds.ntrial, [0,self.ntrials_min], zorder=2.5,
+                 cmap=cmap,vmax=1)
 
     def label(self):
         xlabel(self.xlabel)
