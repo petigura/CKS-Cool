@@ -776,6 +776,14 @@ def order_columns(df, verbose=False, drop=False):
     return df
 
 def load_object(key,cache=0,verbose=1):
+    """
+    Objects must adopt the following naming convention
+    {objkey}_{params}
+    """
+
+    assert key.count('_')==1, "must follow {objkey:}_{params:} convention" 
+    objkey, params = key.split('_')
+    
     pklfn = os.path.join(CACHEDIR,key+'.pkl')
     if cache == 1:
         try:
@@ -797,41 +805,27 @@ def load_object(key,cache=0,verbose=1):
             pickle.dump(obj,f)
         return obj
         
-    if key.count('cp') == 1:
+    if objkey.count('cp') == 1:
         occurkey = key.replace('cp','occur')
         occ = load_object(occurkey, cache=1)
-        if key.count('sinc')==1:
+        if objkey.count('sinc')==1:
             obj = ckscool.plot.occur.load_contour_plotter_sinc(occ)
         else:
             obj = ckscool.plot.occur.load_contour_plotter(occ)
 
-    elif key.count('occur') == 1:
-        bits = key.split('_')
+    elif objkey=='occur-per-prad' or objkey=='occur-sinc-prad':
         limits = {}
-        for bit in bits:
-            if bit.count('smass'):
-                smass1, smass2 = bit.replace('smass=','').split('-')
-                limits['smass1'] = float(smass1)
-                limits['smass2'] = float(smass2)
+        if params.count('smass'):
+            smass1, smass2 = params.replace('smass=','').split('-')
+            limits['smass1'] = float(smass1)
+            limits['smass2'] = float(smass2)
+        obj = ckscool.occur.load_occur(objkey,limits)
 
-            if bit.count('bmr'):
-                bmr1, bmr2 = bit.replace('bmr=','').split('-')
-                limits['bmr1'] = float(bmr1)
-                limits['bmr2'] = float(bmr2)
-
-        if key.count('sinc')==1:
-            obj = ckscool.occur.load_occur(limits,sinc=True)
-        else:
-            obj = ckscool.occur.load_occur(limits)
-
-        obj.comp.__delattr__('stars')
-        limits = dict(smass1=0.9,smass2=1.1)
-
-    elif key.count('fitper_')==1:
+    elif objkey.count('fitper_')==1:
         dlogper = 0.05 # Size of the bins used in the fitting
         dx = [dlogper]
-        #_, smet, size = key.split('-')
-        bits = key.split('_')
+        #_, smet, size = objkey.split('-')
+        bits = objkey.split('_')
         limits = {}
         for bit in bits:
             if bit.count('smass='):

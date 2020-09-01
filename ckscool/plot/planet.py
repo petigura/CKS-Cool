@@ -5,11 +5,49 @@ import ckscool.io
 from ckscool.occur import gaussian_2d_kde
 from .config import *
 from .contour import ContourPlotter
+    
+def fig_sample(**kwargs):
+    sns.set_context('paper',font_scale=1.0)
+    fig,axL = subplots(ncols=2,nrows=2,figsize=(7,6))
 
+    df = ckscool.io.load_table('planets-cuts2',cache=1)
+    df = df[~df.isany]
 
-class Plotter(object):
+    # Period
+    sca(axL[0,0])
+    pl = Plotter(df,'koi_period',**kwargs)
+    pl.plot()
+    fig_label('a')
+    ax = axes([0.89, 0.85, 0.008, 0.1])
+    cbar = colorbar(pl.qc,cax=ax,format='%.1f')
+    cbar.set_label('relative density',size='x-small')
+    cbar.ax.tick_params(labelsize='xx-small')
+
+    # Sinc
+    sca(axL[0,1])
+    pl = Plotter(df,'giso_sinc',**kwargs)
+    pl.plot()
+    xl = xlim()
+    xlim(xl[1],xl[0])
+    fig_label('b')
+
+    # Mass 
+    sca(axL[1,0])
+    pl = Plotter(df,'giso_smass',**kwargs)
+    pl.plot()
+    fig_label('c')
+    
+    # Metallicity
+    sca(axL[1,1])
+    pl = Plotter(df,'cks_smet',**kwargs)
+    pl.plot()
+    fig_label('d')
+    tight_layout(True)
+
+        
+class NDPlotter(object):
     """
-    Helper class to plot the planet sample
+    Class to facillitate plotting of occurrence number density
     """
     def __init__(self, df, xk, zoom=False):
         yk = 'gdir_prad'
@@ -19,7 +57,7 @@ class Plotter(object):
         if xk=='koi_period':
             if zoom:
                 xmin = 1
-                xmax = 100
+                xmax = 300
                 ymin = 1
                 ymax = 4
             else:
@@ -131,63 +169,3 @@ class Plotter(object):
         self.cp.yticks(self.yticks)
         self.cp.set_lim()
         setp(gca(),xlabel=self.xlabel,ylabel=self.ylabel)
-    
-    def plot_occ(self, occ):
-        ds = self.cp.meshgrid()
-        Z = gaussian_2d_kde(array(ds.kxc), array(ds.kyc), self.kx,
-                            self.ky, self.bwx, self.bwy)
-        Z = Z.reshape(ds.kxc.shape)
-        ds['Z'] = (['kx','ky'],Z)
-        qc = self.cp.contour(ds['Z'], normalize=True, cmap=plt.cm.afmhot_r)
-        self.qc = qc
-        self.cp.errorbar(self.x, self.y, yerr=None, fmt='o',
-                         mfc='none', elinewidth=0, ms=2, mew=0.4,
-                         mec='w', zorder=9)
-
-        self.cp.errorbar(self.x, self.y, yerr=None, fmt='o',
-                         mfc='none', elinewidth=0, ms=2, mew=0.2,
-                         mec='k', zorder=10)
-
-        self.cp.yticks(self.yticks)
-        self.cp.xticks(self.xticks)
-        self.cp.yticks(self.yticks)
-        self.cp.set_lim()
-        setp(gca(),xlabel=self.xlabel,ylabel=self.ylabel)
-    
-def fig_sample(**kwargs):
-    sns.set_context('paper',font_scale=1.0)
-    fig,axL = subplots(ncols=2,nrows=2,figsize=(7,6))
-
-    df = ckscool.io.load_table('planets-cuts2',cache=1)
-    df = df[~df.isany]
-
-    # Period
-    sca(axL[0,0])
-    pl = Plotter(df,'koi_period',**kwargs)
-    pl.plot()
-    fig_label('a')
-    ax = axes([0.89, 0.85, 0.008, 0.1])
-    cbar = colorbar(pl.qc,cax=ax,format='%.1f')
-    cbar.set_label('relative density',size='x-small')
-    cbar.ax.tick_params(labelsize='xx-small')
-
-    # Sinc
-    sca(axL[0,1])
-    pl = Plotter(df,'giso_sinc',**kwargs)
-    pl.plot()
-    xl = xlim()
-    xlim(xl[1],xl[0])
-    fig_label('b')
-
-    # Mass 
-    sca(axL[1,0])
-    pl = Plotter(df,'giso_smass',**kwargs)
-    pl.plot()
-    fig_label('c')
-    
-    # Metallicity
-    sca(axL[1,1])
-    pl = Plotter(df,'cks_smet',**kwargs)
-    pl.plot()
-    fig_label('d')
-    tight_layout(True)

@@ -22,32 +22,41 @@ class ContourPlotter(object):
         self._kde_ny = 400
 
     def meshgrid(self):
-        kx = np.linspace(self.xmin, self.xmax, self._kde_nx)
-        ky = np.linspace(self.ymin, self.ymax, self._kde_ny)
+
         if self.xscale=='log':
             kx = np.linspace(log10(self.xmin), log10(self.xmax), self._kde_nx)
+            x = 10**kx
+        else:
+            x = kx = np.linspace(self.xmin, self.xmax, self._kde_nx)
+            
         if self.yscale=='log':
             ky = np.linspace(log10(self.ymin), log10(self.ymax), self._kde_ny)
+            y = 10**ky
+        else:
+            y = ky = np.linspace(self.ymin, self.ymax, self._kde_ny)
 
         coords = {'kx':kx, 'ky':ky}
         _kx, _ky = meshgrid(kx,ky,indexing='ij')
+        _x, _y = meshgrid(x,y,indexing='ij')
         data = {
             'kxc': (['kx', 'ky'], _kx),
             'kyc': (['kx', 'ky'], _ky),
+            'xc': (['kx', 'ky'], _x),
+            'yc': (['kx', 'ky'], _y),
         }
         ds = xr.Dataset(data,coords=coords)
         return ds
-        
+       
     def contour(self, Z, normalize=False, **kwargs):
         if normalize:
             fac = 1.2
             Z /= Z.max()
             Z /= fac
             qc = Z.plot.contourf(
-                x='kx', levels=arange(0,1.001,0.05),zorder=0,
+                x='kx', levels=arange(0,1.001,0.05),
                 vmax=1,add_colorbar=False,**kwargs)
         else:
-            qc = Z.plot.contourf(x='kx', zorder=0,add_colorbar=False,**kwargs)
+            qc = Z.plot.contourf(x='kx', add_colorbar=False,**kwargs)
             
         return qc
 

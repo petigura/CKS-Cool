@@ -221,13 +221,9 @@ def create_workflow():
     kw = dict(zoom=True,xerrfac=0.5,yerrfac=1.5)
 
     # contour plots of planet detections
-    
     kw = dict(zoom=True,xerrfac=0.5,yerrfac=1.5)
-
-    w.plot['occur-contour-three'] = plot.occur.fig_contour_three
     w.plot['occur-contour-six-per'] = plot.occur.fig_contour_six_per
     w.plot['occur-contour-six-sinc'] = plot.occur.fig_contour_six_sinc
-    w.plot['planets-warm-smet-smass'] = plot.smet.fig_planets_warm_smet_smass
 
     # table
     f1 = ckscool.table.tab_star

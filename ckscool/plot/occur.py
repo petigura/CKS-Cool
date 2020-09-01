@@ -10,104 +10,85 @@ import ckscool.io
 import ckscool.plot.planet
 import ckscool.gradient #import R, R_sinc
 from .contour import ContourPlotter
-
+from .planet import NDPlotter
 from . import planet
 
 sns.set_style('ticks')
 sns.set_color_codes()
 
-def contour(cp, plot_interval=False, draw_colorbar=True, cax=None,
-            plot_completeness=True, ntrials_min=50, levels=None):
-    """
-    Args:
-       cp : contour plotter object
-    """
+def fig_contour_six_per(gradient=False):
+    sns.set_context('paper')
+    pl = SixPlotterPer()
+    pl.plot()
 
-    ax = gca()
-    tax = gca().transAxes
-    cmap = 'YlGn' #,None #'hot_r'
+def fig_contour_six_sinc(gradient=False):
+    sns.set_context('paper')
+    pl = SixPlotterSinc()
+    pl.plot()
 
-    # convert into an x-array for plotting
-    ds = cp.rate.groupby(['per1','prad1']).first().to_xarray()
-    rate = ds.rate
-    rate = rate.fillna(1e-10)
-    rate = nd.gaussian_filter(rate,(4,2))
+class SixPlotter(object):
+    def __init__(self):
+        self.mass1 = [0.5,0.7,1.0]
+        self.mass2 = [0.7,1.0,1.4]
+        
+    def plot(self):
+        fig, axL = subplots(nrows=3,ncols=2,figsize=(8.5,9))
+        i = 0
+        for _mass1, _mass2 in zip(self.mass1,self.mass2):
+            key = '{}_smass={}-{}'.format(self.occur_prefix,_mass1,_mass2)
+            occ = ckscool.io.load_object(key,cache=1)
+            axd = axL[i,0]
+            axo = axL[i,1]
 
-    # Smooth out the contours a bit
-    eps = 1e-10
-    X = np.array(np.log10(ds.perc))
-    Y = np.array(np.log10(ds.pradc))
-    Z = np.array(rate)
-    if levels==None:
-        #levels = arange(0,5e-2+eps,0.0025)
-        b = (
-            (ds.ntrial > ntrials_min)
-            & (ds.pradc > 1.0)
-            & (ds.pradc < 4.0)
-        )
-        b = array(b)
-        maxz = np.max(rate[b])
-        maxz = np.round(maxz*1.1,3)
-        levels = linspace(0,maxz+eps,14)
+            # Detected planets
+            sca(axd)
+            df = occ.plnt.copy()
+            df = df.rename(columns={'prad':'gdir_prad','per':'koi_period'})
+            pl = NDPlotter(df,'koi_period',zoom=True)
+            pl.plot()
+            cbar = colorbar(pl.qc,shrink=0.5,format='%.1f')
+            cbar.set_label('$dN/d \log P/ d \log R_p$',size='x-small')
+            cbar.ax.tick_params(labelsize='xx-small')
 
-    cbarticks = levels[::2]
-    cbarticklabels = ["{:.1f}".format(1e2*_yt) for _yt in cbarticks]
-    kw = dict(levels=levels,extend='neither',cmap=cmap,zorder=0)
-    cbarlabel = r"""Planets per 100 Stars per $P-R_P$ interval"""
-    qcs = contourf(X, Y, Z, **kw)
+            # Occurrence rate 
+            sca(axo)
+            cp = pl.cp
+            pl = ORDPlotterPerPrad(occ, cp)
+            pl.plot_ord()
+            pl.plot_completeness()
+            title = '$M_\star = {}-{}\, M_\odot$ '.format(_mass1,_mass2)
+            setp(axL[i,:],title=title)
+            i+=1
 
-    # Completeness
-    if plot_completeness:
-        Zt = np.array(ds.ntrial)
-        cmap = sns.light_palette("gray",as_cmap=True)
-        contourf(X,Y,Zt,[0,ntrials_min],zorder=2.5,cmap=cmap,vmax=1)
-        '''
-        text(
-            0.95,0.15,'Low Completeness',rotation=12,zorder=5,size='small',
-            transform=ax.transAxes,ha='right'
-        )
-        '''
+        for ax in axL.flatten():
+            sca(ax)
+            xticks([log10(_xt) for _xt in self.xt],self.xt)
+            yticks([log10(_yt) for _yt in self.yt],self.yt)
+            grid()
 
+        setp(axL, xlim=self.xlim, ylim=self.ylim)
+        setp(axL[:,1:], ylabel='')
+        setp(axL[:-1,:], xlabel='')
+        tight_layout(True)
 
-    # plot straight contours
-    if draw_colorbar:
-        cbar = colorbar(qcs,cax=cax,ticks=cbarticks,)
-        t = cbar.ax.set_yticklabels(cbarticklabels)
-        setp(t,size='x-small')
-        cbar.set_label(cbarlabel,size='small')
+class SixPlotterPer(SixPlotter):
+    def __init__(self):
+        super(SixPlotterPer,self).__init__()
+        self.xt = [1,3,10,30,100,300]
+        self.yt = [1.0,1.4,2.0,2.8,4.0]
+        self.xlim = log10(1),log10(300)
+        self.ylim = log10(1),log10(4)
+        self.occur_prefix = 'occur-per-prad'
 
-    xt = [1,3,10,30,100,300]
-    yt = [0.5,1,2,4,8,16,32]
-    xticks([log10(_xt) for _xt in xt],xt)
-    yticks([log10(_yt) for _yt in yt],yt)
-    xlim(log10(1),log10(300))
-    ylim(log10(1),log10(4))
-    xlabel('Orbital Period (days)')
-    ylabel('Planet Size (Earth-radii)')
-
-    if plot_interval:
-        #axis_to_data = ax.transAxes + ax.transData.inverted()
-        #xy = axis_to_data.transform((0.1,0.9))
-        xy = 0.1, 0.52
-        w = cp.perwid
-        h = cp.pradwid
-        rect = Rectangle(xy, w, h, lw=1, ec='r', fc='none', zorder=10)
-        ax.add_patch(rect)
-        s = """\
-$P-R_P$ Interval
-$\Delta \log P$ = {:.2f} dex
-$\Delta \log R_P$ = {:.2f} dex
-""".format(w,h)
-        kw = dict(
-            size='x-small',zorder=5,va='top',ha='left',transform=ax.transAxes,
-        )
-
-
-    return X, Y, Z
-
-#        text(xyaxes[0]+0.07,xyaxes[1],s,**kw)
-# ---------------------------------------------------------------------------- #
-
+class SixPlotterSinc(SixPlotter):
+    def __init__(self):
+        super(SixPlotterSinc,self).__init__()
+        self.xt = [3000,1000,300,100,30,10,3]
+        self.yt = [1.0,1.4,2.0,2.8,4.0]
+        self.xlim=log10(3000),log10(3)
+        self.ylim=log10(1),log10(4)
+        self.occur_prefix = 'occur-sinc-prad'
+    
 def contour_sinc(cp, plot_interval=False, draw_colorbar=True,cax=None,
                  plot_completeness=True,label=False, normalize=False,
                  ntrials_min=50):
@@ -192,6 +173,75 @@ $\Delta \log R_P$ = {:.2f} dex
             size='x-small',zorder=5,va='top',ha='left',transform=ax.transAxes,
         )
 #        text(xyaxes[0]+0.07,xyaxes[1],s,**kw)
+
+
+class ORDPlotter(object):
+    """
+    Occurrence rate density plotter
+    """
+    def __init__(self, occ, cp):
+        """
+        occ : occurrence object. can either be 
+        """
+        ds = cp.meshgrid()
+        Z = occ.occurrence_rate_density_idem(array(ds.kxc), array(ds.kyc))
+        Z = Z.reshape(ds.kxc.shape)
+        ds['occrd'] = (['kx','ky'],Z)
+        Z = occ.comp.prob_trdet_interp(ds.xc, ds.yc)
+        ds['prob_trdet'] = (['kx','ky'],Z)
+        ds['ntrial'] = occ.nstars * ds.prob_trdet
+        self.ds = ds
+        self.ntrials_min = 50
+
+    def plot_ord(self,levels=None):
+        """
+        plot occurrence rate density
+        """
+        ds = self.ds
+        if levels==None:
+            eps = 1e-4
+            maxz = ds.occrd.where(ds.ntrial > self.ntrials_min).max()
+            maxz = np.round(maxz*1.1,3)
+            levels = linspace(0,maxz+eps,14)
+
+        cbarticks = levels[::2]
+        cbarticklabels = ["{:.1f}".format(1e2*_yt) for _yt in cbarticks]
+        cmap = 'YlGn' 
+        kw = dict(levels=levels,extend='neither',cmap=cmap,zorder=0)
+        qc = contourf(ds.kxc,ds.kyc,ds.occrd,**kw)
+        cbar = colorbar(qc,shrink=0.5,format='%.1f')
+        cbar.set_label(self.cbarlabel,size='x-small')
+        cbar.ax.tick_params(labelsize='xx-small')
+
+    def plot_completeness(self):
+        """
+        Gray out region of low completeness
+        """
+        ds = self.ds
+        cmap = sns.light_palette("gray",as_cmap=True)
+        contourf(ds.kxc,ds.kyc,ds.ntrial,[0,self.ntrials_min],zorder=2.5,cmap=cmap,vmax=1)
+
+    def label(self):
+        xlabel(self.xlabel)
+        ylabel(self.ylabel)
+        
+class ORDPlotterPerPrad(ORDPlotter):
+    """
+    """
+    def __init__(self, occ, cp):
+        super(ORDPlotterPerPrad,self).__init__(occ,cp)
+        self.xlabel = 'Orbital Period (days)'
+        self.ylabel = 'Planet size (Earth-radii)'
+        self.cbarlabel = '$df/ d \log P / d \log R_p$'
+
+class ORDPlotterSincPrad(ORDPlotter):
+    """
+    """
+    def __init__(self, occ, cp):
+        super(ORDPlotterPerPrad,self).__init__(occ,cp)
+        self.xlabel = 'Orbital Period (days)'
+        self.ylabel = 'Planet size (Earth-radii)'
+        self.cbarlabel = '$df/ d \log P / d \log R_p$'
 
 def gradient_arrays(cp):
 
@@ -286,124 +336,7 @@ def fig_contour_three():
     fig.subplots_adjust(hspace=0.2)
 
 
-def fig_contour_six_per(gradient=False):
-    sns.set_context('paper')
-    #mass1 = [0.5,0.8,1.1]
-    #mass2 = [0.8,1.1,1.4]
-    mass1 = [0.5,0.7,1.0]
-    mass2 = [0.7,1.0,1.4]
-    fig, axL = subplots(nrows=3,ncols=2,figsize=(8.5,9))
-
-    i = 0
-    for _mass1, _mass2 in zip(mass1,mass2):
-        axd = axL[i,0]
-        axo = axL[i,1]
-        
-        # Detected planets
-        key = 'occur_smass={}-{}'.format(_mass1,_mass2)
-        occ = ckscool.io.load_object(key,cache=1)
-
-        sca(axd)
-        df = occ.plnt.copy()
-        df = df.rename(columns={'prad':'gdir_prad','per':'koi_period'})
-        pl = planet.Plotter(df,'koi_period',zoom=True)
-        pl.plot()
-        cbar = colorbar(pl.qc,shrink=0.5,format='%.1f')
-        cbar.set_label('$dN/d \log P/ d \log R_p$',size='x-small')
-        cbar.ax.tick_params(labelsize='xx-small')
-        
-        
-        # Occurrence rate 
-        sca(axo)
-        cp = ContourPlotter(1, 100 , 1, 4, xscale='log', yscale='log')
-        ds = cp.meshgrid()
-        Z = occ.occurrence_rate_density_idem(array(ds.kxc), array(ds.kyc))
-        Z = Z.reshape(ds.kxc.shape)
-        ds['Z'] = (['kx','ky'],Z)
-        qc = cp.contour(ds['Z'], cmap='YlGn',levels=20)
-        cbar = colorbar(qc,shrink=0.5,format='%.1f')
-        cbar.set_label('$df/ d \log P / d \log R_p$',size='x-small')
-        cbar.ax.tick_params(labelsize='xx-small')
-        xlabel('Orbotal Period (days)')
-        '''
-        if gradient:
-            sca(axd)
-            logperc = cp.rate['logperc']
-            bootstrap_det_chain = np.loadtxt("./data/chain_detv2_{0}-{1}-smass.csv".format(_mass1, _mass2), delimiter=',')
-            bootstrap_occ_chain = np.loadtxt("./data/chain_occv2_{0}-{1}-smass.csv".format(_mass1, _mass2), delimiter=',')
-            add_gradient(logperc, bootstrap_det_chain)
-            add_gradient(logperc, bootstrap_occ_chain)
-
-        '''
-        title = '$M_\star = {}-{}\, M_\odot$ '.format(_mass1,_mass2)
-        setp(axL[i,:],title=title)
-        i+=1
-
-
-    for ax in axL.flatten():
-        sca(ax)
-        xt = [1,3,10,30,100,300]
-        yt = [1.0,1.4,2.0,2.8,4.0]
-        xticks([log10(_xt) for _xt in xt],xt)
-        yticks([log10(_yt) for _yt in yt],yt)
-        grid()
-
-    xlim = log10(1),log10(100)
-    ylim = log10(1),log10(4)
-    setp(axL, xlim=xlim, ylim=ylim)
-    setp(axL[:,1:], ylabel='')
-    setp(axL[:-1,:], xlabel='')
-    tight_layout(True)
-
-def fig_contour_six_sinc(gradient=False):
-    sns.set_context('paper')
-    #mass1 = [0.5,0.8,1.1]
-    #mass2 = [0.8,1.1,1.4]
-    mass1 = [0.5,0.7,1.0]
-    mass2 = [0.7,1.0,1.4]
-    fig, axL = subplots(nrows=3,ncols=2,figsize=(8.5,9))
-    i = 0
-    for _mass1, _mass2 in zip(mass1,mass2):
-        key = 'cp-sinc_smass={}-{}'.format(_mass1,_mass2)
-        cp = ckscool.io.load_object(key,cache=1)
-
-        if gradient:
-            logsinc = cp.rate['logsincc']
-            bootstrap_det_chain = np.loadtxt("./data/chain_det_SincPradv2_{0}-{1}-smass.csv".format(_mass1, _mass2), delimiter=',')
-            bootstrap_occ_chain = np.loadtxt("./data/chain_occ_SincPradv2_{0}-{1}-smass.csv".format(_mass1, _mass2), delimiter=',')
-
-        sca(axL[i,0])
-        df = cp.occ.plnt.copy()
-        df = df.rename(columns={'prad':'gdir_prad','sinc':'giso_sinc'})
-        ckscool.plot.planet._sinc_prad(df,nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1)
-        if gradient:
-            add_gradient(logsinc, bootstrap_det_chain, sinc=True)
-
-
-        sca(axL[i,1])
-        contour_sinc(cp,plot_interval=True,draw_colorbar=True, ntrials_min=100)
-        if gradient:
-            add_gradient(logsinc, bootstrap_occ_chain, sinc=True)
-
-        title = '$M_\star = {}-{}\, M_\odot$ '.format(_mass1,_mass2)
-        setp(axL[i,:],title=title)
-        i+=1
-
-    for ax in axL.flatten():
-        sca(ax)
-        xt = [3000,1000,300,100,30,10,3]
-        yt = [1.0,1.4,2.0,2.8,4.0]
-        xticks([log10(_xt) for _xt in xt],xt)
-        yticks([log10(_yt) for _yt in yt],yt)
-        grid()
-
-    xlim=log10(3000),log10(3)
-    ylim=log10(1),log10(4)
-    setp(axL,xlim=xlim,ylim=ylim)
-    setp(axL[:,1:],ylabel='')
-    setp(axL[:-1,:],xlabel='')
-    tight_layout(True)
-
+    
 class obj(object):
     def __init__(self):
         pass

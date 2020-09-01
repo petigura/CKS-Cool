@@ -20,7 +20,7 @@ __STARS_REQUIRED_COLUMNS__ = (
     "logcdpp3 logcdpp6 logcdpp12 tobs smass srad".split()
 )
 
-class Completeness(object):
+class CompletenessPerPrad(object):
     """Class that compute completeness using the noise properties of a
     representive ensemble of stars.
 
@@ -174,8 +174,6 @@ class Completeness(object):
         Returns:
             pandas.Series: transit duration for each star in the sample.
         """
-
-
         per_yrs = per / 365.25
         smax = self.stars['smass']**(1.0/3.0) * per_yrs**(2.0/3.0)
         return smax
@@ -276,7 +274,7 @@ class Completeness(object):
         _prob_tr = srad * self.impact / a
         return _prob_tr.mean()
 
-    def compute_grid_prob_det(self,verbose=0):
+    def compute_grid_prob_det(self, verbose=0):
         """Compute a grid of detection probabilities"""
 
         print "Computing grid of detection probabilities"
@@ -353,8 +351,7 @@ class Completeness(object):
         y = np.log(prad)
         return self._prob_trdet_spline(x,y,grid=False)
     
-
-class Completeness_SincPrad(Completeness):
+class CompletenessSincPrad(CompletenessPerPrad):
     def _a(self, sinc, srad, steff, smass):
         """Returns semimajor axis for a given incident flux,
         stellar mass, stellar radius and stellar effective temperature
@@ -370,7 +367,7 @@ class Completeness_SincPrad(Completeness):
         _per_days = _per / (60.0 * 60.0 * 24.0)
         return _per_days.value
 
-    def prob_det_sinc(self, sinc, prad, interp=False):
+    def prob_det(self, sinc, prad, interp=False):
         """Probability that a planet would be detectable
 
         Probability that transiting planet with incident flux `sinc`
@@ -414,7 +411,7 @@ class Completeness_SincPrad(Completeness):
 
         return _prob_det
 
-    def compute_grid_prob_det_sinc(self,verbose=0):
+    def compute_grid_prob_det(self,verbose=0):
         """Compute a grid of detection probabilities"""
 
         print "Computing grid of detection probabilities"
@@ -428,7 +425,7 @@ class Completeness_SincPrad(Completeness):
 
         self.grid.ds['prob_det'] = self._grid_loop(rowfunc, callback)
 
-    def compute_grid_prob_tr_sinc(self,verbose=0):
+    def compute_grid_prob_tr(self,verbose=0):
         """Compute a grid of transit probabilities"""
 
         print "Computing grid of transit probabilities"
@@ -448,7 +445,7 @@ class Completeness_SincPrad(Completeness):
 
         self.grid.ds['prob_tr'] = self._grid_loop(rowfunc, callback)
 
-    def create_splines_sinc(self):
+    def create_splines(self):
         """Intialize detection probability interpolator
         """
         # Define the regular grid for interpolation
@@ -462,12 +459,12 @@ class Completeness_SincPrad(Completeness):
         self._prob_trdet_spline = RectBivariateSpline(x0, x1, prob_trdet)
         self._prob_det_spline = RectBivariateSpline(x0, x1, prob_det)
 
-    def prob_det_interp_sinc(self, sinc, prad):
+    def prob_det_interp(self, sinc, prad):
         _prob_det =  self._prob_det_interp_spline(per, prad)
         assert np.isfinite(_prob_det), " error in computing transit prob"
         return _prob_det
 
-    def mean_prob_trdet_sinc(self, sinc1, sinc2, prad1, prad2):
+    def mean_prob_trdet(self, sinc1, sinc2, prad1, prad2):
         """Mean probability of transiting and being detected"""
         x1 = np.log(sinc1)
         x2 = np.log(sinc2)

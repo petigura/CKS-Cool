@@ -14,7 +14,18 @@ import ckscool.grid
 
 #import ckscool.gradient
 
-class Occurrence(object):
+class Occurrence2D(object):
+    """
+    Base class for occurrence object. Holds generic functionality for
+    occurrence objects
+
+    """
+    def __init__(self, plnt, comp, nstars):
+        self.plnt = plnt
+        self.comp = comp
+        self.nstars = nstars
+
+class OccurrencePerPrad(Occurrence2D):
     """Occurrence
 
     Args:
@@ -26,11 +37,6 @@ class Occurrence(object):
         nstars (int): number of stars in parent stellar population
 
     """
-    def __init__(self, plnt, comp, nstars):
-        self.plnt = plnt
-        self.comp = comp
-        self.nstars = nstars
-
     def occurence_box(self, limits):
         """Compute occurrence in a little box
 
@@ -109,8 +115,8 @@ class Occurrence(object):
         """
         Occurrence rate density (ORD) at logper logprad
 
-        logper : log10 of the period at which to compute occurrence rate density
-        logprad : log10 of the 
+        logper : log10 of the period at which to compute ord
+        logprad : log10 of the planet radius at which to compute ord
         """
         assert logper.shape ==logprad.shape
 
@@ -140,8 +146,7 @@ def gaussian_2d_kde(x, y, xi, yi, xbw, ybw, w=None):
     cov[:,1,1] *= ybw**2
     return gaussian(pos, mu, cov, w=w) 
 
-
-class Occurrence_SincPrad(Occurrence):
+class OccurrenceSincPrad(Occurrence2D):
     def occurence_box(self, limits):
         """Compute occurrence in a little box
 
@@ -328,9 +333,8 @@ def load_comp3d():
     """
     Iterate over a bunch of 2D completeness 
     """
-    
 
-def load_occur(limits, debug=False, sinc=False):
+def load_occur(objkey, limits, debug=False, sinc=False):
     """
     Constructs occurrence object
     """
@@ -344,7 +348,9 @@ def load_occur(limits, debug=False, sinc=False):
     field = field.rename(columns={'ber19_srad':'srad','ber19_smass':'smass'})
     plnt = ckscool.io.load_table('planets-cuts2')
     plnt = plnt[~plnt.isany]
-    namemap = {'gdir_prad':'prad','koi_period':'per','giso_smass':'smass','giso_sinc':'sinc'}
+
+    namemap = {'gdir_prad':'prad','koi_period':'per','giso_smass':'smass',
+               'giso_sinc':'sinc'}
     plnt = plnt.rename(columns=namemap)
 
     if limits.has_key('smass1'):
@@ -353,58 +359,42 @@ def load_occur(limits, debug=False, sinc=False):
         field = field[field.smass.between(smass1,smass2)]
         plnt = plnt[plnt.smass.between(smass1,smass2)]
 
-    elif limits.has_key('bmr1'):
-        bmr1 = limits['bmr1']
-        bmr2 = limits['bmr2']
-        xs = 'gaia2_bpmag - gaia2_rpmag'
-        field = field[field.eval(xs).between(bmr1,bmr2)]
-        plnt = plnt[plnt.eval(xs).between(bmr1,bmr2)]
-
     n1 = len(field)
     field = field.dropna(subset=ckscool.comp.__STARS_REQUIRED_COLUMNS__)
-    n2 = len(field)
-    print "{}/{} stars remain after droping nulls ".format(n2,n1)
+    nstars = len(field)
+    
+    print "{}/{} stars remain after droping nulls ".format(nstars,n1)
+    if objkey=='occur-per-prad':
+        xbins = np.round(logspace(log10(0.1),log10(1000),65),4)
+        ybins = np.round(logspace(log10(0.25),log10(64),51 ),2)
+        xk = 'per'
+        yk = 'prad'
+        xscale = 'log'
+        yscale = 'log'
+        Completeness = ckscool.comp.CompletenessPerPrad
+        Occurrence = ckscool.occur.OccurrencePerPrad
 
-    if sinc:
-        comp_sinc_bins = np.round(logspace(log10(0.1),log10(100000),65),4)
-        comp_prad_bins = np.round(logspace(log10(0.25),log10(64),51 ),2)
-
-        # debugging
-        if debug:
-            comp_sinc_bins = comp_sinc_bins[:6]
-            comp_prad_bins = comp_prad_bins[:6]
-
-        comp_bins_dict = {'sinc':comp_sinc_bins, 'prad': comp_prad_bins}
-        spacing_dict = {'sinc':'log','prad':'log'}
-        grid = ckscool.grid.Grid(comp_bins_dict, spacing_dict)
-        comp = ckscool.comp.Completeness_SincPrad(field, grid, method, impact)
-        comp.compute_grid_prob_det_sinc(verbose=False)
-        comp.compute_grid_prob_tr_sinc(verbose=False)
-        comp.create_splines_sinc()
-        nstars = len(field)
-        occ = ckscool.occur.Occurrence_SincPrad(plnt, comp, nstars)
+    elif objkey=='occur-sinc-prad':
+        xbins = np.round(logspace(log10(0.1),log10(100000),65),4)
+        ybins = np.round(logspace(log10(0.25),log10(64),51 ),2)
+        xk = 'sinc'
+        yk = 'prad'
+        xscale = 'log'
+        yscale = 'log'
+        Completeness = ckscool.comp.CompletenessSincPrad
+        Occurrence = ckscool.occur.OccurrenceSincPrad
 
     else:
-        # Define grid of period and radius to compute completeness
-        comp_per_bins = np.round(logspace(log10(0.1),log10(1000),65),4)
-        comp_prad_bins = np.round(logspace(log10(0.25),log10(64),51 ),2)
-
-        # debugging
-        if debug:
-            comp_per_bins = comp_per_bins[:6]
-            comp_prad_bins = comp_prad_bins[:6]
-
-        comp_bins_dict = {'per': comp_per_bins,'prad': comp_prad_bins}
-        spacing_dict = {'per':'log','prad':'log'}
-
-        grid = ckscool.grid.Grid(comp_bins_dict,spacing_dict)
-
-        comp = ckscool.comp.Completeness(field, grid, method, impact)
-        comp.compute_grid_prob_det(verbose=False)
-        comp.compute_grid_prob_tr(verbose=False)
-        comp.create_splines()
-        nstars = len(field)
-        occ = ckscool.occur.Occurrence(plnt, comp, nstars)
+        assert False, "{} not supported objkey".format(objkey)
+        
+    comp_bins_dict = {xk: xbins,yk: ybins}
+    spacing_dict = {xk:xscale, yk:yscale}
+    grid = ckscool.grid.Grid(comp_bins_dict,spacing_dict)
+    comp = Completeness(field, grid, method, impact)
+    comp.compute_grid_prob_det(verbose=True)
+    comp.compute_grid_prob_tr(verbose=True)
+    comp.create_splines()
+    occ = Occurrence(plnt, comp, nstars)
     return occ
 
 def load_occur_resample(smass1, smass2, plnt, comp, nstars):
