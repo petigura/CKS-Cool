@@ -41,7 +41,11 @@ class SixPlotter(object):
             # Detected planets
             sca(axd)
             df = occ.plnt.copy()
-            df = df.rename(columns={'prad':'gdir_prad','per':'koi_period','sinc':'giso_sinc'})
+            df = df.rename(
+                columns={
+                    'prad':'gdir_prad','per':'koi_period','sinc':'giso_sinc'
+                }
+            )
             pl = NDPlotter(df,self.xk,zoom=True)
             pl.plot()
             cbar = colorbar(pl.qc,shrink=0.5,format='%.1f')
