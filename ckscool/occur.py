@@ -12,6 +12,7 @@ import calc
 import ckscool.io
 import ckscool.grid
 #import ckscool.gradient
+from ckscool.comp import CompletenessPerPrad, CompletenessSincPrad
 
 class Occurrence2D(object):
     """
@@ -136,12 +137,21 @@ class OccurrencePerPrad(Occurrence2D):
     yk = 'prad'
     xbw = log10(1 + 1)
     ybw = log10(1 + 0.05)
+    def __init__(self,*args):
+        super(OccurrencePerPrad,self).__init__(*args)
+        assert isinstance(self.comp,CompletenessPerPrad), \
+            "comp must be instance of CompletenessPerPrad"
 
 class OccurrenceSincPrad(Occurrence2D):
     xk = 'sinc'
     yk = 'prad'
     xbw = log10(1 + 1)
     ybw = log10(1 + 0.05)
+    def __init__(self,*args):
+        super(OccurrenceSincPrad,self).__init__(*args)
+        assert isinstance(self.comp,CompletenessSincPrad), \
+            "comp must be instance of CompletenessSincPrad"
+
 
 def gaussian_2d_kde(x, y, xi, yi, xbw, ybw, w=None):
     """
@@ -320,7 +330,6 @@ def load_occur(objkey, limits, debug=False, sinc=False):
     else:
         assert False, "{} not supported objkey".format(objkey)
 
-    debug=1
     if debug:
         xbins = xbins[::2]
         ybins = ybins[::2]
