@@ -1,10 +1,10 @@
 from matplotlib.pylab import *
 import seaborn as sns
+import xarray as xr
 
 import ckscool.io
 from ckscool.occur import gaussian_2d_kde
 from .config import *
-from .contour import ContourPlotter
     
 def fig_sample(**kwargs):
     sns.set_context('paper',font_scale=1.0)
@@ -15,7 +15,7 @@ def fig_sample(**kwargs):
 
     # Period
     sca(axL[0,0])
-    pl = Plotter(df,'koi_period',**kwargs)
+    pl = NDPlotter(df,'koi_period',**kwargs)
     pl.plot()
     fig_label('a')
     ax = axes([0.89, 0.85, 0.008, 0.1])
@@ -25,7 +25,7 @@ def fig_sample(**kwargs):
 
     # Sinc
     sca(axL[0,1])
-    pl = Plotter(df,'giso_sinc',**kwargs)
+    pl = NDPlotter(df,'giso_sinc',**kwargs)
     pl.plot()
     xl = xlim()
     xlim(xl[1],xl[0])
@@ -33,13 +33,13 @@ def fig_sample(**kwargs):
 
     # Mass 
     sca(axL[1,0])
-    pl = Plotter(df,'giso_smass',**kwargs)
+    pl = NDPlotter(df,'giso_smass',**kwargs)
     pl.plot()
     fig_label('c')
     
     # Metallicity
     sca(axL[1,1])
-    pl = Plotter(df,'cks_smet',**kwargs)
+    pl = NDPlotter(df,'cks_smet',**kwargs)
     pl.plot()
     fig_label('d')
     tight_layout(True)
@@ -154,7 +154,7 @@ class NDPlotter(object):
                             self.ky, self.bwx, self.bwy)
         Z = Z.reshape(ds.kxc.shape)
         ds['Z'] = (['kx','ky'],Z)
-        qc = self.cp.contour(ds['Z'], normalize=True, cmap=plt.cm.afmhot_r)
+        qc = self.cp.contour(ds['Z'], normalize=True, cmap=plt.cm.afmhot_r,zorder=0)
         self.qc = qc
         self.cp.errorbar(self.x, self.y, yerr=None, fmt='o',
                          mfc='none', elinewidth=0, ms=2, mew=0.4,
@@ -169,3 +169,102 @@ class NDPlotter(object):
         self.cp.yticks(self.yticks)
         self.cp.set_lim()
         setp(gca(),xlabel=self.xlabel,ylabel=self.ylabel)
+
+class ContourPlotter(object):
+
+    """This class facilliates plotting contours where some of the
+    variables have been tranformed from linear to logspace. Just keeps
+    track of the conversion
+
+    """
+    def __init__(self, xmin, xmax, ymin, ymax, xscale='log', yscale='log'):
+        self.xmin = xmin
+        self.xmax = xmax
+        self.ymin = ymin
+        self.ymax = ymax
+        self.xscale = xscale
+        self.yscale = yscale
+        self._kde_nx = 200 # default, can change
+        self._kde_ny = 400
+
+    def meshgrid(self):
+
+        if self.xscale=='log':
+            kx = np.linspace(log10(self.xmin), log10(self.xmax), self._kde_nx)
+            x = 10**kx
+        else:
+            x = kx = np.linspace(self.xmin, self.xmax, self._kde_nx)
+            
+        if self.yscale=='log':
+            ky = np.linspace(log10(self.ymin), log10(self.ymax), self._kde_ny)
+            y = 10**ky
+        else:
+            y = ky = np.linspace(self.ymin, self.ymax, self._kde_ny)
+
+        coords = {'kx':kx, 'ky':ky}
+        _kx, _ky = meshgrid(kx,ky,indexing='ij')
+        _x, _y = meshgrid(x,y,indexing='ij')
+        data = {
+            'kxc': (['kx', 'ky'], _kx),
+            'kyc': (['kx', 'ky'], _ky),
+            'xc': (['kx', 'ky'], _x),
+            'yc': (['kx', 'ky'], _y),
+        }
+        ds = xr.Dataset(data,coords=coords)
+        return ds
+       
+    def contour(self, Z, normalize=False, **kwargs):
+        if normalize:
+            fac = 1.2
+            Z /= Z.max()
+            Z /= fac
+            qc = Z.plot.contourf(
+                x='kx', levels=arange(0,1.001,0.05),
+                vmax=1,add_colorbar=False,**kwargs)
+        else:
+            qc = Z.plot.contourf(x='kx', add_colorbar=False,**kwargs)
+            
+        return qc
+
+    def set_lim(self):
+        self.xlim(self.xmin,self.xmax)
+        self.ylim(self.ymin,self.ymax)
+
+    def xlim(self, *args):
+        if self.xscale=='log':
+            args2 = (log10(args[0]),log10(args[1]))
+        else:
+            args2 = args
+        xlim(*args2)
+
+    def ylim(self, *args):
+        if self.yscale=='log':
+            args2 = (log10(args[0]),log10(args[1]))
+        else:
+            args2 = args
+        ylim(*args2)
+
+    def xticks(self, ticks):
+        if self.xscale=='log':
+            args2 = (log10(ticks),ticks)
+        else:
+            args2 = (ticks,ticks)
+        xticks(*args2)
+
+    def yticks(self, ticks):
+        if self.yscale=='log':
+            args2 = (log10(ticks),ticks)
+        else:
+            args2 = (ticks,ticks)
+        yticks(*args2)
+
+    def errorbar(self, *args, **kwargs):
+        x = args[0]
+        y = args[1]
+
+        if self.xscale=='log':
+            x = log10(x)
+        if self.yscale=='log':
+            y = log10(y)
+        
+        errorbar(x,y, **kwargs)

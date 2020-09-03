@@ -41,8 +41,8 @@ class SixPlotter(object):
             # Detected planets
             sca(axd)
             df = occ.plnt.copy()
-            df = df.rename(columns={'prad':'gdir_prad','per':'koi_period'})
-            pl = NDPlotter(df,'koi_period',zoom=True)
+            df = df.rename(columns={'prad':'gdir_prad','per':'koi_period','sinc':'giso_sinc'})
+            pl = NDPlotter(df,self.xk,zoom=True)
             pl.plot()
             cbar = colorbar(pl.qc,shrink=0.5,format='%.1f')
             cbar.set_label('$dN/d \log P/ d \log R_p$',size='x-small')
@@ -74,6 +74,7 @@ class SixPlotter(object):
 class SixPlotterPerPrad(SixPlotter):
     def __init__(self):
         super(SixPlotterPerPrad,self).__init__()
+        self.xk = 'koi_period'
         self.xt = [1,3,10,30,100,300]
         self.yt = [1.0,1.4,2.0,2.8,4.0]
         self.xlim = log10(1),log10(300)
@@ -86,13 +87,14 @@ class SixPlotterPerPrad(SixPlotter):
 class SixPlotterSincPrad(SixPlotter):
     def __init__(self):
         super(SixPlotterSincPrad,self).__init__()
+        self.xk = 'giso_sinc'
         self.xt = [3000,1000,300,100,30,10,3]
         self.yt = [1.0,1.4,2.0,2.8,4.0]
         self.xlim=log10(3000),log10(3)
         self.ylim=log10(1),log10(4)
         self.occur_prefix = 'occur-sinc-prad'
         self.ORDPlotter = ORDPlotterSincPrad
-        self.xlabel='Orbital Period (days)'
+        self.xlabel='Incident Flux (Earth-units)'
         self.ylabel='Planet Size (Earth-radii)'
 
 class ORDPlotter(object):
