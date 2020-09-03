@@ -16,9 +16,7 @@ from ckscool import plot as plot
 
 import ckscool.plot.sample   # submodule for including plots
 import ckscool.plot.spectra
-import ckscool.plot.hr
 import ckscool.plot.planet
-import ckscool.plot.smet
 from ckscool.plot.compare import fig_compare
 import ckscool.workflow
 from ckscool.plot.compare2 import ComparisonRadius as CR
@@ -194,15 +192,12 @@ def create_workflow():
     w.plot['cuts-kepmag-steff'] = plot.sample.fig_cuts_kepmag_steff
     w.plot['cuts-period-prad'] = plot.sample.fig_cuts_period_prad
     w.plot['cuts-smass-steff'] = plot.sample.fig_cuts_smass_steff
-    #w.plot['cuts-stars-hr'] = lambda : plot.star.Plotter().hr()
     w.plot['cuts-planets-per-prad'] = plot.sample.fig_cuts_planets_per_prad
     w.plot['cuts-planets-per-prad-zoom'] = (
         lambda : plot.sample.fig_cuts_planets_per_prad(zoom=True)
     )
     w.plot['cuts-all-multi'] = plot.sample.fig_cuts_all_multi
     w.plot['cuts-all-multi3'] = plot.sample.fig_cuts_all_multi3
-    w.plot['ferr-hist-star'] = plot.hr.fig_ferr_hist_star
-    w.plot['ferr-hist-planet'] = plot.hr.fig_ferr_hist_planet
     w.plot['star-sample'] =  plot.star.fig_sample
     w.plot['planet-prad'] =  plot.planet.fig_sample
     w.plot['planet-prad-zoom'] =  lambda : plot.planet.fig_sample(zoom=True)
@@ -221,13 +216,9 @@ def create_workflow():
     kw = dict(zoom=True,xerrfac=0.5,yerrfac=1.5)
 
     # contour plots of planet detections
-    
     kw = dict(zoom=True,xerrfac=0.5,yerrfac=1.5)
-
-    w.plot['occur-contour-three'] = plot.occur.fig_contour_three
-    w.plot['occur-contour-six'] = plot.occur.fig_contour_six
+    w.plot['occur-contour-six-per'] = plot.occur.fig_contour_six_per
     w.plot['occur-contour-six-sinc'] = plot.occur.fig_contour_six_sinc
-    w.plot['planets-warm-smet-smass'] = plot.smet.fig_planets_warm_smet_smass
 
     # table
     f1 = ckscool.table.tab_star

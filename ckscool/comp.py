@@ -8,52 +8,23 @@ import scipy.integrate
 from scipy.stats import gamma
 from astropy import constants as c
 from astropy import units as u
+import copy
 
 TDUR_EARTH_SUN_HRS = (
     ((4 * c.R_sun**3 * 1.0*u.yr / np.pi / c.G / (1.0*c.M_sun))**(1.0/3.0)).to(u.hr)).value
 
 DEPTH_EARTH_SUN = ((c.R_earth / c.R_sun)**2).cgs.value
 
-SINC_EARTH = 1.3608e3
+SINC_EARTH = 1.3608e3*u.Watt/u.m**2
 
 __STARS_REQUIRED_COLUMNS__ = (
-    "logcdpp3 logcdpp6 logcdpp12 tobs smass srad".split()
+    "logcdpp3 logcdpp6 logcdpp12 tobs smass srad gaia2_steff".split()
 )
 
-class Completeness(object):
-    """Class that compute completeness using the noise properties of a
-    representive ensemble of stars.
-
-    Examples:
-
-        # 1. Define sample of stars.
-        >>> stars = ckscool.io.load_table('field-cuts',cache=1)
-        >>> stars = stars[~stars.isany]
-        >>> stars = stars.rename(
-               columns={'ber18_srad':'srad','m17_smass':'smass'}
-            )
-        >>> stars = stars.query('smass > 1.3')
-
-        # 2. Define grid to compute completeness
-        comp_per_bins = round(logspace(log10(0.1),log10(1000),33),4)
-        comp_prad_bins = round(logspace(log10(0.25),log10(64),25 ),2)
-        comp_bins_dict = {'per': comp_per_bins,'prad': comp_prad_bins}
-        spacing_dict = {'per':'log','prad':'log'}
-        grid = ckscool.grid.Grid(comp_bins_dict,spacing_dict)
-
-        # 3. Compute completeness grid
-        comp = ckscool.comp.Completeness(stars, grid, method, impact)
-        comp.compute_grid_prob_det(verbose=True)
-        comp.compute_grid_prob_tr(verbose=True)
-
-        # 4. Compute spline interpolation over completeness grid
-        comp.create_splines()
-        comp.mean_prob_trdet(1,10,1,2)
-
-    """
-
+class Completeness2D(object):
     def __init__(self, stars, grid, method, impact, mesfac=None):
-        """Args:
+        """
+        Args:
             stars (pandas.DataFrame): Sample of stars from which planets
                 are detected. Must be as close as possible to be sample of
                 of stars used in the planet search. Must contain the following
@@ -70,6 +41,8 @@ class Completeness(object):
                 - fulton-gamma: Fulton et al. fit to gamma function.
             impact: maximum impact parameter considered for our sample
             mesfactor: conversion between theoretical SNR and actual MES
+
+        SuperClass must define prob_tr(x, y) and prob_det(x, y) 
 
         Notes:
 
@@ -174,8 +147,6 @@ class Completeness(object):
         Returns:
             pandas.Series: transit duration for each star in the sample.
         """
-
-
         per_yrs = per / 365.25
         smax = self.stars['smass']**(1.0/3.0) * per_yrs**(2.0/3.0)
         return smax
@@ -230,7 +201,7 @@ class Completeness(object):
         cdpp = pd.Series(index=self.stars.index,data=10**logcdpp)
         return cdpp
 
-    def prob_det(self, per, prad, interp=False):
+    def prob_det(self, per, prad):
         """Probability that a planet would be detectable
 
         Probability that transiting planet with orbital period `per`
@@ -243,48 +214,35 @@ class Completeness(object):
             method (str): One of the following:
                 - direct: compute prob of detectability by counting stars
                   where the MES is sufficient to detect.
-                - interp: use the interpolator
 
         Returns:
             float: fraction of stars in sample where we could have detected
                 planet
 
         """
-        if interp==False:
-            if self.method.count('step'):
-                mes = self.mes_scaled(per, prad)
-                _prob_det = 1.0*self.prob_det_mes(mes).sum() / self.nstars
-
-            elif self.method=='fulton-gamma':
-                snr = self.snr(per, prad)
-                _prob_det = fulton_gamma(snr).sum() / self.nstars
-
-            elif self.method=='fulton-gamma-clip':
-                snr = self.snr(per, prad)
-                _prob_det = fulton_gamma_clip(snr).sum() / self.nstars
-        else:
-            _prob_det = self.prob_det_interp(per, prad)
+        if self.method.count('step'):
+            mes = self.mes_scaled(per, prad)
+            _prob_det = 1.0*self.prob_det_mes(mes).sum() / self.nstars
+        elif self.method=='fulton-gamma':
+            snr = self.snr(per, prad)
+            _prob_det = fulton_gamma(snr).sum() / self.nstars
+        elif self.method=='fulton-gamma-clip':
+            snr = self.snr(per, prad)
+            _prob_det = fulton_gamma_clip(snr).sum() / self.nstars
 
         return _prob_det
 
-    def prob_tr(self, per):
-        """
-        Probability that a given planet would transit
-        """
-        a = self._smax(per)
-        srad = (np.array(self.stars['srad']) * u.R_sun).to(u.AU).value
-        _prob_tr = srad * self.impact / a
-        return _prob_tr.mean()
-
-    def compute_grid_prob_det(self,verbose=0):
+    def compute_grid_prob_det(self, verbose=0):
         """Compute a grid of detection probabilities"""
 
-        print "Computing grid of detection probabilities"
+        print "Computing detection prob over {} {} grid ".format(self.xk,self.yk)
         def rowfunc(row):
-            return self.prob_det(row.perc, row.pradc)
+            return self.prob_det(row[self.xkc], row[self.ykc])
 
         def callback(row):
-            s ="{perc:.3f} {pradc:.3f} {temp:.3f}".format(**row)
+            s ="{:.3f} {:.3f} {:.3f}".format(
+                row[self.xkc], row[self.ykc], row['val']
+            )
             if verbose>0:
                 print s
 
@@ -293,12 +251,14 @@ class Completeness(object):
     def compute_grid_prob_tr(self,verbose=0):
         """Compute a grid of transit probabilities"""
 
-        print "Computing grid of transit probabilities"
+        print "Computing transit prob over {} {} grid ".format(self.xk,self.yk)
         def rowfunc(row):
-            return self.prob_tr(row.perc)
+            return self.prob_tr(row[self.xkc])
 
         def callback(row):
-            s ="{perc:.3f} {pradc:.3f} {temp:.3f}".format(**row)
+            s ="{:.3f} {:.3f} {:.3f}".format(
+                row[self.xkc], row[self.ykc], row['val']
+            )
             if verbose>0:
                 print s
 
@@ -308,64 +268,102 @@ class Completeness(object):
         df = self.grid.ds.to_dataframe()
         i = 0
         for idx, row in df.iterrows():
-            df.ix[idx,'temp'] = rowfunc(row)
+            df.ix[idx,'val'] = rowfunc(row)
             if i%100==0:
                 callback(df.ix[idx])
             i+=1
-        return df['temp'].to_xarray()
+        return df['val'].to_xarray()
 
     def create_splines(self):
         """Intialize detection probability interpolator
         """
         # Define the regular grid for interpolation
-        x0 = np.log(np.array(self.grid.ds.per))
-        x1 = np.log(np.array(self.grid.ds.prad))
+        x0 = np.log(np.array(self.grid.ds[self.xk]))
+        x1 = np.log(np.array(self.grid.ds[self.yk]))
         points = (x0, x1)
-
-        prob_det = self.grid.ds['prob_det'].transpose('per','prad')
+        prob_det = self.grid.ds['prob_det'].transpose(self.xk,self.yk)
         prob_trdet = self.grid.ds['prob_tr'] * self.grid.ds['prob_det']
-        prob_trdet = prob_trdet.transpose('per','prad')
+        prob_trdet = prob_trdet.transpose(self.xk,self.yk)
         self._prob_trdet_spline = RectBivariateSpline(x0, x1, prob_trdet)
         self._prob_det_spline = RectBivariateSpline(x0, x1, prob_det)
 
-    def prob_det_interp(self, per, prad):
-        _prob_det =  self._prob_det_interp_spline(per, prad)
+    def prob_det_interp(self, x, y):
+        _prob_det =  self._prob_det_interp_spline(x, y)
         assert np.isfinite(_prob_det), " error in computing transit prob"
         return _prob_det
 
-    def mean_prob_trdet(self, per1, per2, prad1, prad2):
-        """Mean probability of transiting and being detected"""
-        x1 = np.log(per1)
-        x2 = np.log(per2)
-        y1 = np.log(prad1)
-        y2 = np.log(prad2)
+    def prob_trdet_interp(self, x, y):
+        x = np.log(x)
+        y = np.log(y)
+        return self._prob_trdet_spline(x,y,grid=False)
 
+    def mean_prob_trdet(self, x1, x2, y1, y2):
+        """Mean probability of transiting and being detected"""
+        x1 = np.log(x1)
+        x2 = np.log(x2)
+        y1 = np.log(y1)
+        y2 = np.log(y2)
         area = (x2-x1) * (y2-y1)
         integral = self._prob_trdet_spline.integral(x1, x2, y1, y2)
         prob_trdet_mean = integral / area
-
         integral = self._prob_det_spline.integral(x1, x2, y1 ,y2)
         prob_det_mean = integral / area
         return prob_trdet_mean, prob_det_mean
 
+class CompletenessPerPrad(Completeness2D):
+    """Class that compute completeness using the noise properties of a
+    representive ensemble of stars.
 
-class Completeness_SincPrad(Completeness):
-    def _a(self, sinc, srad, steff, smass):
-        """Returns semimajor axis for a given incident flux,
-        stellar mass, stellar radius and stellar effective temperature
+    Examples:
+
+        # 1. Define sample of stars.
+        >>> stars = ckscool.io.load_table('field-cuts',cache=1)
+        >>> stars = stars[~stars.isany]
+        >>> stars = stars.rename(
+               columns={'ber18_srad':'srad','m17_smass':'smass'}
+            )
+        >>> stars = stars.query('smass > 1.3')
+
+        # 2. Define grid to compute completeness
+        comp_per_bins = round(logspace(log10(0.1),log10(1000),33),4)
+        comp_prad_bins = round(logspace(log10(0.25),log10(64),25 ),2)
+        comp_bins_dict = {'per': comp_per_bins,'prad': comp_prad_bins}
+        spacing_dict = {'per':'log','prad':'log'}
+        grid = ckscool.grid.Grid(comp_bins_dict,spacing_dict)
+
+        # 3. Compute completeness grid
+        comp = ckscool.comp.Completeness(stars, grid, method, impact)
+        comp.compute_grid_prob_det(verbose=True)
+        comp.compute_grid_prob_tr(verbose=True)
+
+        # 4. Compute spline interpolation over completeness grid
+        comp.create_splines()
+        comp.mean_prob_trdet(1,10,1,2)
+
+    """
+    xk = 'per'
+    yk = 'prad'
+    xkc = 'perc'
+    ykc = 'pradc'
+
+    def prob_tr(self, per):
         """
-        _a = np.sqrt( ( (c.R_sun*srad)**2 * c.sigma_sb * (steff**4) ) / ( SINC_EARTH*sinc ) )
-        return _a.value
-
-    def _per(self, a, smass):
-        """ Returns the orbital period for a given semimajor axis and
-        stellar mass
+        Probability that a given planet would transit
         """
-        _per = 2.0 * np.pi * np.sqrt(a**3 / (c.G * smass * c.M_sun) )
-        _per_days = _per / (60.0 * 60.0 * 24.0)
-        return _per_days.value
+        a = self._smax(per)
+        srad = np.array(self.stars['srad'])
+        srad = (srad * u.R_sun).to(u.AU).value # stellar radii in AU
+        _prob_tr = srad * self.impact / a
+        return _prob_tr.mean()
+    
 
-    def prob_det_sinc(self, sinc, prad, interp=False):
+class CompletenessSincPrad(Completeness2D):
+    xk = 'sinc'
+    yk = 'prad'
+    xkc = 'sincc'
+    ykc = 'pradc'
+
+    def prob_det(self, sinc, prad, interp=False):
         """Probability that a planet would be detectable
 
         Probability that transiting planet with incident flux `sinc`
@@ -385,97 +383,207 @@ class Completeness_SincPrad(Completeness):
                 planet
 
         """
-        srad = self.stars['srad']
-        steff = self.stars['gaia2_steff']
-        smass = self.stars['smass']
-
-        a = self._a(sinc, srad, steff, smass)
+        srad = np.array(self.stars['srad'])
+        steff = np.array(self.stars['gaia2_steff'])
+        smass = np.array(self.stars['smass'])
+        a = self._a(sinc, srad, steff)
         per = self._per(a, smass)
-
-        if interp==False:
-            if self.method.count('step'):
-                mes = self.mes_scaled(per, prad)
-                _prob_det = 1.0*self.prob_det_mes(mes).sum() / self.nstars
-
-            elif self.method=='fulton-gamma':
-                snr = self.snr(per, prad)
-                _prob_det = fulton_gamma(snr).sum() / self.nstars
-
-            elif self.method=='fulton-gamma-clip':
-                snr = self.snr(per, prad)
-                _prob_det = fulton_gamma_clip(snr).sum() / self.nstars
-        else:
-            _prob_det = self.prob_det_interp(per, prad)
-
+        _prob_det = super(CompletenessSincPrad,self).prob_det(per, prad)
         return _prob_det
 
-    def compute_grid_prob_det_sinc(self,verbose=0):
-        """Compute a grid of detection probabilities"""
+    def prob_tr(self,sinc):
+        """Transit probability"""
+        sinc = np.array(sinc)
+        srad = np.array(self.stars['srad'])
+        steff = np.array(self.stars['gaia2_steff'])
+        smass = np.array(self.stars['smass'])
+        a = self._a(sinc, srad, steff)
+        perc = self._per(a, smass)
+        srad = (srad * u.R_sun).to(u.AU).value # stellar radii in AU
+        _prob_tr = srad * self.impact / a
+        return _prob_tr.mean()
 
-        print "Computing grid of detection probabilities"
-        def rowfunc(row):
-            return self.prob_det_sinc(row.sincc, row.pradc)
+    def _a(self, sinc, srad, steff):
+        """Semi major axis
 
-        def callback(row):
-            s ="{sincc:.3f} {pradc:.3f} {temp:.3f}".format(**row)
-            if verbose>0:
-                print s
-
-        self.grid.ds['prob_det'] = self._grid_loop(rowfunc, callback)
-
-    def compute_grid_prob_tr_sinc(self,verbose=0):
-        """Compute a grid of transit probabilities"""
-
-        print "Computing grid of transit probabilities"
-        def rowfunc(row):
-            srad = self.stars['srad']
-            steff = self.stars['gaia2_steff']
-            smass = self.stars['smass']
-
-            a_c = self._a(row.sincc, srad, steff, smass)
-            perc = self._per(a_c, smass)
-            return self.prob_tr(perc)
-
-        def callback(row):
-            s ="{sincc:.3f} {pradc:.3f} {temp:.3f}".format(**row)
-            if verbose>0:
-                print s
-
-        self.grid.ds['prob_tr'] = self._grid_loop(rowfunc, callback)
-
-    def create_splines_sinc(self):
-        """Intialize detection probability interpolator
+        Args:
+            sinc: incident stellar flux (Earth-units)
+            srad: stellar radius (Solar radii)
+            steff: stellar effective temp (K)
+        
+        Returns:
+            semi-major axis in AU
         """
-        # Define the regular grid for interpolation
-        x0 = np.log(np.array(self.grid.ds.sinc))
-        x1 = np.log(np.array(self.grid.ds.prad))
-        points = (x0, x1)
+        a = np.sqrt(
+            (c.R_sun*srad)**2
+            * c.sigma_sb
+            * (steff*u.K)**4
+            / (SINC_EARTH*sinc)
+        )
+        a = a.to(u.AU).value
+        return a
 
-        prob_det = self.grid.ds['prob_det'].transpose('sinc','prad')
-        prob_trdet = self.grid.ds['prob_tr'] * self.grid.ds['prob_det']
-        prob_trdet = prob_trdet.transpose('sinc','prad')
-        self._prob_trdet_spline = RectBivariateSpline(x0, x1, prob_trdet)
-        self._prob_det_spline = RectBivariateSpline(x0, x1, prob_det)
+    def _per(self, a, smass):
+        """Orbital period
+        
+        Args:
+            a : semi-major axis AU
+            smass: stellar mass in solar masses
+        
+        """
+        smass = smass * c.M_sun
+        a = (a*u.AU)**3
+        per = 2.0 * np.pi * np.sqrt(a / (c.G * smass ) )
+        per = per.to(u.day).value
+        return per
 
-    def prob_det_interp_sinc(self, sinc, prad):
-        _prob_det =  self._prob_det_interp_spline(per, prad)
-        assert np.isfinite(_prob_det), " error in computing transit prob"
-        return _prob_det
+class Completeness3D_PerPradSmass(object):
+    """
+    
+    """
+    def __init__(self, stars, grid, massc, masswid, method, impact, mesfac=None):
+        # Derive completeness object
+        method = 'fulton-gamma-clip' # treatment for planet detectability
+        impact = 0.8 # maximum impact parameter considered.
 
-    def mean_prob_trdet_sinc(self, sinc1, sinc2, prad1, prad2):
-        """Mean probability of transiting and being detected"""
-        x1 = np.log(sinc1)
-        x2 = np.log(sinc2)
-        y1 = np.log(prad1)
-        y2 = np.log(prad2)
-        area = (x2-x1) * (y2-y1)
-        integral = self._prob_trdet_spline.integral(x1, x2, y1, y2)
-        prob_trdet_mean = integral / area
+        self.stars = stars
 
-        integral = self._prob_det_spline.integral(x1, x2, y1 ,y2)
-        prob_det_mean = integral / area
-        return prob_trdet_mean, prob_det_mean
+        # default values. can be changed
+        self.massc = massc
+        self.masswid = masswid
+        self.grid = grid
+        self.method = method
+        self.impact = impact
 
+    def get_comp2d(self, smass1, smass2):
+        stars = self.stars[self.stars.smass.between(smass1,smass2)].copy()
+        n1 = len(stars)
+        stars = stars.dropna(subset=__STARS_REQUIRED_COLUMNS__)
+        n2 = len(stars)
+        print "{}/{} stars remain after droping nulls ".format(n2,n1)
+        comp = Completeness(stars, self.grid, self.method, self.impact)
+        comp.compute_grid_prob_det(verbose=False)
+        comp.compute_grid_prob_tr(verbose=False)
+        comp = copy.deepcopy(comp) # don't understand why I need this but I d
+        return comp
+
+    def compute_completeness_grid(self):
+        compL = []
+        for i in range(self.massc.shape[0]):
+            smass1 = self.massc[i] / 10**(0.5*self.masswid)
+            smass2 = self.massc[i] * 10**(0.5*self.masswid)
+            comp = self.get_comp2d(smass1,smass2)
+            compL.append(comp)
+        self.compL = compL
+
+    def create_interpolators(self):
+        comp0 = self.compL[0]
+        xi = np.log10(self.grid.binsc['per'])
+        yi = np.log10(self.grid.binsc['prad'])
+        zi = np.log10(self.massc)
+
+        prob_tr = []
+        prob_det = []
+        for comp in self.compL:
+            prob_tr.append(np.array(comp.grid.ds.prob_tr))
+            prob_det.append(np.array(comp.grid.ds.prob_det))
+        
+        prob_tr = np.dstack(prob_tr)
+        prob_det = np.dstack(prob_det)
+        self._prob_tr = RegularGridInterpolator((xi,yi,zi), prob_tr)
+        self._prob_det = RegularGridInterpolator((xi,yi,zi), prob_det)
+
+    def _transform_to_grid(self, per, prad, smass):
+        points = np.vstack([np.array(per),np.array(prad),np.array(smass)]).T
+        points = np.log10(points)
+        return points
+
+    def prob_det(self, per, prad, smass):
+        return self._prob_det(self._transform_to_grid(per, prad, smass))
+
+    def prob_tr(self, per, prad, smass):
+        return self._prob_tr(self._transform_to_grid(per, prad, smass))
+        
+def load_occur(limits, debug=False, sinc=False):
+    """
+    Constructs occurrence object
+    """
+
+    # Derive completeness object
+    method = 'fulton-gamma-clip' # treatment for planet detectability
+    impact = 0.8 # maximum impact parameter considered.
+
+    field = ckscool.io.load_table('field-cuts',cache=1)
+    field = field[~field.isany]
+    field = field.rename(columns={'ber19_srad':'srad','ber19_smass':'smass'})
+    plnt = ckscool.io.load_table('planets-cuts2')
+    plnt = plnt[~plnt.isany]
+    namemap = {'gdir_prad':'prad','koi_period':'per','giso_smass':'smass','giso_sinc':'sinc'}
+    plnt = plnt.rename(columns=namemap)
+
+    if limits.has_key('smass1'):
+        smass1 = limits['smass1']  
+        smass2 = limits['smass2']
+        field = field[field.smass.between(smass1,smass2)]
+        plnt = plnt[plnt.smass.between(smass1,smass2)]
+
+    elif limits.has_key('bmr1'):
+        bmr1 = limits['bmr1']
+        bmr2 = limits['bmr2']
+        xs = 'gaia2_bpmag - gaia2_rpmag'
+        field = field[field.eval(xs).between(bmr1,bmr2)]
+        plnt = plnt[plnt.eval(xs).between(bmr1,bmr2)]
+
+    n1 = len(field)
+    field = field.dropna(subset=__STARS_REQUIRED_COLUMNS__)
+    n2 = len(field)
+    print "{}/{} stars remain after droping nulls ".format(n2,n1)
+
+    if sinc:
+        comp_sinc_bins = np.round(logspace(log10(0.1),log10(100000),65),4)
+        comp_prad_bins = np.round(logspace(log10(0.25),log10(64),51 ),2)
+
+        # debugging
+        if debug:
+            comp_sinc_bins = comp_sinc_bins[:6]
+            comp_prad_bins = comp_prad_bins[:6]
+
+        comp_bins_dict = {'sinc':comp_sinc_bins, 'prad': comp_prad_bins}
+        spacing_dict = {'sinc':'log','prad':'log'}
+        grid = ckscool.grid.Grid(comp_bins_dict, spacing_dict)
+        comp = ckscool.comp.Completeness_SincPrad(field, grid, method, impact)
+        comp.compute_grid_prob_det_sinc(verbose=False)
+        comp.compute_grid_prob_tr_sinc(verbose=False)
+        comp.create_splines_sinc()
+        nstars = len(field)
+        occ = ckscool.occur.Occurrence_SincPrad(plnt, comp, nstars)
+
+    else:
+        # Define grid of period and radius to compute completeness
+        comp_per_bins = np.round(logspace(log10(0.1),log10(1000),65),4)
+        comp_prad_bins = np.round(logspace(log10(0.25),log10(64),51 ),2)
+
+        # debugging
+        if debug:
+            comp_per_bins = comp_per_bins[:6]
+            comp_prad_bins = comp_prad_bins[:6]
+
+        comp_bins_dict = {'per': comp_per_bins,'prad': comp_prad_bins}
+        spacing_dict = {'per':'log','prad':'log'}
+
+        grid = ckscool.grid.Grid(comp_bins_dict,spacing_dict)
+
+        comp = ckscool.comp.Completeness(field, grid, method, impact)
+        comp.compute_grid_prob_det(verbose=False)
+        comp.compute_grid_prob_tr(verbose=False)
+        comp.create_splines()
+        nstars = len(field)
+        occ = ckscool.occur.Occurrence(plnt, comp, nstars)
+    return occ
+
+
+
+    
 # ---------------------------------------------------------------------------- #
 
 def fulton_gamma(snr):
@@ -486,3 +594,4 @@ def fulton_gamma(snr):
 
 def fulton_gamma_clip(snr):
     return fulton_gamma(snr) * (snr > 10)
+

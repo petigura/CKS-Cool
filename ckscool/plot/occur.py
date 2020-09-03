@@ -9,662 +9,166 @@ from scipy import ndimage as nd
 import ckscool.io
 import ckscool.plot.planet
 import ckscool.gradient #import R, R_sinc
-
+from .planet import NDPlotter
 
 sns.set_style('ticks')
 sns.set_color_codes()
 
-def contour(cp, plot_interval=False, draw_colorbar=True, cax=None,
-            plot_completeness=True, ntrials_min=50, levels=None):
-    """
-    Args:
-       cp : contour plotter object
-    """
-
-    ax = gca()
-    tax = gca().transAxes
-    cmap = 'YlGn' #,None #'hot_r'
-
-    # convert into an x-array for plotting
-    ds = cp.rate.groupby(['per1','prad1']).first().to_xarray()
-    rate = ds.rate
-    rate = rate.fillna(1e-10)
-    rate = nd.gaussian_filter(rate,(4,2))
-
-    # Smooth out the contours a bit
-    eps = 1e-10
-    X = np.array(np.log10(ds.perc))
-    Y = np.array(np.log10(ds.pradc))
-    Z = np.array(rate)
-    if levels==None:
-        #levels = arange(0,5e-2+eps,0.0025)
-        b = (
-            (ds.ntrial > ntrials_min)
-            & (ds.pradc > 1.0)
-            & (ds.pradc < 4.0)
-        )
-        b = array(b)
-        maxz = np.max(rate[b])
-        maxz = np.round(maxz*1.1,3)
-        levels = linspace(0,maxz+eps,14)
-
-    cbarticks = levels[::2]
-    cbarticklabels = ["{:.1f}".format(1e2*_yt) for _yt in cbarticks]
-    kw = dict(levels=levels,extend='neither',cmap=cmap,zorder=0)
-    cbarlabel = r"""Planets per 100 Stars per $P-R_P$ interval"""
-    qcs = contourf(X, Y, Z, **kw)
-
-    # Completeness
-    if plot_completeness:
-        Zt = np.array(ds.ntrial)
-        cmap = sns.light_palette("gray",as_cmap=True)
-        contourf(X,Y,Zt,[0,ntrials_min],zorder=2.5,cmap=cmap,vmax=1)
-        '''
-        text(
-            0.95,0.15,'Low Completeness',rotation=12,zorder=5,size='small',
-            transform=ax.transAxes,ha='right'
-        )
-        '''
-
-
-    # plot straight contours
-    if draw_colorbar:
-        cbar = colorbar(qcs,cax=cax,ticks=cbarticks,)
-        t = cbar.ax.set_yticklabels(cbarticklabels)
-        setp(t,size='x-small')
-        cbar.set_label(cbarlabel,size='small')
-
-    xt = [1,3,10,30,100,300]
-    yt = [0.5,1,2,4,8,16,32]
-    xticks([log10(_xt) for _xt in xt],xt)
-    yticks([log10(_yt) for _yt in yt],yt)
-    xlim(log10(1),log10(300))
-    ylim(log10(1),log10(4))
-    xlabel('Orbital Period (days)')
-    ylabel('Planet Size (Earth-radii)')
-
-    if plot_interval:
-        #axis_to_data = ax.transAxes + ax.transData.inverted()
-        #xy = axis_to_data.transform((0.1,0.9))
-        xy = 0.1, 0.52
-        w = cp.perwid
-        h = cp.pradwid
-        rect = Rectangle(xy, w, h, lw=1, ec='r', fc='none', zorder=10)
-        ax.add_patch(rect)
-        s = """\
-$P-R_P$ Interval
-$\Delta \log P$ = {:.2f} dex
-$\Delta \log R_P$ = {:.2f} dex
-""".format(w,h)
-        kw = dict(
-            size='x-small',zorder=5,va='top',ha='left',transform=ax.transAxes,
-        )
-
-
-    return X, Y, Z
-
-#        text(xyaxes[0]+0.07,xyaxes[1],s,**kw)
-# ---------------------------------------------------------------------------- #
-
-def contour_sinc(cp, plot_interval=False, draw_colorbar=True,cax=None,
-                 plot_completeness=True,label=False, normalize=False,
-                 ntrials_min=50):
-    """
-    Args:
-       cp : contour plotter object
-    """
-
-    ax = gca()
-    tax = gca().transAxes
-
-    # convert into an x-array for plotting
-    ds = cp.rate.groupby(['sinc1','prad1']).first().to_xarray()
-    norm = cp.rate.query('10 < sincc < 1000 and 2 < pradc < 4').rate.sum()
-    rate = ds.rate
-    rate = rate.fillna(4e-6)
-
-    # Smooth out the contours a bit
-    rate = nd.gaussian_filter(rate,(4,2))
-    eps = 1e-10
-    X, Y = np.log10(ds.sincc), np.log10(ds.pradc)
-    Z = np.array(rate)
-    cmap = 'YlGn' #,None #'hot_r'
-    levels = None
-    cbarlabel=''
-    if levels==None:
-        #levels = arange(0,5e-2+eps,0.0025)
-        b = (
-            (ds.ntrial > ntrials_min)
-            & (ds.pradc > 1.0)
-            & (ds.pradc < 4.0)
-        )
-        b = array(b)
-        maxz = np.max(rate[b])
-        maxz = np.round(maxz*1.1,3)
-        levels = linspace(0,maxz+eps,14)
-
-    cbarticks = levels[::2]
-    cbarticklabels = ["{:.1f}".format(1e2*_yt) for _yt in cbarticks]
-    kw = dict(levels=levels,extend='neither',cmap=cmap,zorder=0)
-    cbarlabel = r"""Planets per 100 Stars per $Sinc-R_P$ interval"""
-    X = np.array(X)
-    Y = np.array(Y)
-    Z = np.array(Z)
-    qcs = contourf(X,Y,Z, **kw)
-
-    # plot straight contours
-    if draw_colorbar:
-        cbar = colorbar(qcs,cax=cax,ticks=cbarticks,)
-        t = cbar.ax.set_yticklabels(cbarticklabels)
-        setp(t,size='x-small')
-        cbar.set_label(cbarlabel,size='small')
-
-    # Completeness
-    if plot_completeness:
-        Z = np.array(ds.ntrial)
-        cmap = sns.light_palette("gray",as_cmap=True)
-        contourf(X,Y,Z,[0,ntrials_min],zorder=2.5,cmap=cmap,vmax=1)
-
-    xt = [1,3,10,30,100,1000,10000]
-    yt = [0.5,1,2,4,8,16,32]
-    xticks([log10(_xt) for _xt in xt],xt)
-    yticks([log10(_yt) for _yt in yt],yt)
-    xlim(log10(10000),log10(1))
-    ylim(log10(1),log10(4))
-    xlabel('Stellar Incident Flux (Earth Units)')
-    ylabel('Planet Size (Earth-radii)')
-
-    if plot_interval:
-        #inv = ax.transAxes.inverted()
-        xy = 3.1, 0.52
-        w = cp.sincwid
-        h = cp.pradwid
-        rect = Rectangle(xy, w, h,lw=1,ec='r',fc='none',zorder=4)
-        ax.add_patch(rect)
-        s = """\
-$P-R_P$ Interval
-$\Delta \log Sinc$ = {:.2f} dex
-$\Delta \log R_P$ = {:.2f} dex
-""".format(w,h)
-        kw = dict(
-            size='x-small',zorder=5,va='top',ha='left',transform=ax.transAxes,
-        )
-#        text(xyaxes[0]+0.07,xyaxes[1],s,**kw)
-
-def gradient_arrays(cp):
-
-    """
-    Args:
-       cp : contour plotter object
-    """
-    # convert into an x-array for plotting
-    ds = cp.rate.groupby(['per1','prad1']).first().to_xarray()
-    rate = ds.rate
-    rate = rate.fillna(4e-6)
-
-    # Smooth out the contours a bit
-    rate = nd.gaussian_filter(rate,(4,2))
-    X, Y = ds.perc, ds.pradc
-    ntrial = np.array(ds.ntrial)
-
-    return X, Y, rate, ntrial
-
-def gradient_arrays_sinc(cp):
-
-    """
-    Args:
-       cp : contour plotter object
-    """
-    # convert into an x-array for plotting
-    ds = cp.rate.groupby(['sinc1','prad1']).first().to_xarray()
-    rate = ds.rate
-    rate = rate.fillna(4e-6)
-
-    # Smooth out the contours a bit
-    rate = nd.gaussian_filter(rate,(4,2))
-    X, Y = ds.sincc, ds.pradc
-    ntrial = np.array(ds.ntrial)
-
-    return X, Y, rate, ntrial
-
-
-def add_gradient(logx, chain, sinc=False):
-
-    m = np.median(chain[:,0])
-    m_sigma = np.percentile(chain[:,0], [16,84])
-    m_err = [m-m_sigma[0], m_sigma[1]-m]
-
-    Rp10 = np.median(chain[:,1])
-    Rp10_sigma = np.percentile(chain[:,1], [16,84])
-    Rp10_err = [Rp10-Rp10_sigma[0], Rp10_sigma[1]-Rp10]
-
-    if sinc:
-        label_str = r"m = {0:.2f}$^{{{1:.2f}}}_{{{2:.2f}}}$, R$_p$(100)={3:.2f}$^{{{4:.2f}}}_{{{5:.2f}}}$".format(m, m_err[1], m_err[0], Rp10, Rp10_err[1], Rp10_err[0])
-        plt.plot(logx, [log10(ckscool.gradient.R_sinc(10**i, m, Rp10)) for i in logx], color='b', label=label_str)
-    else:
-        label_str = r"m = {0:.2f}$^{{{1:.2f}}}_{{{2:.2f}}}$, R$_p$(10)={3:.2f}$^{{{4:.2f}}}_{{{5:.2f}}}$".format(m, m_err[1], m_err[0], Rp10, Rp10_err[1], Rp10_err[0])
-        plt.plot(logx, [log10(ckscool.gradient.R(10**i, m, Rp10)) for i in logx], color='b', label=label_str)
-
-
-    R_upper = []
-    R_lower = []
-
-    for i in logx:
-        if sinc:
-            R_values_i = [ckscool.gradient.R_sinc(10**i, chain[j,0], chain[j,1]) for j in range(len(chain[:,0]))]
-        else:
-            R_values_i = [ckscool.gradient.R(10**i, chain[j,0], chain[j,1]) for j in range(len(chain[:,0]))]
-        R_lim_i = np.percentile(R_values_i, [16,84])
-        R_upper.append(R_lim_i[0])
-        R_lower.append(R_lim_i[1])
-
-    plt.fill_between(logx, log10(R_lower), log10(R_upper), color='b', alpha=0.2)
-    plt.legend(loc='upper right')
-
-def fig_contour_three():
-    cp0 = ckscool.io.load_object('cp_smass=0.5-0.7',cache=1)
-    cp1 = ckscool.io.load_object('cp_smass=0.7-1.0',cache=1)
-    cp2 = ckscool.io.load_object('cp_smass=1.0-1.4',cache=1)
-    fig, axL = subplots(ncols=3,figsize=(8,3))
-    sca(axL[0])
-    contour(cp0,plot_planetpoints=False,plot_interval=True,draw_colorbar=False)
-    title('$M_\star = 0.5-0.7\, M_\odot$ ')
-
-    sca(axL[1])
-    contour(cp1,plot_planetpoints=False,plot_interval=True,draw_colorbar=False)
-    title('$M_\star = 0.7-1.0\, M_\odot$ ')
-
-    sca(axL[2])
-    contour(cp2,plot_planetpoints=False,plot_interval=True,draw_colorbar=False)
-    title('$M_\star = 1.0-1.4\, M_\odot$ ')
-
-    xlim=log10(1),log10(300)
-    ylim=log10(1),log10(4)
-    setp(axL,xlim=xlim,ylim=ylim)
-    fig.subplots_adjust(hspace=0.2)
-
-
-def fig_contour_six(gradient=False):
+def fig_contour_six_per(gradient=False):
     sns.set_context('paper')
-    mass1 = [0.5,0.8,1.1]
-    mass2 = [0.8,1.1,1.4]
-    fig, axL = subplots(nrows=3,ncols=2,figsize=(8.5,9))
-
-    i = 0
-    for _mass1, _mass2 in zip(mass1,mass2):
-        key = 'cp_smass={}-{}'.format(_mass1,_mass2)
-        cp = ckscool.io.load_object(key,cache=1)
-
-        if gradient:
-            logperc = cp.rate['logperc']
-            bootstrap_det_chain = np.loadtxt("./data/chain_detv2_{0}-{1}-smass.csv".format(_mass1, _mass2), delimiter=',')
-            bootstrap_occ_chain = np.loadtxt("./data/chain_occv2_{0}-{1}-smass.csv".format(_mass1, _mass2), delimiter=',')
-
-        sca(axL[i,0])
-        df = cp.occ.plnt.copy()
-        df = df.rename(columns={'prad':'gdir_prad','per':'koi_period'})
-        ckscool.plot.planet._per_prad(
-            df, nopoints=False, zoom=False, query=None, yerrfac=1, xerrfac=1
-        )
-        if gradient:
-            add_gradient(logperc, bootstrap_det_chain)
-
-        sca(axL[i,1])
-        contour(cp,plot_interval=True,draw_colorbar=True)
-        if gradient:
-            add_gradient(logperc, bootstrap_occ_chain)
-
-
-        title = '$M_\star = {}-{}\, M_\odot$ '.format(_mass1,_mass2)
-        setp(axL[i,:],title=title)
-        i+=1
-
-    for ax in axL.flatten():
-        sca(ax)
-        xt = [1,3,10,30,100,300]
-        yt = [1.0,1.4,2.0,2.8,4.0]
-        xticks([log10(_xt) for _xt in xt],xt)
-        yticks([log10(_yt) for _yt in yt],yt)
-        grid()
-
-    xlim = log10(1),log10(300)
-    ylim = log10(1),log10(4)
-    setp(axL, xlim=xlim, ylim=ylim)
-    setp(axL[:,1:], ylabel='')
-    setp(axL[:-1,:], xlabel='')
-    tight_layout(True)
+    pl = SixPlotterPerPrad()
+    pl.plot()
 
 def fig_contour_six_sinc(gradient=False):
     sns.set_context('paper')
-    mass1 = [0.5,0.8,1.1]
-    mass2 = [0.8,1.1,1.4]
-    fig, axL = subplots(nrows=3,ncols=2,figsize=(8.5,9))
-    i = 0
-    for _mass1, _mass2 in zip(mass1,mass2):
-        key = 'cp-sinc_smass={}-{}'.format(_mass1,_mass2)
-        cp = ckscool.io.load_object(key,cache=1)
+    pl = SixPlotterSincPrad()
+    pl.plot()
 
-        if gradient:
-            logsinc = cp.rate['logsincc']
-            bootstrap_det_chain = np.loadtxt("./data/chain_det_SincPradv2_{0}-{1}-smass.csv".format(_mass1, _mass2), delimiter=',')
-            bootstrap_occ_chain = np.loadtxt("./data/chain_occ_SincPradv2_{0}-{1}-smass.csv".format(_mass1, _mass2), delimiter=',')
-
-        sca(axL[i,0])
-        df = cp.occ.plnt.copy()
-        df = df.rename(columns={'prad':'gdir_prad','sinc':'giso_sinc'})
-        ckscool.plot.planet._sinc_prad(df,nopoints=False,zoom=False,query=None,yerrfac=1,xerrfac=1)
-        if gradient:
-            add_gradient(logsinc, bootstrap_det_chain, sinc=True)
-
-
-        sca(axL[i,1])
-        contour_sinc(cp,plot_interval=True,draw_colorbar=True, ntrials_min=100)
-        if gradient:
-            add_gradient(logsinc, bootstrap_occ_chain, sinc=True)
-
-        title = '$M_\star = {}-{}\, M_\odot$ '.format(_mass1,_mass2)
-        setp(axL[i,:],title=title)
-        i+=1
-
-    for ax in axL.flatten():
-        sca(ax)
-        xt = [3000,1000,300,100,30,10,3]
-        yt = [1.0,1.4,2.0,2.8,4.0]
-        xticks([log10(_xt) for _xt in xt],xt)
-        yticks([log10(_yt) for _yt in yt],yt)
-        grid()
-
-    xlim=log10(3000),log10(3)
-    ylim=log10(1),log10(4)
-    setp(axL,xlim=xlim,ylim=ylim)
-    setp(axL[:,1:],ylabel='')
-    setp(axL[:-1,:],xlabel='')
-    tight_layout(True)
-
-class obj(object):
+class SixPlotter(object):
     def __init__(self):
-        pass
-
-def load_contour_plotter(occ):
-    logperc = linspace(log10(0.1),log10(300),80)
-    logpradc = linspace(log10(0.5),log10(4),80)
-    perwid = 0.25
-    pradwid = 0.05
-    df = []
-    for i in range(len(logperc)):
-        for j in range(len(logpradc)):
-            d = {}
-            d['logperc'] = logperc[i]
-            d['logpradc'] = logpradc[j]
-            d['logper1'] = d['logperc'] - perwid / 2
-            d['logper2'] = d['logperc'] + perwid / 2
-            d['logprad1'] = d['logpradc'] - pradwid / 2
-            d['logprad2'] = d['logpradc'] + pradwid / 2
-            d['per1'] = 10**d['logper1']
-            d['per2'] = 10**d['logper2']
-            d['perc'] = 10**d['logperc']
-            d['prad1'] = 10**d['logprad1']
-            d['prad2'] = 10**d['logprad2']
-            d['pradc'] = 10**d['logpradc']
-            limits = dict([(k,d[k]) for k in 'per1 per2 prad1 prad2'.split()])
-            d = dict(d,**occ.occurence_box(limits))
-            df.append(d)
-
-    df = pd.DataFrame(df)
-    cp = obj()
-    cp.rate = df
-    cp.perwid = perwid
-    cp.pradwid = pradwid
-    cp.occ = occ
-    return cp
-
-def load_contour_plotter_sinc(occ):
-    logsincc = linspace(log10(0.1),log10(30000),80)
-    logpradc = linspace(log10(0.5),log10(4),80)
-    sincwid = 0.25
-    pradwid = 0.05
-    df = []
-    for i in range(len(logsincc)):
-        for j in range(len(logpradc)):
-            d = {}
-            d['logsincc'] = logsincc[i]
-            d['logpradc'] = logpradc[j]
-            d['logsinc1'] = d['logsincc'] - sincwid / 2
-            d['logsinc2'] = d['logsincc'] + sincwid / 2
-            d['logprad1'] = d['logpradc'] - pradwid / 2
-            d['logprad2'] = d['logpradc'] + pradwid / 2
-            d['sinc1'] = 10**d['logsinc1']
-            d['sinc2'] = 10**d['logsinc2']
-            d['sincc'] = 10**d['logsincc']
-            d['prad1'] = 10**d['logprad1']
-            d['prad2'] = 10**d['logprad2']
-            d['pradc'] = 10**d['logpradc']
-            limits = dict([(k,d[k]) for k in 'sinc1 sinc2 prad1 prad2'.split()])
-            d = dict(d,**occ.occurence_box_sinc(limits))
-            df.append(d)
-
-    df = pd.DataFrame(df)
-    cp = obj()
-    cp.rate = df
-    cp.sincwid = sincwid
-    cp.pradwid = pradwid
-    cp.occ = occ
-    return cp
-
-def load_surface_smass(per1, per2):
-    """Compute occurrence over a grid in stellar mass and planet size
-
-    First loads up occurrence for a specific range of stellar
-    masses. Then loops over the occ.occurrence_box method to determine
-    planet occurrence in a box of period and a planet size.
-
-    Args:
-        per1: lower period limit
-        per2: upper period limit
-    
-    
-    Returns:
-        pd.DataFrame: grid of planet occurrence
-
-    """
-
-    logsmassc = linspace(log10(0.5),log10(1.4),10)
-    logsmassc = logsmassc[1:]
-    logpradc = linspace(log10(0.5),log10(4),80)
-    smasswid = 0.1
-    pradwid = 0.2
-    df = []
-    for i in range(len(logsmassc)):
-        d = {}
-        d['logsmassc'] = logsmassc[i]
-        d['logsmass1'] = d['logsmassc'] - smasswid / 2
-        d['logsmass2'] = d['logsmassc'] + smasswid / 2
-        d['smass1'] = 10**d['logsmass1']
-        d['smass2'] = 10**d['logsmass2']
-        d['smassc'] = 10**d['logsmassc']
-        key = 'occur_smass={smass1:.3f}-{smass2:.3f}'.format(**d)
-        occ = ckscool.io.load_object(key,cache=1)
-
-        for j in range(len(logpradc)):
-            d['logsmassc'] = logsmassc[i]
-            d['logpradc'] = logpradc[j]
-            d['logprad1'] = d['logpradc'] - pradwid / 2
-            d['logprad2'] = d['logpradc'] + pradwid / 2
-            d['prad1'] = 10**d['logprad1']
-            d['prad2'] = 10**d['logprad2']
-            d['pradc'] = 10**d['logpradc']
-            d['nstars'] = occ.nstars
-            limits = dict(per1=per1,per2=per2,prad1=d['prad1'],prad2=d['prad2'])
-            d = dict(d,**occ.occurence_box(limits))
-            df.append(d)
-
-    df = pd.DataFrame(df)
-    return df
-
-def fig_contour_smass(per1, per2, normalize=False,):
-    sns.set_context('talk')
-    figure(figsize=(8,6,))
-    df = load_surface_smass(per1,per2)
-    if normalize:
-        df = df.query('0.5 < pradc < 4')
-        ds = df.groupby(['smass1','prad1']).nth(0).to_xarray()
-        X, Y = np.array(np.log10(ds.smassc)), np.array(np.log10(ds.pradc))
-        Z = ds.rate.fillna(0)
-        Z = nd.gaussian_filter(Z,(0.2,0.2))
-        Z = Z / Z.sum(axis=1)[:,newaxis]
-        levels = np.round(linspace(0.0,1.2*Z.max(),20),3)
-        _title = 'Normalized Occurrence \n $\Delta M_\star = 0.1$ dex $\Delta R_P$ = 0.05 dex, $P$ = {}-{} day'.format(per1,per2)
-    else:
-        ds = df.groupby(['smass1','prad1']).nth(0).to_xarray()
-        X, Y = np.array(np.log10(ds.smassc)), np.array(np.log10(ds.pradc))
-        Z = ds.rate.fillna(0)
-        Z = nd.gaussian_filter(Z,(1,1))
+        self.mass1 = [0.5,0.7,1.0]
+        self.mass2 = [0.7,1.0,1.4]
         
-        # Choose levels based on the maximum flu
-        Zcut = Z[array((1 < ds.pradc) & (ds.pradc < 4))]
-        levels = linspace(0,1.2*Zcut.max(),20)
-        _title = 'Occurrence \n $\Delta M_\star = 0.1$ dex $\Delta R_P$ = 0.05 dex, $P$ = {}-{} day'.format(per1,per2)
+    def plot(self):
+        fig, axL = subplots(nrows=3,ncols=2,figsize=(8.5,9))
+        i = 0
+        for _mass1, _mass2 in zip(self.mass1,self.mass2):
+            key = '{}_smass={}-{}'.format(self.occur_prefix,_mass1,_mass2)
+            occ = ckscool.io.load_object(key,cache=1)
+            axd = axL[i,0]
+            axo = axL[i,1]
 
-    cmap = 'YlGn' #,None #'hot_r'
-    qcs = contourf(X,Y,Z,levels=levels,cmap=cmap,zorder=0)
-    colorbar()
-    Z = np.array(ds.ntrial)
-    cmap = sns.light_palette("gray",as_cmap=True)
-    contourf(X,Y,Z,[0,100],zorder=2.5,cmap=cmap,vmax=1)
-    xt = [0.5,0.7,1.0,1.4]
-    yt = [1,1.4,2,2.8,4]
-    xticks([log10(_xt) for _xt in xt],xt)
-    yticks([log10(_yt) for _yt in yt],yt)
+            # Detected planets
+            sca(axd)
+            df = occ.plnt.copy()
+            df = df.rename(
+                columns={
+                    'prad':'gdir_prad','per':'koi_period','sinc':'giso_sinc'
+                }
+            )
+            pl = NDPlotter(df,self.xk,zoom=True)
+            pl.plot()
+            cbar = colorbar(pl.qc,shrink=0.5,format='%.1f')
+            cbar.set_label('$dN/d \log P/ d \log R_p$',size='x-small')
+            cbar.ax.tick_params(labelsize='xx-small')
 
-    df = ckscool.io.load_table('planets-cuts2')
-    df = df[~df.isany]
-    df = df[df.koi_period.between(per1,per2)]
-    plot(log10(df.giso_smass), log10(df.gdir_prad),'.')
+            # Occurrence rate 
+            sca(axo)
+            cp = pl.cp
+            pl = self.ORDPlotter(occ, cp)
+            pl.plot_ord()
+            pl.plot_completeness()
+            title = '$M_\star = {}-{}\, M_\odot$ '.format(_mass1,_mass2)
+            setp(axL[i,:],title=title)
+            i+=1
 
-    ylim(log10(0.5),log10(4))
-    xlim(log10(0.5),log10(1.4))
-    title(_title)
-    xlabel('Stellar Mass (Solar Masses)')
-    ylabel('Planet Size (Earth Radii)')
+        for ax in axL.flatten():
+            sca(ax)
+            xticks([log10(_xt) for _xt in self.xt],self.xt)
+            yticks([log10(_yt) for _yt in self.yt],self.yt)
+            grid()
 
-def load_surface_bmr(per1,per2):
-    bmrc = arange(0.5,2.0,0.1)
-    logpradc = linspace(log10(0.5),log10(4),80)
-    bmrwid = 0.2
-    pradwid = 0.05
-    df = []
-    for i in range(len(bmrc)):
-        d = {}
-        d['bmrc'] = bmrc[i]
-        d['bmr1'] = d['bmrc'] - bmrwid / 2
-        d['bmr2'] = d['bmrc'] + bmrwid / 2
-        key = 'occur_bmr={bmr1:.3f}-{bmr2:.3f}'.format(**d)
-        occ = ckscool.io.load_object(key,cache=1,verbose=0)
-        for j in range(len(logpradc)):
-            d['bmrc'] = bmrc[i]
-            d['logpradc'] = logpradc[j]
-            d['logprad1'] = d['logpradc'] - pradwid / 2
-            d['logprad2'] = d['logpradc'] + pradwid / 2
-            d['prad1'] = 10**d['logprad1']
-            d['prad2'] = 10**d['logprad2']
-            d['pradc'] = 10**d['logpradc']
-            d['nstars'] = occ.nstars
-            limits = dict(per1=per1,per2=per2,prad1=d['prad1'],prad2=d['prad2'])
-            d = dict(d,**occ.occurence_box(limits))
-            df.append(d)
-    df = pd.DataFrame(df)
-    return df
+        setp(axL, xlim=self.xlim, ylim=self.ylim)
+        setp(axL, ylabel='')
+        setp(axL, xlabel='')
+        setp(axL[:,0], ylabel=self.ylabel)
+        setp(axL[-1,:], xlabel=self.xlabel)
+        tight_layout(True)
 
-def fig_contour_bmr(normalize=False):
-    sns.set_context('talk')
-    figure(figsize=(8,6,))
-    df = load_surface_bmr(10,30)
+class SixPlotterPerPrad(SixPlotter):
+    def __init__(self):
+        super(SixPlotterPerPrad,self).__init__()
+        self.xk = 'koi_period'
+        self.xt = [1,3,10,30,100,300]
+        self.yt = [1.0,1.4,2.0,2.8,4.0]
+        self.xlim = log10(1),log10(300)
+        self.ylim = log10(1),log10(4)
+        self.occur_prefix = 'occur-per-prad'
+        self.ORDPlotter = ORDPlotterPerPrad
+        self.xlabel='Orbital Period (days)'
+        self.ylabel='Planet Size (Earth-radii)'
+        
+class SixPlotterSincPrad(SixPlotter):
+    def __init__(self):
+        super(SixPlotterSincPrad,self).__init__()
+        self.xk = 'giso_sinc'
+        self.xt = [3000,1000,300,100,30,10,3]
+        self.yt = [1.0,1.4,2.0,2.8,4.0]
+        self.xlim=log10(3000),log10(3)
+        self.ylim=log10(1),log10(4)
+        self.occur_prefix = 'occur-sinc-prad'
+        self.ORDPlotter = ORDPlotterSincPrad
+        self.xlabel='Incident Flux (Earth-units)'
+        self.ylabel='Planet Size (Earth-radii)'
 
-    if normalize:
-        df = df.query('1 < pradc < 4')
-        ds = df.groupby(['bmr1','prad1']).nth(0).to_xarray()
-        X, Y = np.array(ds.bmrc), np.array(np.log10(ds.pradc))
-        Z = ds.rate.fillna(0)
-        Z = nd.gaussian_filter(Z,(2,2))
-        Z = Z / Z.sum(axis=1)[:,newaxis]
-        levels = arange(0.0,0.06,0.003)
-        _title = 'Normalized Occurrence \n $\Delta Bp-Rp$ = 0.2 mag $\Delta R_P$ = 0.05 dex, $P$ = 10-30 day'
-    else:
-        ds = df.groupby(['bmr1','prad1']).nth(0).to_xarray()
-        X, Y = np.array(ds.bmrc), np.array(np.log10(ds.pradc))
-        Z = ds.rate.fillna(0)
-        Z = nd.gaussian_filter(Z,(2,2))
-        levels = arange(0.0,0.1,0.003)
-        _title = 'Occurrence \n $\Delta Bp - Rp$ = 0.2 mag $\Delta R_P$ = 0.05 dex, $P$ = 10-30 day'
+class ORDPlotter(object):
+    """
+    Occurrence rate density plotter
+    """
+    def __init__(self, occ, cp):
+        """
+        occ : occurrence object. can either be 
+        """
+        ds = cp.meshgrid()
+        Z = occ.occurrence_rate_density_idem(array(ds.kxc), array(ds.kyc))
+        Z = Z.reshape(ds.kxc.shape)
+        ds['occrd'] = (['kx','ky'],Z)
+        Z = occ.comp.prob_trdet_interp(ds.xc, ds.yc)
+        ds['prob_trdet'] = (['kx','ky'],Z)
+        ds['ntrial'] = occ.nstars * ds.prob_trdet
+        self.ds = ds
+        self.ntrials_min = 50
 
-    qcs = contourf(X,Y,Z,levels=levels,cmap='YlGn',zorder=0)
-    colorbar()
-    Z = np.array(ds.ntrial)
-    cmap = sns.light_palette("gray",as_cmap=True)
-    contourf(X,Y,Z,[0,25],zorder=2.5,cmap=cmap,vmax=1)
-    yt = [1,2,4]
-    yticks([log10(_yt) for _yt in yt],yt)
-    ylim(log10(1),log10(4))
-    title(_title)
-    xlabel('B-V (mag)')
-    ylabel('Planet Size (Earth-radii)')
+    def plot_ord(self,levels=None):
+        """
+        plot occurrence rate density
+        """
+        ds = self.ds
+        if levels==None:
+            eps = 1e-4
+            maxz = ds.occrd.where(ds.ntrial > self.ntrials_min).max()
+            maxz = np.round(maxz*1.1,3)
+            levels = linspace(0,maxz+eps,14)
 
+        cbarticks = levels[::2]
+        cbarticklabels = ["{:.1f}".format(1e2*_yt) for _yt in cbarticks]
+        cmap = 'YlGn' 
+        kw = dict(levels=levels,extend='neither',cmap=cmap,zorder=0)
+        qc = contourf(ds.kxc,ds.kyc,ds.occrd,**kw)
+        cbar = colorbar(qc,shrink=0.5,format='%.1f')
+        cbar.set_label(self.cbarlabel,size='x-small')
+        cbar.ax.tick_params(labelsize='xx-small')
 
-def per(per1, per2, prad1, prad2, smass1, smass2, fmtkey):
-    dlogper_bin = 0.25
-    dlogper_fit = 0.05 # Size of the bins used in the fitting
+    def plot_completeness(self):
+        """
+        Gray out region of low completeness
+        """
+        ds = self.ds
+        cmap = sns.light_palette("gray",as_cmap=True)
+        contourf(ds.kxc, ds.kyc, ds.ntrial, [0,self.ntrials_min], zorder=2.5,
+                 cmap=cmap,vmax=1)
 
-    key = 'occur_smass={}-{}'.format(smass1,smass2)
-    occ = ckscool.io.load_object(key,cache=1)
+    def label(self):
+        xlabel(self.xlabel)
+        ylabel(self.ylabel)
+        
+class ORDPlotterPerPrad(ORDPlotter):
+    """
+    """
+    def __init__(self, occ, cp):
+        super(ORDPlotterPerPrad,self).__init__(occ,cp)
+        self.xlabel = 'Orbital Period (days)'
+        self.ylabel = 'Planet size (Earth-radii)'
+        self.cbarlabel = '$df/ d \log P / d \log R_p$'
 
-    dx = [dlogper_fit]
-    cut = occ.occurrence_grid(
-        per1=per1, per2=per2, dlogper=dlogper_fit, 
-        prad1=prad1, prad2=prad2
-    )
-
-    occ = ckscool.io.load_object(key,cache=1)
-    key = 'fitper_per={}-{}_prad={}-{}_smass={}-{}'.format(
-        per1,per2,prad1,prad2,smass1,smass2
-    )
-    fit = ckscool.io.load_object(key,cache=1)
-    sampler = ckscool.plot.occur.SamplerPer(fit, fmtkey, dlogper_bin)
-    sampler.plot_all()
-
-    # Plot binned occurrence to guide the eye
-    df = occ.occurrence_grid(
-        per1=per1, per2=per2, dlogper=dlogper_bin, prad1=prad1, prad2=prad2
-    )
-    fac = 1
-    plot_rates('perc', df, fmtkey, fac=fac)
-    return sampler
-
-def sinc(sinc1, sinc2, prad1, prad2, smass1, smass2, fmtkey):
-    dlogsinc_bin = 0.5
-    dlogsinc_fit = 0.05 # Size of the bins used in the fitting
-
-    key = 'occur-sinc_smass={}-{}'.format(smass1,smass2)
-    occ = ckscool.io.load_object(key,cache=1)
-
-    dx = [dlogsinc_fit]
-    cut = occ.occurrence_grid(
-        sinc1=sinc1, sinc2=sinc2, dlogsinc=dlogsinc_fit, 
-        prad1=prad1, prad2=prad2
-    )
-
-    occ = ckscool.io.load_object(key,cache=1)
-    key = 'fitsinc_sinc={}-{}_prad={}-{}_smass={}-{}'.format(
-        sinc1,sinc2,prad1,prad2,smass1,smass2
-    )
-    fit = ckscool.io.load_object(key,cache=1)
-    sampler = ckscool.plot.occur.SamplerSinc(fit, fmtkey, dlogsinc_bin)
-    sampler.plot_all()
-    # Plot binned occurrence to guide the eye
-    df = occ.occurrence_grid(
-        sinc1=sinc1, sinc2=sinc2, dlogsinc=dlogsinc_bin, prad1=prad1, prad2=prad2
-    )
-    fac = 1
-    plot_rates('sincc', df, fmtkey, fac=fac)
+class ORDPlotterSincPrad(ORDPlotter):
+    """
+    """
+    def __init__(self, occ, cp):
+        super(ORDPlotterSincPrad,self).__init__(occ,cp)
+        self.xlabel = 'Incident Flux (Earth-units)'
+        self.ylabel = 'Planet size (Earth-radii)'
+        self.cbarlabel = '$df/ d \log Sinc / d \log R_p$'
 
 def plot_rates(xk, occur, fmtkey, fac=1.0, **kw):
     """
@@ -706,14 +210,10 @@ def plot_rates(xk, occur, fmtkey, fac=1.0, **kw):
     
     yerr = np.array(occur['rate_err2 rate_err1'.split()]).T
     yerr[0] *= -1 
-
-    #semilogy()
-    
     x = occur[xk]
     y = occur.rate
     errorbar(x,y*fac,yerr=yerr*fac, **ebkw1)
     errorbar(x,y*fac,yerr=yerr*fac, **ebkw2)
-
     occurul = occur.dropna(subset=['rate_ul'])
     if len(occurul) >0:
         plot(x,occur.rate_ul*fac,**ulkw)
