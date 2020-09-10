@@ -131,7 +131,6 @@ def val_sample(return_dict=False):
     d['nstars dr1 & dr2'] = (m.in_dr1 & m.in_dr2).sum()
     d['nstars dr1 | dr2'] = (m.in_dr1 | m.in_dr2).sum()
     d['nstars dr1 | dr2 | cxm'] = (m.in_dr1 | m.in_dr2 | m.in_cxm).sum()
-
     d['nstars dr2 & cxm & pre-2018'] = (
         m.in_dr2
         & m.in_cxm
@@ -157,6 +156,10 @@ def val_sample(return_dict=False):
     d['nstars dr2 & cxm & pre-2018 counts < 1500'] = b.sum()
     kois = ", ".join(m[b].id_koi.astype(int).astype(str))
     d['kois dr2 & cxm & pre-2018 counts < 1500'] = kois
+
+    b = ~m.in_dr1 & ~m.in_dr2 & m.in_cxm
+    kois = ", ".join(m[b].id_koi.astype(int).astype(str))
+    d['kois ~dr1 & ~dr2 & cxm'] = kois
 
     table = 'planets-cuts1'
     df = ckscool.io.load_table(table,cache=2)
