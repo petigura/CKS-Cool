@@ -88,9 +88,8 @@ def create_iso_batch(args):
         for i,mode in enumerate(modes):
             fn = 'data/isoclassify-{}-{}.csv'.format(source,mode)
             df = stars[i]
-            df = df[df.id_starname.isin(['KIC6697756','KIC7871954','KIC9388479','KIC10395543'])  ]
+            df = df[df.id_starname.isin(['KIC8653134','KIC11453592','KIC4150804','KIC10990886','KIC2989404','KIC9575728','KIC3426367','KIC12506770'])]
             df.to_csv(fn)
-            print "created {}".format(fn)
 
 def create_iso_table(args):
     sources = ['cks1','smsyn','smemp']
