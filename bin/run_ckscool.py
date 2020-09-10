@@ -219,6 +219,7 @@ def create_workflow():
     kw = dict(zoom=True,xerrfac=0.5,yerrfac=1.5)
     w.plot['occur-contour-six-per'] = plot.occur.fig_contour_six_per
     w.plot['occur-contour-six-sinc'] = plot.occur.fig_contour_six_sinc
+    w.plot['mean-planet-size'] = plot.occur.fig_mean_planet_size
 
     # table
     f1 = ckscool.table.tab_star
@@ -237,7 +238,7 @@ def create_workflow():
     # val
     w.val['stat'] = ckscool.value.val_stat
     w.val['sample'] = ckscool.value.val_sample
-    w.val['fitd'] = ckscool.value.val_fitd
+    w.val['fit'] = ckscool.value.val_fit
 
     # planet
     w.csv['star'] = ckscool.table.tab_star_csv

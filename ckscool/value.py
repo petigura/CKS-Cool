@@ -270,10 +270,8 @@ def val_sample(return_dict=False):
 
     return lines
 
-
-def val_fitd(return_dict=False):
+def val_fit(return_dict=False):
     d = OrderedDict()
-
     keys = [
         'fitdetected_sn-m',
         'fitdetected_se-m',
@@ -292,6 +290,16 @@ def val_fitd(return_dict=False):
         d[mode+'-alpha-mass'] = "{:.2f} \pm {:.2f}".format(*desc.loc[['mean','std'],'alpha_mass'].tolist())
         d[mode+'-alpha-met'] = "{:.2f} \pm {:.2f}".format(*desc.loc[['mean','std'],'alpha_met'].tolist())
         d[mode+'-alpha-age'] = "{:.2f} \pm {:.2f}".format(*desc.loc[['mean','std'],'alpha_age'].tolist())
+
+    keys = [
+        'mps_size-se',
+        'mps_size-sn',
+    ]
+
+    for key in keys:
+        mps = ckscool.io.load_object(key,cache=1)
+        d[key+'-alpha'] = "{:.2f} \pm {:.2f}".format(np.mean(mps.coeff[1]), np.std(mps.coeff[1]))
+        d[key+'-R0'] = "{:.2f} \pm {:.2f}".format(np.mean(10**mps.coeff[0]), np.std(10**mps.coeff[0]))
     
     lines = []
     for k, v in d.iteritems():

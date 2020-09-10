@@ -24,6 +24,36 @@ def fig_contour_six_sinc(gradient=False):
     pl = SixPlotterSincPrad()
     pl.plot()
 
+def fig_mean_planet_size():
+    sns.set_context('paper')
+    fig, axL = subplots(nrows=1,figsize=(3.5,3.5),sharex=True)
+
+    loglog()
+    mps = ckscool.io.load_object('mps_size-se')
+    errorbar(mps.smassc,mps.mn,yerr=mps.std,fmt='o')
+    fill_between(10**mps.logsmassci, mps.q16,mps.q84 ,alpha=0.5)
+
+
+    mps = ckscool.io.load_object('mps_size-sn')
+    errorbar(mps.smassc,mps.mn,yerr=mps.std,fmt='o')
+    fill_between(10**mps.logsmassci, mps.q16,mps.q84 ,alpha=0.5)
+
+    yt = np.round(arange(1.2,3.001,0.2),1)
+    xt = [0.5,0.7,1.0,1.4] 
+
+    minorticks_off()
+    yticks(yt,yt)
+    xticks(xt,xt)
+
+    setp(axL,ylabel='Mean Planet Size (Earth-radii)')
+    text(0.55,2.8,'Sub-Neptunes (P < 100)')
+    text(0.55,1.4,'Super-Earths (P < 30)')
+
+    #setp(axL,title='Super-Earths (P < 30)')
+    setp(axL,xlabel='Stellar Mass (Solar-Masses)')
+    ylim(1.2,3)
+    tight_layout()
+
 class SixPlotter(object):
     def __init__(self):
         self.mass1 = [0.5,0.7,1.0]

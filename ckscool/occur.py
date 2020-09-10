@@ -1,6 +1,3 @@
-"""
-grid
-"""
 import numpy as np
 from numpy import log10, logspace, arange, round, array
 from scipy.special import gammaln as gamln
@@ -170,32 +167,61 @@ def gaussian_2d_kde(x, y, xi, yi, xbw, ybw, w=None):
 
 
 class MeanPlanetSize(object):
-    def __init__(self):
+    def __init__(self,query):
         smassbins = np.array([0.5,0.7,1.0,1.4])
-        self.smass1 = smassbins[:-2]
+        self.smass1 = smassbins[:-1]
         self.smass2 = smassbins[1:]
-        self.smassc = np.sqrt(self.smass1 * self.mass2)
+        self.smassc = np.sqrt(self.smass1 * self.smass2)
         self.nsamp = 1000
-
-        occ = []
+        self.nbins = len(self.smass1)
+        self.w = []
+        self.plnt = []
         for i in range(len(self.smass1)):
             smass1, smass2 = self.smass1[i],self.smass2[i]
-            k = 'occur-per-prad_smass=0.5-0.7'.format(smass1,smass2)
-            occ.append(ckscool.io.load_object(k,cache=1))
-        self.occ
+            k = 'occur-per-prad_smass={}-{}'.format(smass1,smass2)
+            occ = ckscool.io.load_object(k,cache=1)
+            plnt = occ.plnt.query(query)
+            w = 1/ occ.comp.prob_trdet_interp(plnt['per'],plnt['prad'])
+            self.plnt.append(plnt)
+            self.w.append(w)
 
-    def sample(self, query):
+    def sample_logprad_single(self):
         """
-        sample mean planet size, and fit to mean planet size
+        sample mean planet size
         """
         mn = []
-        for j in range(nsamp):
-            logprad = log10(cut['prad'])
-            val = logprad.sample(self.nsamp,replace=True)
+        for i in range(self.nbins):
+            w = self.w[i]
+            plnt = self.plnt[i]
+            logprad = log10(plnt['prad'])
+            val = logprad.sample(len(w),replace=True)
             mn.append(np.average(val,weights=w))
-        mn = 10**np.array(mn)
+
         return mn
 
+    def sample_logprad(self):
+        logprad = []
+        for i in range(self.nsamp):
+            logprad.append(self.sample_logprad_single())
+
+        self.logprad = np.array(logprad)
+
+    def fit_powerlaw(self):
+        logprad = np.array(self.logprad)
+        logsmassc = log10(self.smassc)
+        self.logsmassci = np.linspace(log10(0.5),log10(1.4),100)
+        self.mn = np.mean((10**logprad),axis=0)
+        self.std = np.std((10**logprad),axis=0)
+        self.coeff = np.polynomial.polynomial.polyfit(
+            logsmassc,logprad.T,1
+        )
+        self.logpradf = np.polynomial.polynomial.polyval(
+            self.logsmassci,self.coeff
+        )
+
+        self.pradf = 10**self.logpradf
+        self.q16,self.q84 = np.percentile(self.pradf,[16,84],axis=0)
+    
 class Binomial(object):
     """Class that computes binomial statistics
 
