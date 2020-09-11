@@ -4,10 +4,10 @@ from __future__ import print_function
 Module for CKS-Cool I/O
 """
 import os
-import cPickle as pickle
 import warnings
 from collections import OrderedDict
 import re
+import cPickle as pickle
 
 import pandas as pd
 import numpy as np
@@ -28,6 +28,7 @@ import ckscool.plot.occur
 import ckscool._isoclassify
 import ckscool.fit
 import ckscool.fitdetected
+import ckscool.gradient
 
 # Ignore the Natural name warning
 warnings.simplefilter('ignore', tables.NaturalNameWarning)
@@ -775,7 +776,7 @@ def order_columns(df, verbose=False, drop=False):
         df = pd.concat([df,df0[mcols]],axis=1)
     return df
 
-def load_object(key,cache=0,verbose=1):
+def load_object(key,cache=0, verbose=1, N_cores=None):
     """
     Objects must adopt the following naming convention
     {objkey}_{params}
@@ -813,6 +814,7 @@ def load_object(key,cache=0,verbose=1):
         else:
             obj = ckscool.plot.occur.load_contour_plotter(occ)
 
+
     elif objkey=='occur-per-prad' or objkey=='occur-sinc-prad':
         limits = {}
         if params.count('smass'):
@@ -820,6 +822,28 @@ def load_object(key,cache=0,verbose=1):
             limits['smass1'] = float(smass1)
             limits['smass2'] = float(smass2)
         obj = ckscool.occur.load_occur(objkey,limits)
+
+    elif objkey=='comp-per-prad' or objkey=='comp-sinc-prad':
+        limits = {}
+        if params.count('smass'):
+            smass1, smass2 = params.replace('smass=','').split('-')
+            limits['smass1'] = float(smass1)
+            limits['smass2'] = float(smass2)
+        obj = ckscool.comp.load_comp(objkey,limits)
+
+    elif objkey=='grad-per-prad' or objkey=='grad-sinc-prad':
+        limits = {}
+        if params.count('smass'):
+            smass1, smass2 = params.replace('smass=','').split('-')
+            limits['smass1'] = float(smass1)
+            limits['smass2'] = float(smass2)
+
+        if N_cores:
+            obj = ckscool.gradient.construct_grad(objkey, limits, N_cores=N_cores, N_sample=10000)
+        else:
+            obj = ckscool.gradient.construct_grad(objkey, limits, N_sample=10000)
+
+    
 
     elif objkey.count('fitper_')==1:
         dlogper = 0.05 # Size of the bins used in the fitting

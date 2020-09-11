@@ -277,7 +277,7 @@ def load_comp3d():
     Iterate over a bunch of 2D completeness 
     """
 
-def load_occur(objkey, limits, debug=False, sinc=False):
+def load_occur(objkey, limits, debug=False):
     """
     Constructs occurrence object
     """
@@ -342,12 +342,6 @@ def load_occur(objkey, limits, debug=False, sinc=False):
     comp.compute_grid_prob_tr(verbose=True)
     comp.create_splines()
     occ = Occurrence(plnt, comp, nstars)
-    return occ
-
-def load_occur_resample(smass1, smass2, plnt, comp, nstars):
-    resample_indices = resample(np.arange(len(plnt)))
-    plnt_resampled =  plnt.iloc[resample_indices, :]
-    occ = ckscool.occur.Occurrence(plnt_resampled, comp, nstars)
     return occ
 
 

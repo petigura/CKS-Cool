@@ -504,10 +504,9 @@ class Completeness3D_PerPradSmass(object):
     def prob_tr(self, per, prad, smass):
         return self._prob_tr(self._transform_to_grid(per, prad, smass))
         
-def load_occur(limits, debug=False, sinc=False):
-    """
-    Constructs occurrence object
-    """
+
+
+def load_comp(objkey, limits):
 
     # Derive completeness object
     method = 'fulton-gamma-clip' # treatment for planet detectability
@@ -516,74 +515,52 @@ def load_occur(limits, debug=False, sinc=False):
     field = ckscool.io.load_table('field-cuts',cache=1)
     field = field[~field.isany]
     field = field.rename(columns={'ber19_srad':'srad','ber19_smass':'smass'})
-    plnt = ckscool.io.load_table('planets-cuts2')
-    plnt = plnt[~plnt.isany]
-    namemap = {'gdir_prad':'prad','koi_period':'per','giso_smass':'smass','giso_sinc':'sinc'}
-    plnt = plnt.rename(columns=namemap)
 
     if limits.has_key('smass1'):
         smass1 = limits['smass1']  
         smass2 = limits['smass2']
         field = field[field.smass.between(smass1,smass2)]
-        plnt = plnt[plnt.smass.between(smass1,smass2)]
-
-    elif limits.has_key('bmr1'):
-        bmr1 = limits['bmr1']
-        bmr2 = limits['bmr2']
-        xs = 'gaia2_bpmag - gaia2_rpmag'
-        field = field[field.eval(xs).between(bmr1,bmr2)]
-        plnt = plnt[plnt.eval(xs).between(bmr1,bmr2)]
 
     n1 = len(field)
-    field = field.dropna(subset=__STARS_REQUIRED_COLUMNS__)
-    n2 = len(field)
-    print "{}/{} stars remain after droping nulls ".format(n2,n1)
+    field = field.dropna(subset=ckscool.comp.__STARS_REQUIRED_COLUMNS__)
+    nstars = len(field)
+    
+    print "{}/{} stars remain after droping nulls ".format(nstars,n1)
+    if objkey=='comp-per-prad':
+        xbins = np.round(logspace(log10(0.1),log10(1000),65),4)
+        ybins = np.round(logspace(log10(0.25),log10(64),51 ),2)
+        xk = 'per'
+        yk = 'prad'
+        xscale = 'log'
+        yscale = 'log'
+        Completeness = ckscool.comp.CompletenessPerPrad
 
-    if sinc:
-        comp_sinc_bins = np.round(logspace(log10(0.1),log10(100000),65),4)
-        comp_prad_bins = np.round(logspace(log10(0.25),log10(64),51 ),2)
-
-        # debugging
-        if debug:
-            comp_sinc_bins = comp_sinc_bins[:6]
-            comp_prad_bins = comp_prad_bins[:6]
-
-        comp_bins_dict = {'sinc':comp_sinc_bins, 'prad': comp_prad_bins}
-        spacing_dict = {'sinc':'log','prad':'log'}
-        grid = ckscool.grid.Grid(comp_bins_dict, spacing_dict)
-        comp = ckscool.comp.Completeness_SincPrad(field, grid, method, impact)
-        comp.compute_grid_prob_det_sinc(verbose=False)
-        comp.compute_grid_prob_tr_sinc(verbose=False)
-        comp.create_splines_sinc()
-        nstars = len(field)
-        occ = ckscool.occur.Occurrence_SincPrad(plnt, comp, nstars)
+    elif objkey=='comp-sinc-prad':
+        xbins = np.round(logspace(log10(0.1),log10(100000),65),4)
+        ybins = np.round(logspace(log10(0.25),log10(64),51 ),2)
+        xk = 'sinc'
+        yk = 'prad'
+        xscale = 'log'
+        yscale = 'log'
+        Completeness = ckscool.comp.CompletenessSincPrad
 
     else:
-        # Define grid of period and radius to compute completeness
-        comp_per_bins = np.round(logspace(log10(0.1),log10(1000),65),4)
-        comp_prad_bins = np.round(logspace(log10(0.25),log10(64),51 ),2)
+        assert False, "{} not supported objkey".format(objkey)
 
-        # debugging
-        if debug:
-            comp_per_bins = comp_per_bins[:6]
-            comp_prad_bins = comp_prad_bins[:6]
+    if debug:
+        xbins = xbins[::2]
+        ybins = ybins[::2]
 
-        comp_bins_dict = {'per': comp_per_bins,'prad': comp_prad_bins}
-        spacing_dict = {'per':'log','prad':'log'}
+    comp_bins_dict = {xk: xbins,yk: ybins}
+    spacing_dict = {xk:xscale, yk:yscale}
+    grid = ckscool.grid.Grid(comp_bins_dict,spacing_dict)
+    comp = Completeness(field, grid, method, impact)
+    comp.compute_grid_prob_det(verbose=True)
+    comp.compute_grid_prob_tr(verbose=True)
+    comp.create_splines()
 
-        grid = ckscool.grid.Grid(comp_bins_dict,spacing_dict)
+    return comp
 
-        comp = ckscool.comp.Completeness(field, grid, method, impact)
-        comp.compute_grid_prob_det(verbose=False)
-        comp.compute_grid_prob_tr(verbose=False)
-        comp.create_splines()
-        nstars = len(field)
-        occ = ckscool.occur.Occurrence(plnt, comp, nstars)
-    return occ
-
-
-
-    
 # ---------------------------------------------------------------------------- #
 
 def fulton_gamma(snr):
