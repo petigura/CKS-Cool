@@ -1,6 +1,3 @@
-"""
-grid
-"""
 import numpy as np
 from numpy import log10, logspace, arange, round, array
 from scipy.special import gammaln as gamln
@@ -101,9 +98,9 @@ class Occurrence2D(object):
         df = pd.DataFrame(df)
         return df
 
-
     def planet_weights(self):
         return 1 / self.comp.prob_trdet_interp(self.plntx,self.plnty)
+
 
     def occurrence_rate_density_idem(self, logx, logy):
         """
@@ -114,9 +111,8 @@ class Occurrence2D(object):
         """
         assert logx.shape ==logy.shape
         w = self.planet_weights()
-        nplnt = len(plnt)
-        logxi = np.log10(plntx)
-        logyi = np.log10(plnty)
+        logxi = np.log10(self.plntx)
+        logyi = np.log10(self.plnty)
         occrd = gaussian_2d_kde(
             logx, logy, logxi, logyi, self.xbw, self.ybw ,w=w
         )
@@ -170,32 +166,61 @@ def gaussian_2d_kde(x, y, xi, yi, xbw, ybw, w=None):
 
 
 class MeanPlanetSize(object):
-    def __init__(self):
+    def __init__(self,query):
         smassbins = np.array([0.5,0.7,1.0,1.4])
-        self.smass1 = smassbins[:-2]
+        self.smass1 = smassbins[:-1]
         self.smass2 = smassbins[1:]
-        self.smassc = np.sqrt(self.smass1 * self.mass2)
+        self.smassc = np.sqrt(self.smass1 * self.smass2)
         self.nsamp = 1000
-
-        occ = []
+        self.nbins = len(self.smass1)
+        self.w = []
+        self.plnt = []
         for i in range(len(self.smass1)):
             smass1, smass2 = self.smass1[i],self.smass2[i]
-            k = 'occur-per-prad_smass=0.5-0.7'.format(smass1,smass2)
-            occ.append(ckscool.io.load_object(k,cache=1))
-        self.occ
+            k = 'occur-per-prad_smass={}-{}'.format(smass1,smass2)
+            occ = ckscool.io.load_object(k,cache=1)
+            plnt = occ.plnt.query(query)
+            w = 1/ occ.comp.prob_trdet_interp(plnt['per'],plnt['prad'])
+            self.plnt.append(plnt)
+            self.w.append(w)
 
-    def sample(self, query):
+    def sample_logprad_single(self):
         """
-        sample mean planet size, and fit to mean planet size
+        sample mean planet size
         """
         mn = []
-        for j in range(nsamp):
-            logprad = log10(cut['prad'])
-            val = logprad.sample(self.nsamp,replace=True)
+        for i in range(self.nbins):
+            w = self.w[i]
+            plnt = self.plnt[i]
+            logprad = log10(plnt['prad'])
+            val = logprad.sample(len(w),replace=True)
             mn.append(np.average(val,weights=w))
-        mn = 10**np.array(mn)
+
         return mn
 
+    def sample_logprad(self):
+        logprad = []
+        for i in range(self.nsamp):
+            logprad.append(self.sample_logprad_single())
+
+        self.logprad = np.array(logprad)
+
+    def fit_powerlaw(self):
+        logprad = np.array(self.logprad)
+        logsmassc = log10(self.smassc)
+        self.logsmassci = np.linspace(log10(0.5),log10(1.4),100)
+        self.mn = np.mean((10**logprad),axis=0)
+        self.std = np.std((10**logprad),axis=0)
+        self.coeff = np.polynomial.polynomial.polyfit(
+            logsmassc,logprad.T,1
+        )
+        self.logpradf = np.polynomial.polynomial.polyval(
+            self.logsmassci,self.coeff
+        )
+
+        self.pradf = 10**self.logpradf
+        self.q16,self.q84 = np.percentile(self.pradf,[16,84],axis=0)
+    
 class Binomial(object):
     """Class that computes binomial statistics
 
@@ -307,79 +332,6 @@ def load_comp3d():
     """
     Iterate over a bunch of 2D completeness 
     """
-
-def load_occur(objkey, limits, debug=False, sinc=False):
-    """
-    Constructs occurrence object
-    """
-
-    # Derive completeness object
-    method = 'fulton-gamma-clip' # treatment for planet detectability
-    impact = 0.8 # maximum impact parameter considered.
-
-    field = ckscool.io.load_table('field-cuts',cache=1)
-    field = field[~field.isany]
-    field = field.rename(columns={'ber19_srad':'srad','ber19_smass':'smass'})
-    plnt = ckscool.io.load_table('planets-cuts2')
-    plnt = plnt[~plnt.isany]
-
-    namemap = {'gdir_prad':'prad','koi_period':'per','giso_smass':'smass',
-               'giso_sinc':'sinc'}
-    plnt = plnt.rename(columns=namemap)
-
-    if limits.has_key('smass1'):
-        smass1 = limits['smass1']  
-        smass2 = limits['smass2']
-        field = field[field.smass.between(smass1,smass2)]
-        plnt = plnt[plnt.smass.between(smass1,smass2)]
-
-    n1 = len(field)
-    field = field.dropna(subset=ckscool.comp.__STARS_REQUIRED_COLUMNS__)
-    nstars = len(field)
-    
-    print "{}/{} stars remain after droping nulls ".format(nstars,n1)
-    if objkey=='occur-per-prad':
-        xbins = np.round(logspace(log10(0.1),log10(1000),65),4)
-        ybins = np.round(logspace(log10(0.25),log10(64),51 ),2)
-        xk = 'per'
-        yk = 'prad'
-        xscale = 'log'
-        yscale = 'log'
-        Completeness = ckscool.comp.CompletenessPerPrad
-        Occurrence = ckscool.occur.OccurrencePerPrad
-
-    elif objkey=='occur-sinc-prad':
-        xbins = np.round(logspace(log10(0.1),log10(100000),65),4)
-        ybins = np.round(logspace(log10(0.25),log10(64),51 ),2)
-        xk = 'sinc'
-        yk = 'prad'
-        xscale = 'log'
-        yscale = 'log'
-        Completeness = ckscool.comp.CompletenessSincPrad
-        Occurrence = ckscool.occur.OccurrenceSincPrad
-
-    else:
-        assert False, "{} not supported objkey".format(objkey)
-
-    if debug:
-        xbins = xbins[::2]
-        ybins = ybins[::2]
-
-    comp_bins_dict = {xk: xbins,yk: ybins}
-    spacing_dict = {xk:xscale, yk:yscale}
-    grid = ckscool.grid.Grid(comp_bins_dict,spacing_dict)
-    comp = Completeness(field, grid, method, impact)
-    comp.compute_grid_prob_det(verbose=True)
-    comp.compute_grid_prob_tr(verbose=True)
-    comp.create_splines()
-    occ = Occurrence(plnt, comp, nstars)
-    return occ
-
-def load_occur_resample(smass1, smass2, plnt, comp, nstars):
-    resample_indices = resample(np.arange(len(plnt)))
-    plnt_resampled =  plnt.iloc[resample_indices, :]
-    occ = ckscool.occur.Occurrence(plnt_resampled, comp, nstars)
-    return occ
 
 
 def gaussian(pos, mu, cov, w=None):

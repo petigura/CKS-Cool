@@ -4,10 +4,10 @@ from __future__ import print_function
 Module for CKS-Cool I/O
 """
 import os
-import cPickle as pickle
 import warnings
 from collections import OrderedDict
 import re
+import cPickle as pickle
 
 import pandas as pd
 import numpy as np
@@ -24,10 +24,10 @@ import ckscool.comp
 from ckscool.pdplus import LittleEndian
 import ckscool.gaia
 import ckscool.occur
-import ckscool.plot.occur
 import ckscool._isoclassify
 import ckscool.fit
 import ckscool.fitdetected
+import ckscool.gradient
 
 # Ignore the Natural name warning
 warnings.simplefilter('ignore', tables.NaturalNameWarning)
@@ -775,7 +775,10 @@ def order_columns(df, verbose=False, drop=False):
         df = pd.concat([df,df0[mcols]],axis=1)
     return df
 
-def load_object(key,cache=0,verbose=1):
+
+# Code for loading in objects
+
+def load_object(key,cache=0, verbose=1, N_cores=None):
     """
     Objects must adopt the following naming convention
     {objkey}_{params}
@@ -805,21 +808,50 @@ def load_object(key,cache=0,verbose=1):
             pickle.dump(obj,f)
         return obj
         
-    if objkey.count('cp') == 1:
-        occurkey = key.replace('cp','occur')
-        occ = load_object(occurkey, cache=1)
-        if objkey.count('sinc')==1:
-            obj = ckscool.plot.occur.load_contour_plotter_sinc(occ)
-        else:
-            obj = ckscool.plot.occur.load_contour_plotter(occ)
-
     elif objkey=='occur-per-prad' or objkey=='occur-sinc-prad':
         limits = {}
         if params.count('smass'):
             smass1, smass2 = params.replace('smass=','').split('-')
             limits['smass1'] = float(smass1)
             limits['smass2'] = float(smass2)
-        obj = ckscool.occur.load_occur(objkey,limits)
+        obj = load_occur(objkey,limits)
+
+    elif objkey=='comp-per-prad' or objkey=='comp-sinc-prad':
+        limits = {}
+        if params.count('smass'):
+            smass1, smass2 = params.replace('smass=','').split('-')
+            limits['smass1'] = float(smass1)
+            limits['smass2'] = float(smass2)
+        obj = load_comp(objkey,limits)
+
+    elif objkey=='grad-per-prad' or objkey=='grad-sinc-prad':
+        limits = {}
+        if params.count('smass'):
+            smass1, smass2 = params.replace('smass=','').split('-')
+            limits['smass1'] = float(smass1)
+            limits['smass2'] = float(smass2)
+
+        N_cores=8
+        if N_cores:
+            obj = ckscool.gradient.construct_grad(
+                objkey, limits, N_cores=N_cores, N_sample=100
+            )
+        else:
+            obj = ckscool.gradient.construct_grad(
+                objkey, limits, N_sample=100
+            )
+    
+    elif objkey=='mps':
+        if params.count('size-se'):
+            mps = ckscool.occur.MeanPlanetSize('per < 30 and 1.0 < prad < 1.7')
+        elif params.count('size-sn'):
+            mps = ckscool.occur.MeanPlanetSize('per < 100 and 1.7 < prad < 4.0')
+        else:
+            assert False, "Failed"
+
+        mps.sample_logprad()
+        mps.fit_powerlaw()
+        obj = mps
 
     elif objkey.count('fitper_')==1:
         dlogper = 0.05 # Size of the bins used in the fitting
@@ -852,6 +884,8 @@ def load_object(key,cache=0,verbose=1):
         fit.mcmc(burn=3000, steps=6000, thin=1, nwalkers=20)
         obj = fit
 
+
+        
     elif key.count('fitsinc_')==1:
         dlogsinc = 0.05 # Size of the bins used in the fitting
         dx = [dlogsinc]
@@ -894,3 +928,120 @@ def load_object(key,cache=0,verbose=1):
 
     return obj
 
+def load_comp(objkey, limits):
+
+    # Derive completeness object
+    method = 'fulton-gamma-clip' # treatment for planet detectability
+    impact = 0.8 # maximum impact parameter considered.
+
+    field = ckscool.io.load_table('field-cuts',cache=1)
+    field = field[~field.isany]
+    field = field.rename(columns={'ber19_srad':'srad','ber19_smass':'smass'})
+
+    if limits.has_key('smass1'):
+        smass1 = limits['smass1']  
+        smass2 = limits['smass2']
+        field = field[field.smass.between(smass1,smass2)]
+
+    n1 = len(field)
+    field = field.dropna(subset=ckscool.comp.__STARS_REQUIRED_COLUMNS__)
+    nstars = len(field)
+    print("{}/{} stars remain after droping nulls".format(nstars,n1))
+    if objkey=='comp-per-prad':
+        xbins = np.round(np.logspace(np.log10(0.1),np.log10(1000),65),4)
+        ybins = np.round(np.logspace(np.log10(0.25),np.log10(64),51 ),2)
+        xk = 'per'
+        yk = 'prad'
+        xscale = 'log'
+        yscale = 'log'
+        Completeness = ckscool.comp.CompletenessPerPrad
+
+    elif objkey=='comp-sinc-prad':
+        xbins = np.round(np.logspace(np.log10(0.1),np.log10(100000),65),4)
+        ybins = np.round(np.logspace(np.log10(0.25),np.log10(64),51 ),2)
+        xk = 'sinc'
+        yk = 'prad'
+        xscale = 'log'
+        yscale = 'log'
+        Completeness = ckscool.comp.CompletenessSincPrad
+
+    else:
+        assert False, "{} not supported objkey".format(objkey)
+
+    comp_bins_dict = {xk: xbins,yk: ybins}
+    spacing_dict = {xk:xscale, yk:yscale}
+    grid = ckscool.grid.Grid(comp_bins_dict,spacing_dict)
+    comp = Completeness(field, grid, method, impact)
+    comp.compute_grid_prob_det(verbose=True)
+    comp.compute_grid_prob_tr(verbose=True)
+    comp.create_splines()
+
+    return comp
+
+def load_occur(objkey, limits, debug=False):
+    """
+    Constructs occurrence object
+    """
+
+    # Derive completeness object
+    method = 'fulton-gamma-clip' # treatment for planet detectability
+    impact = 0.8 # maximum impact parameter considered.
+
+    field = ckscool.io.load_table('field-cuts',cache=1)
+    field = field[~field.isany]
+    field = field.rename(columns={'ber19_srad':'srad','ber19_smass':'smass'})
+    plnt = ckscool.io.load_table('planets-cuts2')
+    plnt = plnt[~plnt.isany]
+
+    namemap = {'gdir_prad':'prad','koi_period':'per','giso_smass':'smass',
+               'giso_sinc':'sinc'}
+    plnt = plnt.rename(columns=namemap)
+
+    if limits.has_key('smass1'):
+        smass1 = limits['smass1']  
+        smass2 = limits['smass2']
+        field = field[field.smass.between(smass1,smass2)]
+        plnt = plnt[plnt.smass.between(smass1,smass2)]
+
+    n1 = len(field)
+    field = field.dropna(subset=ckscool.comp.__STARS_REQUIRED_COLUMNS__)
+    nstars = len(field)
+
+    print("{}/{} stars remain after droping nulls".format(nstars,n1))
+
+    if objkey=='occur-per-prad':
+        xbins = np.round(np.logspace(np.log10(0.1),np.log10(1000),65),4)
+        ybins = np.round(np.logspace(np.log10(0.25),np.log10(64),51 ),2)
+        xk = 'per'
+        yk = 'prad'
+        xscale = 'log'
+        yscale = 'log'
+        Completeness = ckscool.comp.CompletenessPerPrad
+        Occurrence = ckscool.occur.OccurrencePerPrad
+
+    elif objkey=='occur-sinc-prad':
+        xbins = np.round(np.logspace(np.log10(0.1),np.log10(100000),65),4)
+        ybins = np.round(np.logspace(np.log10(0.25),np.log10(64),51 ),2)
+        xk = 'sinc'
+        yk = 'prad'
+        xscale = 'log'
+        yscale = 'log'
+        Completeness = ckscool.comp.CompletenessSincPrad
+        Occurrence = ckscool.occur.OccurrenceSincPrad
+
+    else:
+        assert False, "{} not supported objkey".format(objkey)
+
+    if debug:
+        xbins = xbins[::2]
+        ybins = ybins[::2]
+
+    comp_bins_dict = {xk: xbins,yk: ybins}
+    spacing_dict = {xk:xscale, yk:yscale}
+    grid = ckscool.grid.Grid(comp_bins_dict,spacing_dict)
+    comp = Completeness(field, grid, method, impact)
+    comp.compute_grid_prob_det(verbose=True)
+    comp.compute_grid_prob_tr(verbose=True)
+    comp.create_splines()
+    occ = Occurrence(plnt, comp, nstars)
+    return occ

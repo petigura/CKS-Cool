@@ -8,28 +8,58 @@ from scipy import ndimage as nd
 
 import ckscool.io
 import ckscool.plot.planet
-import ckscool.gradient #import R, R_sinc
+import ckscool.gradient 
 from .planet import NDPlotter
 
 sns.set_style('ticks')
 sns.set_color_codes()
 
-def fig_contour_six_per(gradient=False):
+def fig_contour_six_per(plot_gradient=False):
     sns.set_context('paper')
     pl = SixPlotterPerPrad()
-    pl.plot()
+    pl.plot(plot_gradient)
 
-def fig_contour_six_sinc(gradient=False):
+def fig_contour_six_sinc(plot_gradient=False):
     sns.set_context('paper')
     pl = SixPlotterSincPrad()
-    pl.plot()
+    pl.plot(plot_gradient)
+
+def fig_mean_planet_size():
+    sns.set_context('paper')
+    fig, axL = subplots(nrows=1,figsize=(3.5,3.5),sharex=True)
+
+    loglog()
+    mps = ckscool.io.load_object('mps_size-se')
+    errorbar(mps.smassc,mps.mn,yerr=mps.std,fmt='o')
+    fill_between(10**mps.logsmassci, mps.q16,mps.q84 ,alpha=0.5)
+
+
+    mps = ckscool.io.load_object('mps_size-sn')
+    errorbar(mps.smassc,mps.mn,yerr=mps.std,fmt='o')
+    fill_between(10**mps.logsmassci, mps.q16,mps.q84 ,alpha=0.5)
+
+    yt = np.round(arange(1.2,3.001,0.2),1)
+    xt = [0.5,0.7,1.0,1.4] 
+
+    minorticks_off()
+    yticks(yt,yt)
+    xticks(xt,xt)
+
+    setp(axL,ylabel='Mean Planet Size (Earth-radii)')
+    text(0.55,2.8,'Sub-Neptunes (P < 100)')
+    text(0.55,1.4,'Super-Earths (P < 30)')
+
+    #setp(axL,title='Super-Earths (P < 30)')
+    setp(axL,xlabel='Stellar Mass (Solar-Masses)')
+    ylim(1.2,3)
+    tight_layout()
 
 class SixPlotter(object):
     def __init__(self):
         self.mass1 = [0.5,0.7,1.0]
         self.mass2 = [0.7,1.0,1.4]
         
-    def plot(self):
+    def plot(self, plot_gradient):
         fig, axL = subplots(nrows=3,ncols=2,figsize=(8.5,9))
         i = 0
         for _mass1, _mass2 in zip(self.mass1,self.mass2):
@@ -46,8 +76,8 @@ class SixPlotter(object):
                     'prad':'gdir_prad','per':'koi_period','sinc':'giso_sinc'
                 }
             )
-            pl = NDPlotter(df,self.xk,zoom=True)
-            pl.plot()
+            pl = NDPlotter(df,self.xk,smass_lims=[_mass1,_mass2],zoom=True)
+            pl.plot(plot_gradient)
             cbar = colorbar(pl.qc,shrink=0.5,format='%.1f')
             cbar.set_label('$dN/d \log P/ d \log R_p$',size='x-small')
             cbar.ax.tick_params(labelsize='xx-small')
@@ -57,6 +87,8 @@ class SixPlotter(object):
             cp = pl.cp
             pl = self.ORDPlotter(occ, cp)
             pl.plot_ord()
+            if plot_gradient:
+                pl.gradient_plot(self.xk, [_mass1,_mass2])
             pl.plot_completeness()
             title = '$M_\star = {}-{}\, M_\odot$ '.format(_mass1,_mass2)
             setp(axL[i,:],title=title)
@@ -119,7 +151,7 @@ class ORDPlotter(object):
         self.ds = ds
         self.ntrials_min = 50
 
-    def plot_ord(self,levels=None):
+    def plot_ord(self,levels=None, gradient_array=False):
         """
         plot occurrence rate density
         """
@@ -130,6 +162,9 @@ class ORDPlotter(object):
             maxz = np.round(maxz*1.1,3)
             levels = linspace(0,maxz+eps,14)
 
+        if gradient_array:
+            return ds.kxc.values, ds.kyc.values, ds.occrd.values
+
         cbarticks = levels[::2]
         cbarticklabels = ["{:.1f}".format(1e2*_yt) for _yt in cbarticks]
         cmap = 'YlGn' 
@@ -139,11 +174,15 @@ class ORDPlotter(object):
         cbar.set_label(self.cbarlabel,size='x-small')
         cbar.ax.tick_params(labelsize='xx-small')
 
-    def plot_completeness(self):
+    def plot_completeness(self, gradient_array=False):
         """
         Gray out region of low completeness
         """
         ds = self.ds
+
+        if gradient_array:
+            return ds.ntrial.values, self.ntrials_min
+
         cmap = sns.light_palette("gray",as_cmap=True)
         contourf(ds.kxc, ds.kyc, ds.ntrial, [0,self.ntrials_min], zorder=2.5,
                  cmap=cmap,vmax=1)
@@ -151,6 +190,31 @@ class ORDPlotter(object):
     def label(self):
         xlabel(self.xlabel)
         ylabel(self.ylabel)
+
+    def gradient_plot(self, xk, smass_lims):
+
+        ds = self.ds
+        kx = ds.kxc.values[:,0]
+
+        if xk == 'koi_period':
+            grad = ckscool.io.load_object('grad-per-prad_smass={0}-{1}'.format(smass_lims[0],smass_lims[1]),cache=1)
+        elif xk == 'giso_sinc':
+            grad = ckscool.io.load_object('grad-sinc-prad_smass={0}-{1}'.format(smass_lims[0],smass_lims[1]),cache=1)
+
+        grad_chain = grad.grad_chain
+
+        grad_realisations = np.ndarray((grad_chain.shape[0],len(kx)))
+
+        for i in range(grad_realisations.shape[0]):
+            if xk == 'koi_period':
+                grad_realisations[i,:] = [grad.prad_per(j,grad_chain[i,2],grad_chain[i,3]) for j in kx]
+            if xk == 'giso_sinc':
+                grad_realisations[i,:] = [grad.prad_sinc(j,grad_chain[i,2],grad_chain[i,3]) for j in kx]
+
+        gradient_lims = np.percentile(grad_realisations, [16,84], axis=0)
+
+        fill_between(kx, gradient_lims[0,:], gradient_lims[1,:], color='b', alpha=0.4)
+        
         
 class ORDPlotterPerPrad(ORDPlotter):
     """

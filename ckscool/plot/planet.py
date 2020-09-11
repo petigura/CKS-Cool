@@ -4,9 +4,10 @@ import xarray as xr
 
 import ckscool.io
 from ckscool.occur import gaussian_2d_kde
+import ckscool.gradient
 from .config import *
     
-def fig_sample(**kwargs):
+def fig_sample(plot_gradient=False, **kwargs):
     sns.set_context('paper',font_scale=1.0)
     fig,axL = subplots(ncols=2,nrows=2,figsize=(7,6))
 
@@ -15,8 +16,8 @@ def fig_sample(**kwargs):
 
     # Period
     sca(axL[0,0])
-    pl = NDPlotter(df,'koi_period',**kwargs)
-    pl.plot()
+    pl = NDPlotter(df,'koi_period',smass_lims=[0.5,1.4],**kwargs)
+    pl.plot(plot_gradient=plot_gradient)
     fig_label('a')
     ax = axes([0.89, 0.85, 0.008, 0.1])
     cbar = colorbar(pl.qc,cax=ax,format='%.1f')
@@ -25,8 +26,8 @@ def fig_sample(**kwargs):
 
     # Sinc
     sca(axL[0,1])
-    pl = NDPlotter(df,'giso_sinc',**kwargs)
-    pl.plot()
+    pl = NDPlotter(df,'giso_sinc',smass_lims=[0.5,1.4],**kwargs)
+    pl.plot(plot_gradient=plot_gradient)
     xl = xlim()
     xlim(xl[1],xl[0])
     fig_label('b')
@@ -49,10 +50,12 @@ class NDPlotter(object):
     """
     Class to facillitate plotting of occurrence number density
     """
-    def __init__(self, df, xk, zoom=False):
+    def __init__(self, df, xk, smass_lims=False, zoom=False):
         yk = 'gdir_prad'
         self.x = df[xk]
         self.y = df[yk]
+        self.xk = xk
+        self.smass_lims = smass_lims
         
         if xk=='koi_period':
             if zoom:
@@ -148,11 +151,16 @@ class NDPlotter(object):
         self.ylabel = ylabel
         self.xlabel = xlabel
 
-    def plot(self):
+    def plot(self, plot_gradient=False, gradient_array=False):
         ds = self.cp.meshgrid()
         Z = gaussian_2d_kde(array(ds.kxc), array(ds.kyc), self.kx,
                             self.ky, self.bwx, self.bwy)
         Z = Z.reshape(ds.kxc.shape)
+
+        if gradient_array:
+            return ds['kx'].values, ds['ky'].values, Z
+    
+
         ds['Z'] = (['kx','ky'],Z)
         qc = self.cp.contour(ds['Z'], normalize=True, cmap=plt.cm.afmhot_r,zorder=0)
         self.qc = qc
@@ -163,6 +171,9 @@ class NDPlotter(object):
         self.cp.errorbar(self.x, self.y, yerr=None, fmt='o',
                          mfc='none', elinewidth=0, ms=2, mew=0.2,
                          mec='k', zorder=10)
+
+        if plot_gradient:
+            self.cp.gradient_plot(self.xk, self.smass_lims)
 
         self.cp.yticks(self.yticks)
         self.cp.xticks(self.xticks)
@@ -268,3 +279,36 @@ class ContourPlotter(object):
             y = log10(y)
         
         errorbar(x,y, **kwargs)
+
+    def gradient_plot(self, xk, smass_lims):
+
+        if self.xscale=='log':
+            kx = np.linspace(log10(self.xmin), log10(self.xmax), self._kde_nx)
+            x = 10**kx
+        else:
+            x = kx = np.linspace(self.xmin, self.xmax, self._kde_nx)
+
+        if xk == 'koi_period':
+            objkey = 'grad-per-prad_smass={0}-{1}'.format(
+                smass_lims[0],smass_lims[1]
+            )
+        elif xk == 'giso_sinc':
+            objkey = 'grad-sinc-prad_smass={0}-{1}'.format(smass_lims[0],smass_lims[1])
+        grad = ckscool.io.load_object(objkey,cache=1)
+        grad_chain = grad.grad_chain
+        grad_realisations = np.ndarray((grad_chain.shape[0],len(kx)))
+
+        for i in range(grad_realisations.shape[0]):
+            if xk == 'koi_period':
+                grad_realisations[i,:] = [grad.prad_per(j,grad_chain[i,0],grad_chain[i,1]) for j in kx]
+            if xk == 'giso_sinc':
+                grad_realisations[i,:] = [grad.prad_sinc(j,grad_chain[i,0],grad_chain[i,1]) for j in kx]
+
+        gradient_lims = np.percentile(grad_realisations, [16,84], axis=0)
+        fill_between(
+            kx, gradient_lims[0,:], gradient_lims[1,:], color='b', alpha=0.4
+        )
+        
+
+        
+            
