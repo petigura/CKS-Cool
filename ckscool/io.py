@@ -24,7 +24,6 @@ import ckscool.comp
 from ckscool.pdplus import LittleEndian
 import ckscool.gaia
 import ckscool.occur
-import ckscool.plot.occur
 import ckscool._isoclassify
 import ckscool.fit
 import ckscool.fitdetected
@@ -806,15 +805,6 @@ def load_object(key,cache=0, verbose=1, N_cores=None):
             pickle.dump(obj,f)
         return obj
         
-    if objkey.count('cp') == 1:
-        occurkey = key.replace('cp','occur')
-        occ = load_object(occurkey, cache=1)
-        if objkey.count('sinc')==1:
-            obj = ckscool.plot.occur.load_contour_plotter_sinc(occ)
-        else:
-            obj = ckscool.plot.occur.load_contour_plotter(occ)
-
-
     elif objkey=='occur-per-prad' or objkey=='occur-sinc-prad':
         limits = {}
         if params.count('smass'):
@@ -844,6 +834,17 @@ def load_object(key,cache=0, verbose=1, N_cores=None):
             obj = ckscool.gradient.construct_grad(objkey, limits, N_sample=10000)
 
     
+    elif objkey=='mps':
+        if params.count('size-se'):
+            mps = ckscool.occur.MeanPlanetSize('per < 30 and 1.0 < prad < 1.7')
+        elif params.count('size-sn'):
+            mps = ckscool.occur.MeanPlanetSize('per < 100 and 1.7 < prad < 4.0')
+        else:
+            assert False, "Failed"
+
+        mps.sample_logprad()
+        mps.fit_powerlaw()
+        obj = mps
 
     elif objkey.count('fitper_')==1:
         dlogper = 0.05 # Size of the bins used in the fitting
@@ -876,6 +877,8 @@ def load_object(key,cache=0, verbose=1, N_cores=None):
         fit.mcmc(burn=3000, steps=6000, thin=1, nwalkers=20)
         obj = fit
 
+
+        
     elif key.count('fitsinc_')==1:
         dlogsinc = 0.05 # Size of the bins used in the fitting
         dx = [dlogsinc]

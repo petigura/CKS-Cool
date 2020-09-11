@@ -88,9 +88,8 @@ def create_iso_batch(args):
         for i,mode in enumerate(modes):
             fn = 'data/isoclassify-{}-{}.csv'.format(source,mode)
             df = stars[i]
-            df = df[df.id_starname.isin(['KIC6697756','KIC7871954','KIC9388479','KIC10395543'])  ]
+            df = df[df.id_starname.isin(['KIC8653134','KIC11453592','KIC4150804','KIC10990886','KIC2989404','KIC9575728','KIC3426367','KIC12506770'])]
             df.to_csv(fn)
-            print "created {}".format(fn)
 
 def create_iso_table(args):
     sources = ['cks1','smsyn','smemp']
@@ -210,17 +209,14 @@ def create_workflow():
         lambda : fig_compare('ckscool-brewer18')
     )
         
-    w.plot['srad-h13'] = lambda: CR('srad-h13').plot_comparison()
-    w.plot['srad-s15'] = lambda: CR('srad-s15').plot_comparison()
-
-    kw = dict(zoom=True,xerrfac=0.5,yerrfac=1.5)
-
+    #w.plot['srad-h13'] = lambda: CR('srad-h13').plot_comparison()
+    #w.plot['srad-s15'] = lambda: CR('srad-s15').plot_comparison()
     # contour plots of planet detections
-    kw = dict(zoom=True,xerrfac=0.5,yerrfac=1.5)
     w.plot['occur-contour-six-per'] = \
         lambda : plot.occur.fig_contour_six_per(gradient=True)
     w.plot['occur-contour-six-sinc'] = \
         lambda : plot.occur.fig_contour_six_sinc(gradient=True)
+    w.plot['mean-planet-size'] = plot.occur.fig_mean_planet_size
 
     # table
     f1 = ckscool.table.tab_star
@@ -239,7 +235,7 @@ def create_workflow():
     # val
     w.val['stat'] = ckscool.value.val_stat
     w.val['sample'] = ckscool.value.val_sample
-    w.val['fitd'] = ckscool.value.val_fitd
+    w.val['fit'] = ckscool.value.val_fit
 
     # planet
     w.csv['star'] = ckscool.table.tab_star_csv

@@ -54,19 +54,11 @@ First generate the csv files of stellar parameters
 bin/run_ckscool.py create-iso-batch # creates 9 csv files
 ```
 
-### Test first 9 from each method
+Note, if you need to run just a few new stars, add line in`run_ckscool.py`
 
-```bash
-isoclassify multiproc direct -1 data/isoclassify-smsyn-direct.csv.16 isoclassify/smsyn/direct.csv --baseoutdir isoclassify/smsyn/direct/
-isoclassify multiproc grid -1 data/isoclassify-smsyn-grid-parallax-yes.csv.16 isoclassify/smsyn/grid-parallax-yes.csv --baseoutdir isoclassify/smsyn/grid-parallax-yes/
-isoclassify multiproc grid -1 data/isoclassify-smsyn-grid-parallax-no.csv.16 isoclassify/smsyn/grid-parallax-no.csv --baseoutdir isoclassify/smsyn/grid-parallax-no/
-isoclassify multiproc direct -1 data/isoclassify-smemp-direct.csv.16 isoclassify/smemp/direct.csv --baseoutdir isoclassify/smemp/direct/
-isoclassify multiproc grid -1 data/isoclassify-smemp-grid-parallax-yes.csv.16 isoclassify/smemp/grid-parallax-yes.csv --baseoutdir isoclassify/smemp/grid-parallax-yes/
-isoclassify multiproc grid -1 data/isoclassify-smemp-grid-parallax-no.csv.16 isoclassify/smemp/grid-parallax-no.csv --baseoutdir isoclassify/smemp/grid-parallax-no/
-```
+conda activate isoclassify
 
 Look at the logs and confirm isoclassify is behaving right. Run them on Erik's laptop.
-
 
 ```bash
 isoclassify multiproc direct 6 data/isoclassify-smsyn-direct.csv isoclassify/smsyn/direct.csv --baseoutdir isoclassify/smsyn/direct/  --plot none
@@ -76,6 +68,8 @@ isoclassify multiproc direct 6 data/isoclassify-smemp-direct.csv isoclassify/sme
 isoclassify multiproc grid 6 data/isoclassify-smemp-grid-parallax-yes.csv isoclassify/smemp/grid-parallax-yes.csv --baseoutdir isoclassify/smemp/grid-parallax-yes/ --plot none
 isoclassify multiproc grid 6 data/isoclassify-smemp-grid-parallax-no.csv isoclassify/smemp/grid-parallax-no.csv --baseoutdir isoclassify/smemp/grid-parallax-no/ --plot none
 ```
+
+conda deactivate
 
 The create isoclassify tables
 
