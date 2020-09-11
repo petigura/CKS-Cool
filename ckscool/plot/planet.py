@@ -289,11 +289,13 @@ class ContourPlotter(object):
             x = kx = np.linspace(self.xmin, self.xmax, self._kde_nx)
 
         if xk == 'koi_period':
-            grad = ckscool.io.load_object('grad-per-prad_smass={0}-{1}'.format(smass_lims[0],smass_lims[1]),cache=1)
+            objkey = 'grad-per-prad_smass={0}-{1}'.format(
+                smass_lims[0],smass_lims[1]
+            )
         elif xk == 'giso_sinc':
-            grad = ckscool.io.load_object('grad-sinc-prad_smass={0}-{1}'.format(smass_lims[0],smass_lims[1]),cache=1)
+            objkey = 'grad-sinc-prad_smass={0}-{1}'.format(smass_lims[0],smass_lims[1])
+        grad = ckscool.io.load_object(objkey,cache=1)
         grad_chain = grad.grad_chain
-
         grad_realisations = np.ndarray((grad_chain.shape[0],len(kx)))
 
         for i in range(grad_realisations.shape[0]):
@@ -303,8 +305,9 @@ class ContourPlotter(object):
                 grad_realisations[i,:] = [grad.prad_sinc(j,grad_chain[i,0],grad_chain[i,1]) for j in kx]
 
         gradient_lims = np.percentile(grad_realisations, [16,84], axis=0)
-
-        fill_between(kx, gradient_lims[0,:], gradient_lims[1,:], color='b', alpha=0.4)
+        fill_between(
+            kx, gradient_lims[0,:], gradient_lims[1,:], color='b', alpha=0.4
+        )
         
 
         

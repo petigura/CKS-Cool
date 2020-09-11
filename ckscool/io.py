@@ -814,7 +814,7 @@ def load_object(key,cache=0, verbose=1, N_cores=None):
             smass1, smass2 = params.replace('smass=','').split('-')
             limits['smass1'] = float(smass1)
             limits['smass2'] = float(smass2)
-        obj = ckscool.occur.load_occur(objkey,limits)
+        obj = load_occur(objkey,limits)
 
     elif objkey=='comp-per-prad' or objkey=='comp-sinc-prad':
         limits = {}
@@ -822,7 +822,7 @@ def load_object(key,cache=0, verbose=1, N_cores=None):
             smass1, smass2 = params.replace('smass=','').split('-')
             limits['smass1'] = float(smass1)
             limits['smass2'] = float(smass2)
-        obj = ckscool.comp.load_comp(objkey,limits)
+        obj = load_comp(objkey,limits)
 
     elif objkey=='grad-per-prad' or objkey=='grad-sinc-prad':
         limits = {}
@@ -831,14 +831,14 @@ def load_object(key,cache=0, verbose=1, N_cores=None):
             limits['smass1'] = float(smass1)
             limits['smass2'] = float(smass2)
 
-        import pdb;pdb.set_trace()
+        N_cores=8
         if N_cores:
             obj = ckscool.gradient.construct_grad(
-                objkey, limits, N_cores=N_cores, N_sample=10000
+                objkey, limits, N_cores=N_cores, N_sample=100
             )
         else:
             obj = ckscool.gradient.construct_grad(
-                objkey, limits, N_sample=10000
+                objkey, limits, N_sample=100
             )
 
     
@@ -955,7 +955,7 @@ def load_comp(objkey, limits):
         yk = 'prad'
         xscale = 'log'
         yscale = 'log'
-        Completeness = CompletenessPerPrad
+        Completeness = ckscool.comp.CompletenessPerPrad
 
     elif objkey=='comp-sinc-prad':
         xbins = np.round(np.logspace(np.log10(0.1),np.log10(100000),65),4)
@@ -964,7 +964,7 @@ def load_comp(objkey, limits):
         yk = 'prad'
         xscale = 'log'
         yscale = 'log'
-        Completeness = CompletenessSincPrad
+        Completeness = ckscool.comp.CompletenessSincPrad
 
     else:
         assert False, "{} not supported objkey".format(objkey)

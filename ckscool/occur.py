@@ -98,9 +98,9 @@ class Occurrence2D(object):
         df = pd.DataFrame(df)
         return df
 
-
     def planet_weights(self):
         return 1 / self.comp.prob_trdet_interp(self.plntx,self.plnty)
+
 
     def occurrence_rate_density_idem(self, logx, logy):
         """
@@ -111,9 +111,8 @@ class Occurrence2D(object):
         """
         assert logx.shape ==logy.shape
         w = self.planet_weights()
-        nplnt = len(plnt)
-        logxi = np.log10(plntx)
-        logyi = np.log10(plnty)
+        logxi = np.log10(self.plntx)
+        logyi = np.log10(self.plnty)
         occrd = gaussian_2d_kde(
             logx, logy, logxi, logyi, self.xbw, self.ybw ,w=w
         )

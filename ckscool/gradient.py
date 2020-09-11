@@ -106,6 +106,9 @@ class Gradient(object):
 
         # compute gradient chain (parallelised)
         self.grad_chain = Parallel(n_jobs=N_cores)(delayed(self.resampled_gradient)(plnt, comp, nstars, i) for i in np.arange(N_iter))
+        #self.grad_chain = []
+        #for i in np.arange(N_iter):
+        #    self.grad_chain = self.resampled_gradient(plnt, comp, nstars, i)
         self.grad_chain = np.array(self.grad_chain)
 
 
