@@ -209,15 +209,11 @@ def create_workflow():
         lambda : fig_compare('ckscool-brewer18')
     )
         
-    w.plot['srad-h13'] = lambda: CR('srad-h13').plot_comparison()
-    w.plot['srad-s15'] = lambda: CR('srad-s15').plot_comparison()
-
-    kw = dict(zoom=True,xerrfac=0.5,yerrfac=1.5)
-
+    #w.plot['srad-h13'] = lambda: CR('srad-h13').plot_comparison()
+    #w.plot['srad-s15'] = lambda: CR('srad-s15').plot_comparison()
     # contour plots of planet detections
-    kw = dict(zoom=True,xerrfac=0.5,yerrfac=1.5)
-    w.plot['occur-contour-six-per'] = plot.occur.fig_contour_six_per
-    w.plot['occur-contour-six-sinc'] = plot.occur.fig_contour_six_sinc
+    #w.plot['occur-contour-six-per'] = plot.occur.fig_contour_six_per
+    #w.plot['occur-contour-six-sinc'] = plot.occur.fig_contour_six_sinc
     w.plot['mean-planet-size'] = plot.occur.fig_mean_planet_size
 
     # table

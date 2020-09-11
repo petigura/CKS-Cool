@@ -63,7 +63,7 @@ class Plotter():
     def smet_sage(self):
         scatter(self.smet,self.sage,s=8)
         self.setp('smet','sage')
-
+    
     def smass_sage(self):
         semilogx()
         self.scatter(self.smass,self.sage)
@@ -89,15 +89,15 @@ def fig_sample():
     sca(axL[0,1])
     p.hr()
     fig_label('b')
+    ax = axes([0.6, 0.6, 0.01, 0.15])
+    cbar = colorbar(cax=ax,shrink=10)
+    cbar.set_label('log(age) error',size='small')
+    cbar.ax.tick_params(labelsize='x-small')
 
     # Metallicity and age
     sca(axL[1,0])
     p.smet_sage()
     fig_label('c')
-    ax = axes([0.6, 0.6, 0.01, 0.15])
-    cbar = colorbar(cax=ax,shrink=10)
-    cbar.set_label('log(age) error',size='small')
-    cbar.ax.tick_params(labelsize='x-small')
 
     # Mass and age
     sca(axL[1,1])
@@ -130,7 +130,6 @@ def fig_ferr_hist_star():
     rat = rat.dropna().tolist()
     hist([rat],label='$\sigma(R_\star) / R_\star$',**kw)
 
-    import pdb;pdb.set_trace()
 
     legend()
     xlabel('Fractional Precision')
