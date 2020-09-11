@@ -200,7 +200,7 @@ def create_workflow():
     w.plot['cuts-all-multi3'] = plot.sample.fig_cuts_all_multi3
     w.plot['star-sample'] =  plot.star.fig_sample
     w.plot['planet-prad'] =  plot.planet.fig_sample
-    w.plot['planet-prad-zoom'] =  lambda : plot.planet.fig_sample(zoom=True)
+    w.plot['planet-prad-zoom'] =  lambda : plot.planet.fig_sample(gradient=True,zoom=True)
 
     w.plot['compare-ckscool-mann13'] = lambda : fig_compare('ckscool-mann13')
     w.plot['compare-ckscool-dressing13'] = (
@@ -217,8 +217,10 @@ def create_workflow():
 
     # contour plots of planet detections
     kw = dict(zoom=True,xerrfac=0.5,yerrfac=1.5)
-    w.plot['occur-contour-six-per'] = plot.occur.fig_contour_six_per
-    w.plot['occur-contour-six-sinc'] = plot.occur.fig_contour_six_sinc
+    w.plot['occur-contour-six-per'] = \
+        lambda : plot.occur.fig_contour_six_per(gradient=True)
+    w.plot['occur-contour-six-sinc'] = \
+        lambda : plot.occur.fig_contour_six_sinc(gradient=True)
 
     # table
     f1 = ckscool.table.tab_star
