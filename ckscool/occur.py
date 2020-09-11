@@ -24,6 +24,8 @@ class Occurrence2D(object):
         self.plnt = plnt
         self.comp = comp
         self.nstars = nstars
+        self.plntx = array(plnt[self.xk])
+        self.plnty = array(plnt[self.yk])
 
     def occurence_box(self, limits):
         """Compute occurrence in a little box
@@ -99,6 +101,10 @@ class Occurrence2D(object):
         df = pd.DataFrame(df)
         return df
 
+
+    def planet_weights(self):
+        return 1 / self.comp.prob_trdet_interp(self.plntx,self.plnty)
+
     def occurrence_rate_density_idem(self, logx, logy):
         """
         Occurrence rate density (ORD) at logx logy
@@ -107,10 +113,7 @@ class Occurrence2D(object):
         logy : log10 of the planet radius at which to compute ord
         """
         assert logx.shape ==logy.shape
-        plnt = self.plnt.copy()
-        plntx = array(plnt[self.xk])
-        plnty = array(plnt[self.yk])
-        w = 1 / self.comp.prob_trdet_interp(plntx,plnty)
+        w = self.planet_weights()
         nplnt = len(plnt)
         logxi = np.log10(plntx)
         logyi = np.log10(plnty)
@@ -164,6 +167,34 @@ def gaussian_2d_kde(x, y, xi, yi, xbw, ybw, w=None):
     cov[:,0,0] *= xbw**2
     cov[:,1,1] *= ybw**2
     return gaussian(pos, mu, cov, w=w) 
+
+
+class MeanPlanetSize(object):
+    def __init__(self):
+        smassbins = np.array([0.5,0.7,1.0,1.4])
+        self.smass1 = smassbins[:-2]
+        self.smass2 = smassbins[1:]
+        self.smassc = np.sqrt(self.smass1 * self.mass2)
+        self.nsamp = 1000
+
+        occ = []
+        for i in range(len(self.smass1)):
+            smass1, smass2 = self.smass1[i],self.smass2[i]
+            k = 'occur-per-prad_smass=0.5-0.7'.format(smass1,smass2)
+            occ.append(ckscool.io.load_object(k,cache=1))
+        self.occ
+
+    def sample(self, query):
+        """
+        sample mean planet size, and fit to mean planet size
+        """
+        mn = []
+        for j in range(nsamp):
+            logprad = log10(cut['prad'])
+            val = logprad.sample(self.nsamp,replace=True)
+            mn.append(np.average(val,weights=w))
+        mn = 10**np.array(mn)
+        return mn
 
 class Binomial(object):
     """Class that computes binomial statistics
