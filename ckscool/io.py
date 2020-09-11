@@ -840,7 +840,6 @@ def load_object(key,cache=0, verbose=1, N_cores=None):
             obj = ckscool.gradient.construct_grad(
                 objkey, limits, N_sample=100
             )
-
     
     elif objkey=='mps':
         if params.count('size-se'):
@@ -1011,8 +1010,8 @@ def load_occur(objkey, limits, debug=False):
     print("{}/{} stars remain after droping nulls".format(nstars,n1))
 
     if objkey=='occur-per-prad':
-        xbins = np.round(logspace(log10(0.1),log10(1000),65),4)
-        ybins = np.round(logspace(log10(0.25),log10(64),51 ),2)
+        xbins = np.round(np.logspace(np.log10(0.1),np.log10(1000),65),4)
+        ybins = np.round(np.logspace(np.log10(0.25),np.log10(64),51 ),2)
         xk = 'per'
         yk = 'prad'
         xscale = 'log'
@@ -1021,8 +1020,8 @@ def load_occur(objkey, limits, debug=False):
         Occurrence = ckscool.occur.OccurrencePerPrad
 
     elif objkey=='occur-sinc-prad':
-        xbins = np.round(logspace(log10(0.1),log10(100000),65),4)
-        ybins = np.round(logspace(log10(0.25),log10(64),51 ),2)
+        xbins = np.round(np.logspace(np.log10(0.1),np.log10(100000),65),4)
+        ybins = np.round(np.logspace(np.log10(0.25),np.log10(64),51 ),2)
         xk = 'sinc'
         yk = 'prad'
         xscale = 'log'

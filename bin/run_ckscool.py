@@ -213,9 +213,9 @@ def create_workflow():
     #w.plot['srad-s15'] = lambda: CR('srad-s15').plot_comparison()
     # contour plots of planet detections
     w.plot['occur-contour-six-per'] = \
-        lambda : plot.occur.fig_contour_six_per(gradient=True)
+        lambda : plot.occur.fig_contour_six_per(plot_gradient=True)
     w.plot['occur-contour-six-sinc'] = \
-        lambda : plot.occur.fig_contour_six_sinc(gradient=True)
+        lambda : plot.occur.fig_contour_six_sinc(plot_gradient=True)
     w.plot['mean-planet-size'] = plot.occur.fig_mean_planet_size
 
     # table
