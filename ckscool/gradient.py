@@ -152,9 +152,6 @@ class Gradient(object):
 
         self.output_data = pd.DataFrame(data=data)
 
-            
-
-
 
 class GradientPerPrad(Gradient):
 
@@ -224,7 +221,6 @@ class GradientPerPrad(Gradient):
         else:
             return 1e10
 
-
     def find_gradient(self, logP_array, logR_array, KDE):
         """
         Runs a minimisation algorithm to find the gradient and intercept that
@@ -244,10 +240,6 @@ class GradientPerPrad(Gradient):
         sol = optimize.minimize(self.line_integral_per, x0=[0.01,log10(1.7)], args=(map_interp),
                                 method='Nelder-Mead')
         return sol.x
-
-
-
-
 
 class GradientSincPrad(Gradient):
 
@@ -337,9 +329,6 @@ class GradientSincPrad(Gradient):
         sol = optimize.minimize(self.line_integral_sinc, x0=[0.01,log10(1.7)], args=(map_interp),
                                 method='Nelder-Mead')
         return sol.x
-
-
-
 
 def construct_grad(objkey, limits, N_cores=4, N_sample=10000):
 

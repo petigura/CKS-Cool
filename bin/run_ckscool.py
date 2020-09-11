@@ -199,7 +199,7 @@ def create_workflow():
     w.plot['cuts-all-multi3'] = plot.sample.fig_cuts_all_multi3
     w.plot['star-sample'] =  plot.star.fig_sample
     w.plot['planet-prad'] =  plot.planet.fig_sample
-    w.plot['planet-prad-zoom'] =  lambda : plot.planet.fig_sample(gradient=True,zoom=True)
+    w.plot['planet-prad-zoom'] =  lambda : plot.planet.fig_sample(plot_gradient=True,zoom=True)
 
     w.plot['compare-ckscool-mann13'] = lambda : fig_compare('ckscool-mann13')
     w.plot['compare-ckscool-dressing13'] = (

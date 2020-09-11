@@ -775,6 +775,9 @@ def order_columns(df, verbose=False, drop=False):
         df = pd.concat([df,df0[mcols]],axis=1)
     return df
 
+
+# Code for loading in objects
+
 def load_object(key,cache=0, verbose=1, N_cores=None):
     """
     Objects must adopt the following naming convention
@@ -828,10 +831,15 @@ def load_object(key,cache=0, verbose=1, N_cores=None):
             limits['smass1'] = float(smass1)
             limits['smass2'] = float(smass2)
 
+        import pdb;pdb.set_trace()
         if N_cores:
-            obj = ckscool.gradient.construct_grad(objkey, limits, N_cores=N_cores, N_sample=10000)
+            obj = ckscool.gradient.construct_grad(
+                objkey, limits, N_cores=N_cores, N_sample=10000
+            )
         else:
-            obj = ckscool.gradient.construct_grad(objkey, limits, N_sample=10000)
+            obj = ckscool.gradient.construct_grad(
+                objkey, limits, N_sample=10000
+            )
 
     
     elif objkey=='mps':
@@ -921,3 +929,120 @@ def load_object(key,cache=0, verbose=1, N_cores=None):
 
     return obj
 
+def load_comp(objkey, limits):
+
+    # Derive completeness object
+    method = 'fulton-gamma-clip' # treatment for planet detectability
+    impact = 0.8 # maximum impact parameter considered.
+
+    field = ckscool.io.load_table('field-cuts',cache=1)
+    field = field[~field.isany]
+    field = field.rename(columns={'ber19_srad':'srad','ber19_smass':'smass'})
+
+    if limits.has_key('smass1'):
+        smass1 = limits['smass1']  
+        smass2 = limits['smass2']
+        field = field[field.smass.between(smass1,smass2)]
+
+    n1 = len(field)
+    field = field.dropna(subset=ckscool.comp.__STARS_REQUIRED_COLUMNS__)
+    nstars = len(field)
+    print("{}/{} stars remain after droping nulls".format(nstars,n1))
+    if objkey=='comp-per-prad':
+        xbins = np.round(np.logspace(np.log10(0.1),np.log10(1000),65),4)
+        ybins = np.round(np.logspace(np.log10(0.25),np.log10(64),51 ),2)
+        xk = 'per'
+        yk = 'prad'
+        xscale = 'log'
+        yscale = 'log'
+        Completeness = CompletenessPerPrad
+
+    elif objkey=='comp-sinc-prad':
+        xbins = np.round(np.logspace(np.log10(0.1),np.log10(100000),65),4)
+        ybins = np.round(np.logspace(np.log10(0.25),np.log10(64),51 ),2)
+        xk = 'sinc'
+        yk = 'prad'
+        xscale = 'log'
+        yscale = 'log'
+        Completeness = CompletenessSincPrad
+
+    else:
+        assert False, "{} not supported objkey".format(objkey)
+
+    comp_bins_dict = {xk: xbins,yk: ybins}
+    spacing_dict = {xk:xscale, yk:yscale}
+    grid = ckscool.grid.Grid(comp_bins_dict,spacing_dict)
+    comp = Completeness(field, grid, method, impact)
+    comp.compute_grid_prob_det(verbose=True)
+    comp.compute_grid_prob_tr(verbose=True)
+    comp.create_splines()
+
+    return comp
+
+def load_occur(objkey, limits, debug=False):
+    """
+    Constructs occurrence object
+    """
+
+    # Derive completeness object
+    method = 'fulton-gamma-clip' # treatment for planet detectability
+    impact = 0.8 # maximum impact parameter considered.
+
+    field = ckscool.io.load_table('field-cuts',cache=1)
+    field = field[~field.isany]
+    field = field.rename(columns={'ber19_srad':'srad','ber19_smass':'smass'})
+    plnt = ckscool.io.load_table('planets-cuts2')
+    plnt = plnt[~plnt.isany]
+
+    namemap = {'gdir_prad':'prad','koi_period':'per','giso_smass':'smass',
+               'giso_sinc':'sinc'}
+    plnt = plnt.rename(columns=namemap)
+
+    if limits.has_key('smass1'):
+        smass1 = limits['smass1']  
+        smass2 = limits['smass2']
+        field = field[field.smass.between(smass1,smass2)]
+        plnt = plnt[plnt.smass.between(smass1,smass2)]
+
+    n1 = len(field)
+    field = field.dropna(subset=ckscool.comp.__STARS_REQUIRED_COLUMNS__)
+    nstars = len(field)
+
+    print("{}/{} stars remain after droping nulls".format(nstars,n1))
+
+    if objkey=='occur-per-prad':
+        xbins = np.round(logspace(log10(0.1),log10(1000),65),4)
+        ybins = np.round(logspace(log10(0.25),log10(64),51 ),2)
+        xk = 'per'
+        yk = 'prad'
+        xscale = 'log'
+        yscale = 'log'
+        Completeness = ckscool.comp.CompletenessPerPrad
+        Occurrence = ckscool.occur.OccurrencePerPrad
+
+    elif objkey=='occur-sinc-prad':
+        xbins = np.round(logspace(log10(0.1),log10(100000),65),4)
+        ybins = np.round(logspace(log10(0.25),log10(64),51 ),2)
+        xk = 'sinc'
+        yk = 'prad'
+        xscale = 'log'
+        yscale = 'log'
+        Completeness = ckscool.comp.CompletenessSincPrad
+        Occurrence = ckscool.occur.OccurrenceSincPrad
+
+    else:
+        assert False, "{} not supported objkey".format(objkey)
+
+    if debug:
+        xbins = xbins[::2]
+        ybins = ybins[::2]
+
+    comp_bins_dict = {xk: xbins,yk: ybins}
+    spacing_dict = {xk:xscale, yk:yscale}
+    grid = ckscool.grid.Grid(comp_bins_dict,spacing_dict)
+    comp = Completeness(field, grid, method, impact)
+    comp.compute_grid_prob_det(verbose=True)
+    comp.compute_grid_prob_tr(verbose=True)
+    comp.create_splines()
+    occ = Occurrence(plnt, comp, nstars)
+    return occ

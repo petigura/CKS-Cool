@@ -506,60 +506,6 @@ class Completeness3D_PerPradSmass(object):
         
 
 
-def load_comp(objkey, limits):
-
-    # Derive completeness object
-    method = 'fulton-gamma-clip' # treatment for planet detectability
-    impact = 0.8 # maximum impact parameter considered.
-
-    field = ckscool.io.load_table('field-cuts',cache=1)
-    field = field[~field.isany]
-    field = field.rename(columns={'ber19_srad':'srad','ber19_smass':'smass'})
-
-    if limits.has_key('smass1'):
-        smass1 = limits['smass1']  
-        smass2 = limits['smass2']
-        field = field[field.smass.between(smass1,smass2)]
-
-    n1 = len(field)
-    field = field.dropna(subset=ckscool.comp.__STARS_REQUIRED_COLUMNS__)
-    nstars = len(field)
-    
-    print "{}/{} stars remain after droping nulls ".format(nstars,n1)
-    if objkey=='comp-per-prad':
-        xbins = np.round(logspace(log10(0.1),log10(1000),65),4)
-        ybins = np.round(logspace(log10(0.25),log10(64),51 ),2)
-        xk = 'per'
-        yk = 'prad'
-        xscale = 'log'
-        yscale = 'log'
-        Completeness = ckscool.comp.CompletenessPerPrad
-
-    elif objkey=='comp-sinc-prad':
-        xbins = np.round(logspace(log10(0.1),log10(100000),65),4)
-        ybins = np.round(logspace(log10(0.25),log10(64),51 ),2)
-        xk = 'sinc'
-        yk = 'prad'
-        xscale = 'log'
-        yscale = 'log'
-        Completeness = ckscool.comp.CompletenessSincPrad
-
-    else:
-        assert False, "{} not supported objkey".format(objkey)
-
-    if debug:
-        xbins = xbins[::2]
-        ybins = ybins[::2]
-
-    comp_bins_dict = {xk: xbins,yk: ybins}
-    spacing_dict = {xk:xscale, yk:yscale}
-    grid = ckscool.grid.Grid(comp_bins_dict,spacing_dict)
-    comp = Completeness(field, grid, method, impact)
-    comp.compute_grid_prob_det(verbose=True)
-    comp.compute_grid_prob_tr(verbose=True)
-    comp.create_splines()
-
-    return comp
 
 # ---------------------------------------------------------------------------- #
 
