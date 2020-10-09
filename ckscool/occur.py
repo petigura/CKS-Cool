@@ -64,40 +64,6 @@ class Occurrence2D(object):
         out = dict(out,**rate)
         return out
 
-    def occurrence_grid(self, per1=None, per2=None, dlogper=None, 
-                            prad1=None, prad2=None, dlogprad=None):
-        """
-        A convenience function to compute occurrence over a grid in period and radius
-        """
-        eps = 1e-9
-
-        if dlogper is None:
-            per = [per1,per2]
-        else:
-            per = 10**np.arange(log10(per1),log10(per2)+eps,dlogper)
-            
-        if dlogprad is None:
-            prad = [prad1,prad2]
-        else:
-            prad = 10**np.arange(log10(prad1),log10(prad2)+eps,dlogprad)
-        
-        df = []
-        for i in range(len(per)-1):
-            _per1 = per[i]
-            _per2 = per[i+1]
-            for j in range(len(prad)-1):
-                _prad1 = prad[j]
-                _prad2 = prad[j+1]
-                limits = dict(
-                    per1=_per1, per2=_per2, prad1=_prad1, prad2=_prad2
-                )
-                _out = self.occurence_box(limits)
-                _out['perc'] = np.sqrt(_per1*_per2)
-                _out['pradc'] = np.sqrt(_prad1*_prad2)
-                df.append(_out)
-        df = pd.DataFrame(df)
-        return df
-
     def planet_weights(self):
         return 1 / self.comp.prob_trdet_interp(self.plntx,self.plnty)
 
