@@ -217,7 +217,9 @@ def create_workflow():
     w.plot['occur-contour-six-sinc'] = \
         lambda : plot.occur.fig_contour_six_sinc(plot_gradient=True)
     w.plot['mean-planet-size'] = plot.occur.fig_mean_planet_size
-
+    w.plot['occur-per'] = plot.occur.fig_occur_per
+    w.plot['occur-sinc'] = plot.occur.fig_occur_sinc
+    
     # table
     f1 = ckscool.table.tab_star
     w.table['star'] = f1

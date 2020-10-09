@@ -17,6 +17,8 @@ from scipy.io import idl
 import tables
 from astropy.table import Table
 import astropy.io.ascii
+import lmfit
+import scipy
 
 import ckscool.cuts.occur
 import ckscool.calc
@@ -824,6 +826,114 @@ def load_object(key,cache=0, verbose=1, N_cores=None):
             limits['smass2'] = float(smass2)
         obj = load_comp(objkey,limits)
 
+
+    elif objkey=='fitper':
+        params.split()
+        smass1, smass2, prad1, prad2 = (
+            params.replace('smass=','').replace('prad=','').split('-')
+        ) 
+        prad1 = float(prad1)
+        prad2 = float(prad2)
+        if params.count('prad=1.0-1.7'):
+            per1 = 1
+            per2 = 30
+        elif params.count('prad=1.7-4.0'):
+            per1 = 1
+            per2 = 300
+        else:
+            assert False,'key not recognized'
+            
+        occkey = 'occur-per-prad_smass={}-{}'.format(smass1,smass2)
+        occ = load_object(occkey,cache=1)
+        fit = ckscool.fit.FitSmoothBrokenPowerLaw(occ, per1, per2, prad1, prad2)
+        fit.create_completeness_spline()
+
+        # Use a non-parameteric approach to get the mean number of
+        # planets per star, over the specified range of period. We assume this
+        # number is right to a factor of two.
+
+        dlogper = 0.25
+        logper = np.arange(np.log10(per1),np.log10(per2),dlogper)
+        per = 10**logper
+        df = dict(per1=per[:-1], per2=per[1:], prad1=fit.prad1, prad2=fit.prad2)
+        df = pd.DataFrame(df)
+        df['perc'] = np.sqrt(df.per1 * df.per2)
+        rates = []
+        for i, row in df.iterrows():
+            rates += [fit.occ.occurence_box(row)]
+
+        rates = pd.DataFrame(rates)    
+        rates = pd.concat([df,rates],ignore_index=False,axis=1)
+        f = rates.rate.sum()
+        logf = np.log10(f)
+        p = lmfit.Parameters()
+        p.add('logf',value=logf, min=logf-0.3, max=logf+0.3)
+        p.add('k1',value=2, min=0, max=4)
+        p.add('k2',value=-1.010, min=-3, max=0,vary=False)
+        p.add('logper0',value=1,min=0,max=2)
+
+        # confirm that rate function is normalized
+        f = lambda per: fit.rate_lambda(per, p)
+        _int, err = scipy.integrate.quad(f, fit.per1, fit.per2)
+        assert abs(_int - 1) < 1e-3, "rate function must be normalized"
+        fit.fit_max_likelihood(p, method='lbfgsb', nan_policy='omit')
+        fit.run_mcmc(short=False)
+        obj = fit
+
+    elif objkey=='fitsinc':
+        params.split()
+        smass1, smass2, prad1, prad2 = (
+            params.replace('smass=','').replace('prad=','').split('-')
+        ) 
+        prad1 = float(prad1)
+        prad2 = float(prad2)
+        if params.count('prad=1.0-1.7'):
+            sinc1 = 30
+            sinc2 = 3000
+        elif params.count('prad=1.7-4.0'):
+            per1 = 3
+            per2 = 3000
+        else:
+            assert False,'key not recognized'
+
+        occkey = 'occur-sinc-prad_smass={}-{}'.format(smass1,smass2)
+        occ = load_object(occkey,cache=1)
+        fit = ckscool.fit.FitSmoothBrokenPowerLaw(occ, sinc1, sinc2, prad1, prad2)
+        fit.create_completeness_spline()
+
+        # Use a non-parameteric approach to get the mean number of
+        # planets per star, over the specified range of period. We assume this
+        # number is right to a factor of two.
+
+        dlogsinc = 0.25
+        logsinc = np.arange(np.log10(sinc1),np.log10(sinc2),dlogsinc)
+        sinc = 10**logsinc
+        df = dict(sinc1=sinc[:-1], sinc2=sinc[1:], prad1=fit.prad1, prad2=fit.prad2)
+        df = pd.DataFrame(df)
+        import pdb;pdb.set_trace()
+        df['sincc'] = np.sqrt(df.sinc1 * df.sinc2)
+        rates = []
+        for i, row in df.iterrows():
+            rates += [fit.occ.occurence_box(row)]
+
+        rates = pd.DataFrame(rates)    
+        rates = pd.concat([df,rates],ignore_index=False,axis=1)
+        f = rates.rate.sum()
+        logf = np.log10(f)
+        p = lmfit.Parameters()
+        p.add('logf',value=logf, min=logf-0.3, max=logf+0.3)
+        p.add('k1',value=2, min=0, max=4)
+        p.add('k2',value=-1.010, min=-3, max=0,vary=False)
+        p.add('logsinc0',value=1,min=0,max=2)
+
+        # confirm that rate function is normalized
+        f = lambda per: fit.rate_lambda(per, p)
+        _int, err = scipy.integrate.quad(f, fit.sinc1, fit.sinc2)
+        assert abs(_int - 1) < 1e-3, "rate function must be normalized"
+        fit.fit_max_likelihood(p, method='lbfgsb', nan_policy='omit')
+        fit.run_mcmc(short=False)
+        obj = fit
+
     elif objkey=='grad-per-prad' or objkey=='grad-sinc-prad':
         limits = {}
         if params.count('smass'):
@@ -853,39 +963,6 @@ def load_object(key,cache=0, verbose=1, N_cores=None):
         mps.fit_powerlaw()
         obj = mps
 
-    elif objkey.count('fitper_')==1:
-        dlogper = 0.05 # Size of the bins used in the fitting
-        dx = [dlogper]
-        #_, smet, size = objkey.split('-')
-        bits = objkey.split('_')
-        limits = {}
-        for bit in bits:
-            if bit.count('smass='):
-                smass1, smass2 = bit.replace('smass=','').split('-')
-                smass1 = float(smass1)
-                smass2 = float(smass2)
-            if bit.count('per='):
-                per1, per2 = bit.replace('per=','').split('-')
-                per1 = float(per1)
-                per2 = float(per2)
-            if bit.count('prad='):
-                prad1, prad2 = bit.replace('prad=','').split('-')
-                prad1 = float(prad1)
-                prad2 = float(prad2)
-
-        occkey = 'occur_smass={}-{}'.format(smass1,smass2)
-        occ = load_object(occkey,cache=1)
-        cut = occ.occurrence_grid(
-            per1=per1, per2=per2, dlogper=dlogper, 
-            prad1=prad1,prad2=prad2,dlogprad=None
-        )
-        fit = ckscool.fit.BrokenPowerLaw(cut.perc, dx, cut.nplnt, cut.ntrial) 
-        fit.fit()
-        fit.mcmc(burn=3000, steps=6000, thin=1, nwalkers=20)
-        obj = fit
-
-
-        
     elif key.count('fitsinc_')==1:
         dlogsinc = 0.05 # Size of the bins used in the fitting
         dx = [dlogsinc]

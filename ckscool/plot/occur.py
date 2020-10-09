@@ -115,7 +115,6 @@ class SixPlotterPerPrad(SixPlotter):
         self.yt = [1.0,1.4,2.0,2.8,4.0]
         self.xlim = log10(1),log10(300)
         self.ylim = log10(1),log10(4)
-        self.occur_prefix = 'occur-per-prad'
         self.ORDPlotter = ORDPlotterPerPrad
         self.xlabel='Orbital Period (days)'
         self.ylabel='Planet Size (Earth-radii)'
@@ -215,7 +214,7 @@ class ORDPlotter(object):
 
         fill_between(kx, gradient_lims[0,:], gradient_lims[1,:], color='b', alpha=0.4)
         
-        
+
 class ORDPlotterPerPrad(ORDPlotter):
     """
     """
@@ -233,6 +232,108 @@ class ORDPlotterSincPrad(ORDPlotter):
         self.xlabel = 'Incident Flux (Earth-units)'
         self.ylabel = 'Planet size (Earth-radii)'
         self.cbarlabel = '$df/ d \log Sinc / d \log R_p$'
+
+def fig_occur_per():
+    sns.set_context('paper',font_scale=1.1)
+    fig, axL = subplots(ncols=2,figsize=(8,4),sharey=True)
+    sizes = ['se','sn']
+    for i in range(2):
+        size = sizes[i]
+        sca(axL[i])
+        smass = [0.5,0.7,1.0,1.4]
+        if size=='se':
+            prad1, prad2 = 1.0, 1.7
+        elif size=='sn':
+            prad1, prad2 = 1.7, 4.0
+
+        dlogper = 0.25
+        for i in range(3):
+            smass1, smass2 = smass[i],smass[i+1]
+            key = 'fitper_smass={}-{}-prad={}-{}'.format(
+                smass1, smass2, prad1, prad2,
+            )
+            fit = ckscool.io.load_object(key,cache=2)
+            fmtkey = 'smass{}'.format(i+1)
+            plot_per_rates(fit,log10(1),log10(300)+0.1,dlogper,fmtkey)
+            loglog()
+
+    sca(axL[0])
+    setp(axL, xlabel='Orbital Period', ylim=(1e-4,1e0))
+    setp(
+        axL[0],
+        ylabel = 'Planets per Star per {} dex Period Interval'.format(dlogper),
+        xlim =(1,100)
+    )
+    setp(axL[1], xlim =(1,300))
+    tight_layout(True)
+
+def fig_occur_sinc():
+    sns.set_context('paper',font_scale=1.1)
+    fig, axL = subplots(ncols=2,figsize=(8,4),sharey=True)
+    sizes = ['se','sn']
+    for i in range(2):
+        size = sizes[i]
+        sca(axL[i])
+        smass = [0.5,0.7,1.0,1.4]
+        if size=='se':
+            prad1, prad2 = 1.0, 1.7
+        elif size=='sn':
+            prad1, prad2 = 1.7, 4.0
+
+        dlogsinc = 0.25
+        for i in range(3):
+            smass1, smass2 = smass[i],smass[i+1]
+            key = 'fitsinc_smass={}-{}-prad={}-{}'.format(
+                smass1, smass2, prad1, prad2,
+            )
+            fit = ckscool.io.load_object(key,cache=2)
+            fmtkey = 'smass{}'.format(i+1)
+            plot_per_rates(fit,log10(1),log10(300)+0.1,dlogsinc,fmtkey)
+            loglog()
+
+    sca(axL[0])
+    setp(axL, xlabel='Incident Flux', ylim=(1e-4,1e0))
+    setp(
+        axL[0],
+        ylabel = 'Planets per Star per {} dex Sinc Interval'.format(dlogsinc),
+        xlim =(1,100)
+    )
+    setp(axL[1], xlim =(1,300))
+    tight_layout(True)
+    
+def plot_per_rates(fit, logper1, logper2, dlogper, fmtkey, plot_band=True, bandkw={}):
+    """
+    """
+    logper = np.arange(logper1,logper2,dlogper)
+    per = 10**logper
+    df = dict(per1=per[:-1], per2=per[1:],prad1=fit.prad1,prad2=fit.prad2)
+    df = pd.DataFrame(df)
+    df['perc'] = np.sqrt(df.per1 * df.per2)
+
+    rates = []
+    for i, row in df.iterrows():
+        rates += [fit.occ.occurence_box(row)]
+
+    rates = pd.DataFrame(rates)    
+    rates = pd.concat([df,rates],ignore_index=False,axis=1)
+    peri = np.logspace(np.log10(1),np.log10(300),300)
+    ckscool.plot.occur.plot_rates('perc',rates,fmtkey)
+    if hasattr(fit,'mi'):
+        f = 10**fit.mi.params['logf']
+        rate = f * fit.rate_lambda(peri, fit.mi.params)
+        y = peri * rate # planets per e interval dN/dnper
+        y = y * dlogper / np.log10(np.e) 
+        _ = plot(peri,y,color=ptcolor[fmtkey])
+
+    if plot_band:
+        chain = fit.res.flatchain.sample(300)
+        chain['f'] = 10**chain['logf']
+        rate_lambda = fit.rate_lambda_sample(peri, chain) # nchain x nper
+        rate = np.array(chain['f']).reshape(-1,1) * rate_lambda
+        y = peri.reshape(1,-1) * rate # planets per e interval dN/dnper
+        y = y * dlogper / np.log10(np.e) 
+        lo,hi = np.percentile(y,[16,84],axis=0)
+        fill_between(peri,lo,hi, color=ptcolor[fmtkey],alpha=0.3)
 
 def plot_rates(xk, occur, fmtkey, fac=1.0, **kw):
     """
@@ -282,94 +383,19 @@ def plot_rates(xk, occur, fmtkey, fac=1.0, **kw):
     if len(occurul) >0:
         plot(x,occur.rate_ul*fac,**ulkw)
 
-sns.set_style('ticks')
-sns.set_color_codes()
-
 ptcolor = {
-    'se':'g',
-    'sn':'b',
-    'ss':'y',
-    'jup':'r',
     'smass1':'r',
     'smass2':'g',
     'smass3':'b',
 }
 
 bdcolor = {
-    'se':'light green',
-    'sn':'light blue',
-    'ss':'light mustard',
-    'jup':'light pink'
+    'smass1':'light red',
+    'smass2':'light green',
+    'smass3':'light blue'
 }
 
-namedict = {
-    'se':'Super-Earths',
-    'sn':'Sub-Neptunes',
-    'ss':'Sub-Saturns',
-    'jup':'Jupiters',
-    'sub':'[Fe/H] < 0',
-    'sup':'[Fe/H] > 0',
-}
+sns.set_style('ticks')
+sns.set_color_codes()
 
-sizedict = {
-    'se':'$R_P$ = 1.0$-$1.7 $R_E$',
-    'sn':'$R_P$ = 1.7$-$4.0 $R_E$',
-    'ss':'$R_P$ = 4.0$-$8.0 $R_E$',
-    'jup':'$R_P$ = 8.0$-$24.0 $R_E$'
-}
 
-class Sampler(object):
-    nsamples = 1000
-    def __init__(self, fit, fmtkey, dx):
-        """
-        dx : size of phase-space volume to integrate occurrence 
-        """
-        self.fit = fit
-        self.fmtkey = fmtkey
-        self.dx = dx
-
-    def plot_band(self):
-        p16, p50, p84 = np.percentile(self.fit_samples,[16,50,84],axis=0)
-        _bdcolor = ptcolor[self.fmtkey]
-        fill_between(self.x, p16, p84, color=_bdcolor,alpha=0.3)
-        
-    def plot_best(self):
-        plot(self.x, self.fit_best, color=ptcolor[self.fmtkey])
-
-    def plot_all(self):
-        self.compute_samples()
-        self.compute_best()
-        self.plot_band()
-        #self.plot_best()
-
-    def dict_to_params(self, params):
-        _params = lmfit.Parameters()
-        for k in params.keys():
-            _params.add(k, value=params[k] )
-        return _params 
-
-    def compute_samples(self):
-        psamples = self.fit.sample_chain(self.nsamples)
-        fit_samples = []
-        for i, params in psamples.iterrows():
-            params = self.dict_to_params(params)
-            fit_samples.append(self.model(params))
-        self.fit_samples = np.vstack(fit_samples)
-
-    def model(self,params):
-        """Compute planet occurrence integrated over volumes of size dx""" 
-        return self.fit.model(params,self.x) * self.dx 
-
-    def compute_best(self):
-        params = self.fit.pfit
-        self.fit_best = self.model(params)
-
-class SamplerPer(Sampler):
-    dx = 0.25 / 10
-    x = arange(np.log10(0.1) + 0.5*dx,np.log10(1000),dx)
-    x = 10**x
-
-class SamplerSinc(Sampler):
-    dx = 0.25 / 10
-    x = arange(np.log10(0.1) + 0.5*dx,np.log10(1e4),dx)
-    x = 10**x

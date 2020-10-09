@@ -275,6 +275,7 @@ def val_sample(return_dict=False):
 
 def val_fit(return_dict=False):
     d = OrderedDict()
+    '''
     keys = [
         'fitdetected_sn-m',
         'fitdetected_se-m',
@@ -303,7 +304,29 @@ def val_fit(return_dict=False):
         mps = ckscool.io.load_object(key,cache=1)
         d[key+'-alpha'] = "{:.2f} \pm {:.2f}".format(np.mean(mps.coeff[1]), np.std(mps.coeff[1]))
         d[key+'-R0'] = "{:.2f} \pm {:.2f}".format(np.mean(10**mps.coeff[0]), np.std(10**mps.coeff[0]))
-    
+    '''
+
+    smass = [0.5,0.7,1.0,1.4]
+    for i in range(3):
+        smass1, smass2 = smass[i],smass[i+1]
+        prad = [1.0,1.7,4.0]
+        for j in range(2):
+            prad1, prad2 = prad[j],prad[j+1]
+            key = 'fitper_smass={}-{}-prad={}-{}'.format(
+                smass1, smass2, prad1, prad2,
+            )
+            fit = ckscool.io.load_object(key,cache=1)
+            chain = fit.res.flatchain
+            chain['per0'] = 10**chain['logper0']
+            q = chain.quantile([0.14,0.5,0.86])
+            q.loc['up'] = q.loc[0.86] - q.loc[0.50]
+            q.loc['lo'] = q.loc[0.14] - q.loc[0.50]
+            d[key+'-f'] = "{:.2f}^{{ {:.2f} }}_{{ {:.2f} }}".format(*q.loc[[0.5,'up','lo'],'f'].tolist())
+            d[key+'-k1'] = "{:.1f}^{{ {:.1f} }}_{{ {:.1f} }}".format(*q.loc[[0.5,'up','lo'],'k1'].tolist())
+            d[key+'-k2'] = "{:.1f}^{{ {:.1f} }}_{{ {:.1f} }}".format(*q.loc[[0.5,'up','lo'],'k2'].tolist())
+            d[key+'-logper0'] = "{:.1f}^{{ {:.1f} }}_{{ {:.1f} }}".format(*q.loc[[0.5,'up','lo'],'logper0'].tolist())
+            d[key+'-per0'] = "{:.1f}^{{ {:.1f} }}_{{ {:.1f} }}".format(*q.loc[[0.5,'up','lo'],'per0'].tolist())
+
     lines = []
     for k, v in d.iteritems():
         line = r"{{{}}}{{{}}}".format(k,v)
