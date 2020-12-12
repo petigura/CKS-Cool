@@ -174,14 +174,14 @@ def fig_cuts_all(sample,xk,yk):
 
 def fig_cuts_all_field_steff_srad():
     df = ckscool.io.load_table('field-cuts',cache=2)
-    xk = 'ber19_steff'
-    yk = 'ber19_srad'
+    xk = 'ber20_steff'
+    yk = 'ber20_srad'
 
 
 def fig_cuts_all_plnt_steff_srad():
     df = ckscool.io.load_table('planet-cuts1',cache=2)
-    xk = 'ber19_steff'
-    yk = 'ber19_srad'
+    xk = 'ber20_steff'
+    yk = 'ber20_srad'
     x = df.eval(xk)
     y = df.eval(yk)
     plotkw = dict(ms=2,rasterized=True,alpha=0.1)
@@ -214,7 +214,7 @@ def fig_cuts_field_steff_srad():
     nrows=2
     ncols=4
     df = ckscool.io.load_table('field-cuts',cache=2)
-    cuts(df,'ber19_steff','ber19_srad',nrows=nrows,ncols=ncols,stars=False)
+    cuts(df,'ber20_steff','ber20_srad',nrows=nrows,ncols=ncols,stars=False)
     axL = gcf().get_axes()
     axL = np.array(axL).reshape(nrows,ncols) 
     setp(axL,ylim=(0.1,10),xlim=(8000,3000))

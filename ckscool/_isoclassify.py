@@ -64,7 +64,7 @@ def load_stellar_parameters(source):
     else:
         assert False, "invalid mode"
 
-    star = ckscool.io.load_table('m17+cdpp+gaia2+ber19')
+    star = ckscool.io.load_table('m17+cdpp+gaia2+ber20')
     star = pd.merge(star,df,on='id_kic')
     star['m17_kmag_err'] = star['m17_kmag_err'].fillna(0.02)
     star = star.sort_values(by='id_kic')

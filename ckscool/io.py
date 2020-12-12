@@ -245,7 +245,7 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         df['id_kic'] = df['id_kic'].astype(int)
         
         
-    elif table == 'm17+cdpp+gaia2+ber19':
+    elif table == 'm17+cdpp+gaia2+ber20':
         m17 = load_table('m17', cache=1)
         # Store to separate cache to prevent long reload times
         cachefn = os.path.join(DATADIR,'cdpp.hdf') 
@@ -257,12 +257,12 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         df = pd.merge(df,ber,on=['id_kic'])
 
     elif table == 'field-cuts':
-        df = load_table('m17+cdpp+gaia2+ber19',cache=1)
+        df = load_table('m17+cdpp+gaia2+ber20',cache=1)
         cuttypes = ['none','faint','giantcmd','ruwe']
         df = ckscool.cuts.occur.add_cuts(df, cuttypes, 'field')
 
     elif table == 'planets-cuts1':
-        star = load_table('m17+cdpp+gaia2+ber19',cache=1)
+        star = load_table('m17+cdpp+gaia2+ber20',cache=1)
         plnt = load_table('koi-thompson18')
         df = pd.merge(star,plnt)
         cuttypes = ['none','faint','giantcmd','ruwe','notreliable','lowsnr']
@@ -536,7 +536,7 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         }
 
         df = df.rename(columns=namemap)[namemap.values()]
-        df = add_prefix(df,'ber19_')
+        df = add_prefix(df,'ber20_')
 
     elif table == 'ckscool-brewer18':
         cks = load_table('planets-cuts2').groupby('id_koi',as_index=False).nth(0)
@@ -845,7 +845,7 @@ def load_object(key,cache=0, verbose=1, N_cores=None):
             
         occkey = 'occur-per-prad_smass={}-{}'.format(smass1,smass2)
         occ = load_object(occkey,cache=1)
-        fit = ckscool.fit.FitSmoothBrokenPowerLaw(occ, per1, per2, prad1, prad2)
+        fit = ckscool.fit.FitSmoothBrokenPowerLaw(occ, 'per','prad', per1, per2, prad1, prad2)
         fit.create_completeness_spline()
 
         # Use a non-parameteric approach to get the mean number of
@@ -855,12 +855,12 @@ def load_object(key,cache=0, verbose=1, N_cores=None):
         dlogper = 0.25
         logper = np.arange(np.log10(per1),np.log10(per2),dlogper)
         per = 10**logper
-        df = dict(per1=per[:-1], per2=per[1:], prad1=fit.prad1, prad2=fit.prad2)
+        df = dict(per1=per[:-1], per2=per[1:], prad1=fit.y1, prad2=fit.y2)
         df = pd.DataFrame(df)
         df['perc'] = np.sqrt(df.per1 * df.per2)
         rates = []
         for i, row in df.iterrows():
-            rates += [fit.occ.occurence_box(row)]
+            rates += [fit.occ.occurrence_box(row)]
 
         rates = pd.DataFrame(rates)    
         rates = pd.concat([df,rates],ignore_index=False,axis=1)
@@ -870,11 +870,11 @@ def load_object(key,cache=0, verbose=1, N_cores=None):
         p.add('logf',value=logf, min=logf-0.3, max=logf+0.3)
         p.add('k1',value=2, min=0, max=4)
         p.add('k2',value=-1.010, min=-3, max=0,vary=False)
-        p.add('logper0',value=1,min=0,max=2)
+        p.add('logx0',value=1,min=0,max=2)
 
         # confirm that rate function is normalized
         f = lambda per: fit.rate_lambda(per, p)
-        _int, err = scipy.integrate.quad(f, fit.per1, fit.per2)
+        _int, err = scipy.integrate.quad(f, fit.x1, fit.x2)
         assert abs(_int - 1) < 1e-3, "rate function must be normalized"
         fit.fit_max_likelihood(p, method='lbfgsb', nan_policy='omit')
         fit.run_mcmc(short=False)
@@ -888,17 +888,19 @@ def load_object(key,cache=0, verbose=1, N_cores=None):
         prad1 = float(prad1)
         prad2 = float(prad2)
         if params.count('prad=1.0-1.7'):
-            sinc1 = 30
-            sinc2 = 3000
+            sinc1 = 10.0
+            sinc2 = 3000.0
         elif params.count('prad=1.7-4.0'):
-            per1 = 3
-            per2 = 3000
+            sinc1 = 1.0
+            sinc2 = 3000.0
         else:
             assert False,'key not recognized'
 
         occkey = 'occur-sinc-prad_smass={}-{}'.format(smass1,smass2)
         occ = load_object(occkey,cache=1)
-        fit = ckscool.fit.FitSmoothBrokenPowerLaw(occ, sinc1, sinc2, prad1, prad2)
+        fit = ckscool.fit.FitSmoothBrokenPowerLaw(
+            occ, 'sinc', 'prad', sinc1, sinc2, prad1, prad2
+        )
         fit.create_completeness_spline()
 
         # Use a non-parameteric approach to get the mean number of
@@ -906,29 +908,29 @@ def load_object(key,cache=0, verbose=1, N_cores=None):
         # number is right to a factor of two.
 
         dlogsinc = 0.25
-        logsinc = np.arange(np.log10(sinc1),np.log10(sinc2),dlogsinc)
+        eps = 1e-10
+        logsinc = np.arange(np.log10(sinc1),np.log10(sinc2)+eps,dlogsinc)
         sinc = 10**logsinc
-        df = dict(sinc1=sinc[:-1], sinc2=sinc[1:], prad1=fit.prad1, prad2=fit.prad2)
+        df = dict(sinc1=sinc[:-1], sinc2=sinc[1:], prad1=fit.y1, prad2=fit.y2)
         df = pd.DataFrame(df)
-        import pdb;pdb.set_trace()
         df['sincc'] = np.sqrt(df.sinc1 * df.sinc2)
         rates = []
         for i, row in df.iterrows():
-            rates += [fit.occ.occurence_box(row)]
+            rates += [fit.occ.occurrence_box(row)]
 
         rates = pd.DataFrame(rates)    
         rates = pd.concat([df,rates],ignore_index=False,axis=1)
         f = rates.rate.sum()
         logf = np.log10(f)
         p = lmfit.Parameters()
-        p.add('logf',value=logf, min=logf-0.3, max=logf+0.3)
-        p.add('k1',value=2, min=0, max=4)
-        p.add('k2',value=-1.010, min=-3, max=0,vary=False)
-        p.add('logsinc0',value=1,min=0,max=2)
+        p.add('logf', value=logf, min=logf-0.3, max=logf+0.3)
+        p.add('k1', value=-1.0001, min=-2, max=0, vary=False)
+        p.add('k2', value=-3.0, min=-5, max=-2,vary=True)
+        p.add('logx0', value=2.0, min=0, max=3)
 
         # confirm that rate function is normalized
-        f = lambda per: fit.rate_lambda(per, p)
-        _int, err = scipy.integrate.quad(f, fit.sinc1, fit.sinc2)
+        f = lambda x: fit.rate_lambda(x, p)
+        _int, err = scipy.integrate.quad(f, fit.x1, fit.x2)
         assert abs(_int - 1) < 1e-3, "rate function must be normalized"
         fit.fit_max_likelihood(p, method='lbfgsb', nan_policy='omit')
         fit.run_mcmc(short=False)
@@ -982,7 +984,7 @@ def load_comp(objkey, limits):
 
     field = ckscool.io.load_table('field-cuts',cache=1)
     field = field[~field.isany]
-    field = field.rename(columns={'ber19_srad':'srad','ber19_smass':'smass'})
+    field = field.rename(columns={'ber20_srad':'srad','ber20_smass':'smass'})
 
     if limits.has_key('smass1'):
         smass1 = limits['smass1']  
@@ -1035,7 +1037,7 @@ def load_occur(objkey, limits, debug=False):
 
     field = ckscool.io.load_table('field-cuts',cache=1)
     field = field[~field.isany]
-    field = field.rename(columns={'ber19_srad':'srad','ber19_smass':'smass'})
+    field = field.rename(columns={'ber20_srad':'srad','ber20_smass':'smass'})
     plnt = ckscool.io.load_table('planets-cuts2')
     plnt = plnt[~plnt.isany]
 

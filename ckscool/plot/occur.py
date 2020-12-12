@@ -280,7 +280,7 @@ def fig_occur_sinc():
         elif size=='sn':
             prad1, prad2 = 1.7, 4.0
 
-        dlogsinc = 0.25
+        dlogsinc = 0.5
         for i in range(3):
             smass1, smass2 = smass[i],smass[i+1]
             key = 'fitsinc_smass={}-{}-prad={}-{}'.format(
@@ -288,17 +288,17 @@ def fig_occur_sinc():
             )
             fit = ckscool.io.load_object(key,cache=2)
             fmtkey = 'smass{}'.format(i+1)
-            plot_per_rates(fit,log10(1),log10(300)+0.1,dlogsinc,fmtkey)
+            plot_sinc_rates(fit,log10(1),log10(10000)+0.1,dlogsinc,fmtkey)
             loglog()
 
     sca(axL[0])
     setp(axL, xlabel='Incident Flux', ylim=(1e-4,1e0))
     setp(
         axL[0],
-        ylabel = 'Planets per Star per {} dex Sinc Interval'.format(dlogsinc),
-        xlim =(1,100)
+        ylabel = 'Planets per Star per {} dex Flux Interval'.format(dlogsinc),
+        xlim =(1e4,1)
     )
-    setp(axL[1], xlim =(1,300))
+    setp(axL[1], xlim =(1e4,1))
     tight_layout(True)
     
 def plot_per_rates(fit, logper1, logper2, dlogper, fmtkey, plot_band=True, bandkw={}):
@@ -306,13 +306,13 @@ def plot_per_rates(fit, logper1, logper2, dlogper, fmtkey, plot_band=True, bandk
     """
     logper = np.arange(logper1,logper2,dlogper)
     per = 10**logper
-    df = dict(per1=per[:-1], per2=per[1:],prad1=fit.prad1,prad2=fit.prad2)
+    df = dict(per1=per[:-1], per2=per[1:],prad1=fit.y1,prad2=fit.y2)
     df = pd.DataFrame(df)
     df['perc'] = np.sqrt(df.per1 * df.per2)
 
     rates = []
     for i, row in df.iterrows():
-        rates += [fit.occ.occurence_box(row)]
+        rates += [fit.occ.occurrence_box(row)]
 
     rates = pd.DataFrame(rates)    
     rates = pd.concat([df,rates],ignore_index=False,axis=1)
@@ -334,6 +334,41 @@ def plot_per_rates(fit, logper1, logper2, dlogper, fmtkey, plot_band=True, bandk
         y = y * dlogper / np.log10(np.e) 
         lo,hi = np.percentile(y,[16,84],axis=0)
         fill_between(peri,lo,hi, color=ptcolor[fmtkey],alpha=0.3)
+
+def plot_sinc_rates(fit, logsinc1, logsinc2, dlogsinc, fmtkey, plot_band=True, bandkw={}):
+    """
+    """
+    logsinc = np.arange(logsinc1,logsinc2,dlogsinc)
+    sinc = 10**logsinc
+    df = dict(sinc1=sinc[:-1], sinc2=sinc[1:],prad1=fit.y1,prad2=fit.y2)
+    df = pd.DataFrame(df)
+    df['sincc'] = np.sqrt(df.sinc1 * df.sinc2)
+
+    rates = []
+    for i, row in df.iterrows():
+        rates += [fit.occ.occurrence_box(row)]
+
+    rates = pd.DataFrame(rates)    
+    rates = pd.concat([df,rates],ignore_index=False,axis=1)
+    sinci = np.logspace(np.log10(1),np.log10(10000),300)
+    ckscool.plot.occur.plot_rates('sincc',rates,fmtkey)
+    if hasattr(fit,'mi'):
+        f = 10**fit.mi.params['logf']
+        rate = f * fit.rate_lambda(sinci, fit.mi.params)
+        y = sinci * rate # planets sinc e interval dN/dnsinc
+        y = y * dlogsinc / np.log10(np.e) 
+        _ = plot(sinci,y,color=ptcolor[fmtkey])
+
+    if plot_band:
+        chain = fit.res.flatchain.sample(300)
+        chain['f'] = 10**chain['logf']
+        rate_lambda = fit.rate_lambda_sample(sinci, chain) # nchain x nsinc
+        rate = np.array(chain['f']).reshape(-1,1) * rate_lambda
+        y = sinci.reshape(1,-1) * rate # planets sinc e interval dN/dnsinc
+        y = y * dlogsinc / np.log10(np.e) 
+        lo,hi = np.percentile(y,[16,84],axis=0)
+        fill_between(sinci,lo,hi, color=ptcolor[fmtkey],alpha=0.3)
+
 
 def plot_rates(xk, occur, fmtkey, fac=1.0, **kw):
     """

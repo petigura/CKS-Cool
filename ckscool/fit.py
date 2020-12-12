@@ -9,27 +9,27 @@ import scipy.interpolate
 import pandas as pd
 
 class Fit(object):
-    def __init__(self,occ, per1, per2, prad1, prad2):
+    def __init__(self, occ, xk, yk, x1, x2, y1, y2):
         self.occ = occ
-        self.prad1 = prad1
-        self.prad2 = prad2
-        self.per1 = per1
-        self.per2 = per2
-        b = ( occ.plnt.per.between(per1,per2)
-              & occ.plnt.prad.between(prad1,prad2))
-        self.plnt = occ.plnt[b]
+        self.y1 = y1
+        self.y2 = y2
+        self.x1 = x1
+        self.x2 = x2
+        b = occ.plnt[xk].between(x1,x2) & occ.plnt[yk].between(y1,y2)
+        self.plntx = occ.plnt[b][xk]
+        self.plnty = occ.plnt[b][yk]
 
     def create_completeness_spline(self):
         """
-        Evaluate average completeness as a function of period
+        Evaluate average completeness as a function of xiod
         """
 
-        x = np.linspace(self.per1,self.per2,100)
+        x = np.linspace(self.x1, self.x2, 100)
         dx = 0.1
         prob_trdet_mean = []
         for _x in x:
             temp, _ = self.occ.comp.mean_prob_trdet(
-                _x - dx, _x + dx , self.prad1, self.prad2
+                _x - dx, _x + dx , self.y1, self.y2
             )
             prob_trdet_mean.append(temp)
         prob_trdet_mean = np.array(prob_trdet_mean)
@@ -42,17 +42,17 @@ class Fit(object):
         v = p.valuesdict()
         nknots = 300
         f = 10**v['logf']
-        x = np.logspace(np.log10(self.per1),np.log10(self.per2), nknots)
+        x = np.logspace(np.log10(self.x1),np.log10(self.x2), nknots)
         etalambda = self.comp(x) * self.rate_lambda(x, p) 
         product = scipy.interpolate.UnivariateSpline(x, etalambda, s=0)
-        integral =  product.integral(self.per1, self.per2)
+        integral =  product.integral(self.x1, self.x2)
         return integral * f * self.occ.nstars
 
     def logprob(self,p):
         v = p.valuesdict()
         f = 10**v['logf']
         _Lambda = self.rate_Lambda(p)
-        _lambda = self.rate_lambda(self.plnt.per, p)
+        _lambda = self.rate_lambda(self.plntx, p)
         _sumloglambda = np.sum(np.log(f * _lambda))
         _logprob = - _Lambda + _sumloglambda
         return _logprob
@@ -78,12 +78,12 @@ class Fit(object):
         res.params.pretty_print()
         self.res = res
 
-    def rate_lambda_sample(self, per, chain):
+    def rate_lambda_sample(self, x, chain):
         """
         sample the normalize occurrence rate density from mcmc
         
         Returns:
-            array: shape = (len(chain), len(nper))
+            array: shape = (len(chain), len(nx))
         """
         rate = []
         for i,row in chain.iterrows():
@@ -93,7 +93,7 @@ class Fit(object):
                     params[k] = Parameter(k,value=row[k])
                 else:
                     params[k] = Parameter(k,value=param0.value)
-            rate.append( self.rate_lambda(per,params) )
+            rate.append( self.rate_lambda(x,params) )
         rate = np.vstack(rate)
         return rate
 
@@ -108,43 +108,43 @@ class FitSmoothBrokenPowerLaw(Fit):
     def DefInt(self,k1,k2,x0,x1,x2):
         return self.IndefInt(k1,k2,x2/x0,x0) - self.IndefInt(k1,k2,x1/x0,x0)
 
-    def rate_lambda(self, per, p):
+    def rate_lambda(self, x, p):
         """
         must integrate to 1
         """
         v = p.valuesdict()
-        per0 = 10**v['logper0']
-        u = per / per0
+        x0 = 10**v['logx0']
+        u = x / x0
         denom = u**(-v['k1']) + u**(-v['k2'])
-        norm = self.DefInt(v['k1'],v['k2'],per0,self.per1,self.per2)
-        _lambda_per = 1.0 / denom / norm
-        return _lambda_per
+        norm = self.DefInt(v['k1'],v['k2'],x0,self.x1,self.x2)
+        _lambda_x = 1.0 / denom / norm
+        return _lambda_x
 
 class FitBrokenPowerLaw(Fit):
-    def InDefInt1(self, per, per0, k1):
-        return per**(k1 + 1) / (k1 + 1)
+    def InDefInt1(self, x, x0, k1):
+        return x**(k1 + 1) / (k1 + 1)
 
-    def InDefInt2(self, per, per0, k1, k2):
-        return per0**(k1 - k2) / (k2 + 1) * per**(k2 + 1)
+    def InDefInt2(self, x, x0, k1, k2):
+        return x0**(k1 - k2) / (k2 + 1) * x**(k2 + 1)
 
-    def rate_lambda(self, per, p):
+    def rate_lambda(self, x, p):
         """
         must integrate to 1
         """
-        if type(per) is float:
-            per = np.array([per])
+        if type(x) is float:
+            x = np.array([x])
         v = p.valuesdict()
-        per0 = 10**v['logper0']
-        _lambda_per = np.zeros_like(per)
-        b = per <= per0 
-        _lambda_per[b] = per[b]**v['k1']
-        b = per > per0 
-        _lambda_per[b] = per0**(v['k1'] - v['k2']) * per[b]**v['k2']
+        x0 = 10**v['logx0']
+        _lambda_x = np.zeros_like(x)
+        b = x <= x0 
+        _lambda_x[b] = x[b]**v['k1']
+        b = x > x0 
+        _lambda_x[b] = x0**(v['k1'] - v['k2']) * x[b]**v['k2']
 
-        norm = ( self.InDefInt1(per0, per0, v['k1'])
-                 - self.InDefInt1(self.per1, per0, v['k1'])
-                 + self.InDefInt2(self.per2, per0, v['k1'], v['k2'])
-                 - self.InDefInt2(per0, per0, v['k1'], v['k2']) ) 
+        norm = ( self.InDefInt1(x0, x0, v['k1'])
+                 - self.InDefInt1(self.x1, x0, v['k1'])
+                 + self.InDefInt2(self.x2, x0, v['k1'], v['k2'])
+                 - self.InDefInt2(x0, x0, v['k1'], v['k2']) ) 
         
-        _lambda_per = _lambda_per / norm
-        return _lambda_per
+        _lambda_x = _lambda_x / norm
+        return _lambda_x

@@ -24,46 +24,6 @@ class Occurrence2D(object):
         self.plntx = array(plnt[self.xk])
         self.plnty = array(plnt[self.yk])
 
-    def occurence_box(self, limits):
-        """Compute occurrence in a little box
-
-        We make the assumption that the dN/dlogP and dN/lopRp is constant
-        within a box.
-
-        Args:
-            limits (dict): must contain, per1, per2, prad1, prad2
-        """
-        
-        prad1 = limits['prad1']
-        prad2 = limits['prad2']
-        per1 = limits['per1']
-        per2 = limits['per2']
-
-        # Get planet sample and number of stars
-        cut = self.plnt.copy()
-        cut = cut[cut.prad.between(prad1,prad2)]
-        cut = cut[cut.per.between(per1,per2)]
-        nplnt = len(cut)
-        prob_trdet_mean, prob_det_mean = self.comp.mean_prob_trdet(
-            per1, per2, prad1, prad2
-        )
-        ntrial = self.nstars * prob_trdet_mean
-        rate = nplnt / ntrial
-
-        nsample = int(1e4)
-        binom = Binomial(ntrial, nplnt)
-        samples = binom.sample(nsample)
-
-        uplim = nplnt==0
-        rate = samples_to_rate(samples,uplim=uplim)
-        out = {}
-        out['ntrial'] = ntrial
-        out['nplnt'] = nplnt
-        out['prob_trdet_mean'] = prob_trdet_mean
-        out['prob_det_mean'] = prob_det_mean
-        out = dict(out,**rate)
-        return out
-
     def planet_weights(self):
         return 1 / self.comp.prob_trdet_interp(self.plntx,self.plnty)
 
@@ -107,6 +67,46 @@ class OccurrencePerPrad(Occurrence2D):
         assert isinstance(self.comp,CompletenessPerPrad), \
             "comp must be instance of CompletenessPerPrad"
 
+    def occurrence_box(self, limits):
+        """Compute occurrence in a little box
+
+        We make the assumption that the dN/dlogP and dN/lopRp is constant
+        within a box.
+
+        Args:
+            limits (dict): must contain, per1, per2, prad1, prad2
+        """
+        
+        prad1 = limits['prad1']
+        prad2 = limits['prad2']
+        per1 = limits['per1']
+        per2 = limits['per2']
+
+        # Get planet sample and number of stars
+        cut = self.plnt.copy()
+        cut = cut[cut.prad.between(prad1,prad2)]
+        cut = cut[cut.per.between(per1,per2)]
+        nplnt = len(cut)
+        prob_trdet_mean, prob_det_mean = self.comp.mean_prob_trdet(
+            per1, per2, prad1, prad2
+        )
+        ntrial = self.nstars * prob_trdet_mean
+        rate = nplnt / ntrial
+
+        nsample = int(1e4)
+        binom = Binomial(ntrial, nplnt)
+        samples = binom.sample(nsample)
+
+        uplim = nplnt==0
+        rate = samples_to_rate(samples,uplim=uplim)
+        out = {}
+        out['ntrial'] = ntrial
+        out['nplnt'] = nplnt
+        out['prob_trdet_mean'] = prob_trdet_mean
+        out['prob_det_mean'] = prob_det_mean
+        out = dict(out,**rate)
+        return out
+
 class OccurrenceSincPrad(Occurrence2D):
     xk = 'sinc'
     yk = 'prad'
@@ -117,6 +117,45 @@ class OccurrenceSincPrad(Occurrence2D):
         assert isinstance(self.comp,CompletenessSincPrad), \
             "comp must be instance of CompletenessSincPrad"
 
+    def occurrence_box(self, limits):
+        """Compute occurrence in a little box
+
+        We make the assumption that the dN/dlogP and dN/lopRp is constant
+        within a box.
+
+        Args:
+            limits (dict): must contain, per1, per2, prad1, prad2
+        """
+        
+        prad1 = limits['prad1']
+        prad2 = limits['prad2']
+        sinc1 = limits['sinc1']
+        sinc2 = limits['sinc2']
+
+        # Get planet sample and number of stars
+        cut = self.plnt.copy()
+        cut = cut[cut.prad.between(prad1,prad2)]
+        cut = cut[cut.sinc.between(sinc1,sinc2)]
+        nplnt = len(cut)
+        prob_trdet_mean, prob_det_mean = self.comp.mean_prob_trdet(
+            sinc1, sinc2, prad1, prad2
+        )
+        ntrial = self.nstars * prob_trdet_mean
+        rate = nplnt / ntrial
+
+        nsample = int(1e4)
+        binom = Binomial(ntrial, nplnt)
+        samples = binom.sample(nsample)
+
+        uplim = nplnt==0
+        rate = samples_to_rate(samples,uplim=uplim)
+        out = {}
+        out['ntrial'] = ntrial
+        out['nplnt'] = nplnt
+        out['prob_trdet_mean'] = prob_trdet_mean
+        out['prob_det_mean'] = prob_det_mean
+        out = dict(out,**rate)
+        return out
 
 def gaussian_2d_kde(x, y, xi, yi, xbw, ybw, w=None):
     """

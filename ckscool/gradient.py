@@ -85,7 +85,7 @@ class Gradient(object):
         # load planet sample
         field = ckscool.io.load_table('field-cuts',cache=1)
         field = field[~field.isany]
-        field = field.rename(columns={'ber19_srad':'srad','ber19_smass':'smass'})
+        field = field.rename(columns={'ber20_srad':'srad','ber20_smass':'smass'})
         plnt = ckscool.io.load_table('planets-cuts2')
         plnt = plnt[~plnt.isany]
 
@@ -110,7 +110,6 @@ class Gradient(object):
         #for i in np.arange(N_iter):
         #    self.grad_chain = self.resampled_gradient(plnt, comp, nstars, i)
         self.grad_chain = np.array(self.grad_chain)
-
 
     def gradient_file(self):
 
