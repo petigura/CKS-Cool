@@ -281,7 +281,7 @@ class ContourPlotter(object):
         errorbar(x,y, **kwargs)
 
     def gradient_plot(self, xk, smass_lims):
-
+        import pdb;pdb.set_trace()
         if self.xscale=='log':
             kx = np.linspace(log10(self.xmin), log10(self.xmax), self._kde_nx)
             x = 10**kx

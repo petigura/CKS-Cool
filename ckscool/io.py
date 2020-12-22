@@ -250,7 +250,7 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         # Store to separate cache to prevent long reload times
         cachefn = os.path.join(DATADIR,'cdpp.hdf') 
         cdpp = load_table('cdpp',cache=1, cachefn=cachefn)        
-        ber = load_table('berger19', cache=1)
+        ber = load_table('berger20', cache=1)
         gaia = load_table('gaia2', cache=1)
         df = pd.merge(m17,cdpp)
         df = pd.merge(df,gaia)
@@ -518,8 +518,8 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         df = df.rename(columns=namemap)[namemap.values()]
         df = add_prefix(df,'ber18_')
 
-    # Berger al. (2019)
-    elif table == 'berger19':
+    # Berger al. (2020)
+    elif table == 'berger20':
         df = pd.read_csv('data/GKSPC_InOut_V1.csv')
         df = df.rename(columns={'KIC':'id_kic'})
         namemap = {
@@ -943,14 +943,15 @@ def load_object(key,cache=0, verbose=1, N_cores=None):
             limits['smass1'] = float(smass1)
             limits['smass2'] = float(smass2)
 
-        N_cores=8
+        N_cores = 8
+        import pdb;pdb.set_trace()
         if N_cores:
             obj = ckscool.gradient.construct_grad(
-                objkey, limits, N_cores=N_cores, N_sample=100
+                objkey, limits, N_cores=N_cores, N_sample=1000
             )
         else:
             obj = ckscool.gradient.construct_grad(
-                objkey, limits, N_sample=100
+                objkey, limits, N_sample=1000
             )
     
     elif objkey=='mps':

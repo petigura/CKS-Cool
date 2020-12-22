@@ -32,7 +32,7 @@ def update_planet_parameters(df):
     for i, row in df.iterrows():
         if i % 100 == 0:
             print(i)
-        fn = '../Kepler-Radius-Ratio/test_trimmed-thinned_comp.hdf'
+        fn = 'data/dr25-chains_trimmed-thinned.hdf'
         try:
             with pd.HDFStore(fn) as store:
                 chain = pd.read_hdf(store,row.id_koicand)

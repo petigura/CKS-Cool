@@ -17,6 +17,7 @@ sns.set_color_codes()
 def fig_contour_six_per(plot_gradient=False):
     sns.set_context('paper')
     pl = SixPlotterPerPrad()
+    pl.occur_prefix = 'occur-per-prad'
     pl.plot(plot_gradient)
 
 def fig_contour_six_sinc(plot_gradient=False):

@@ -85,9 +85,7 @@ Run `ReaMatch.ipynb` and copy output file to `reamatch.csv` to `~/Dropbox/CKS-Co
 
 4. Create final table of stellar / planet parameters
 
-
-
-4. Generate representative spectra figure
+5. Generate representative spectra figure
 
 Run the 3_Spectra-Figure ipython notebook
 
@@ -95,19 +93,6 @@ Run the 3_Spectra-Figure ipython notebook
 rsync -av --progress --files-from=data/fig_spectra/fig_spectra-files.txt cadence:/ data/fig_spectra/ 
 ```
 
-## Access CKS-Cool dataset
-
-The full list of star and planet properties are in `data/ckscool-planets-cuts.csv ` see `data/column-definitions.txt` for a description of the columns.
-
-The `is*` columns correspond to cuts. See the ckscool/cuts.py for additional info. The radius gap be comes more clear when one adopts a koi_impact of > 0.7 or 0.8.
-
-
-
-
-
-
-
-For a description of the columns
 
 ## Generate HDF version of DR25 chains.
 
@@ -135,13 +120,19 @@ Notes
 
 
 
+## Access CKS-Cool dataset
 
-# Old notes
+The full list of star and planet properties are in `data/ckscool-planets-cuts.csv ` see `data/column-definitions.txt` for a description of the columns.
 
-## Cross-match the CKS stars with Gaia IDs. This is now accomplished using the Berger designatinos
+The `is*` columns correspond to cuts. See the ckscool/cuts.py for additional info. The radius gap be comes more clear when one adopts a koi_impact of > 0.7 or 0.8.
 
-Follow instructions [here](docs/gaia-xmatch.md)
 
+
+
+
+
+
+For a description of the columns
 
 
 # Notes for running isoclassify on cadence
