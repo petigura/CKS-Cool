@@ -305,6 +305,22 @@ def val_fit(return_dict=False):
         d[key+'-alpha'] = "{:.2f} \pm {:.2f}".format(np.mean(mps.coeff[1]), np.std(mps.coeff[1]))
         d[key+'-R0'] = "{:.2f} \pm {:.2f}".format(np.mean(10**mps.coeff[0]), np.std(10**mps.coeff[0]))
 
+    # gradient slope
+    smass = [0.5,0.7,1.0,1.4]
+    for i in range(3):
+        smass1, smass2 = smass[i],smass[i+1]
+        key = 'grad-per-prad_smass={0}-{1}'.format(
+            smass1, smass2
+        )            
+        grad = ckscool.io.load_object(key,cache=1)
+        m = grad.grad_chain[:,0]
+        Rp_10 = 10**grad.grad_chain[:,1]
+        
+        d[key+'m'] = "{:.2f} \pm {:.2f}".format(m.mean(),m.std())
+        d[key+'Rp10'] = "{:.2f} \pm {:.2f}".format(Rp_10.mean(),Rp_10.std())
+
+
+        
     smass = [0.5,0.7,1.0,1.4]
     for i in range(3):
         smass1, smass2 = smass[i],smass[i+1]
@@ -357,7 +373,49 @@ def val_fit(return_dict=False):
         line = r"{{{}}}{{{}}}".format(k,v)
         lines.append(line)
 
+        
+    if return_dict:
+        return d
 
+    return lines
+
+def val_grad(return_dict=False):
+    d = OrderedDict()
+
+    # gradient slope
+    smass = [0.5,0.7,1.0,1.4]
+    for i in range(3):
+        smass1, smass2 = smass[i],smass[i+1]
+        key = 'grad-per-prad_smass={0}-{1}'.format(
+            smass1, smass2
+        )            
+        grad = ckscool.io.load_object(key,cache=1)
+        m = grad.grad_chain[:,0]
+        Rp_10 = 10**grad.grad_chain[:,1]
+        
+        d[key+'-m'] = "{:.2f} \pm {:.2f}".format(m.mean(),m.std())
+        d[key+'-Rp10'] = "{:.2f} \pm {:.2f}".format(Rp_10.mean(),Rp_10.std())
+
+
+    # gradient slope
+    smass = [0.5,0.7,1.0,1.4]
+    for i in range(3):
+        smass1, smass2 = smass[i],smass[i+1]
+        key = 'grad-sinc-prad_smass={0}-{1}'.format(
+            smass1, smass2
+        )            
+        grad = ckscool.io.load_object(key,cache=1)
+        m = grad.grad_chain[:,0]
+        Rp_100 = 10**grad.grad_chain[:,1]
+        
+        d[key+'-m'] = "{:.2f} \pm {:.2f}".format(m.mean(),m.std())
+        d[key+'-Rp100'] = "{:.2f} \pm {:.2f}".format(Rp_100.mean(),Rp_100.std())
+        
+    lines = []
+    for k, v in d.iteritems():
+        line = r"{{{}}}{{{}}}".format(k,v)
+        lines.append(line)
+        
     if return_dict:
         return d
 

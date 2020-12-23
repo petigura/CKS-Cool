@@ -238,6 +238,7 @@ def create_workflow():
     w.val['stat'] = ckscool.value.val_stat
     w.val['sample'] = ckscool.value.val_sample
     w.val['fit'] = ckscool.value.val_fit
+    w.val['grad'] = ckscool.value.val_grad
 
     # planet
     w.csv['star'] = ckscool.table.tab_star_csv

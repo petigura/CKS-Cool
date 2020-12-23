@@ -29,12 +29,22 @@ isoclassify on f6f16e
 - Compute stellar/planet parameters
 - Access the CKS-Cool dataset
 
-# Copy over the table cache from CKS-Gaia
 
-$ cp ../CKS-Gaia/load_table_cache.hdf data/cksgaia_cache.hdf
+### Assemble the data
 
+1. Copy over CKS-Gaia HDF file
 
-## Compute Stellar/Planetary Properties
+```bash
+cp ../CKS-Gaia/load_table_cache.hdf data/cksgaia_cache.hdf
+```
+
+2. Generate a symlink to `dr25-chains_trimmed-thinned.hdf`
+
+Note the DR25 chains are created in `Kepler-Radius-Ratio` repo. See
+its readme file. Users looking to rerun code, will need to get the
+datafile from Petigura.
+
+### Compute Stellar/Planetary Properties
 
 1. Download smemp and smsyn catalogs to `data/CKS_Spectroscopic_Parameters.csv`
 
@@ -94,47 +104,17 @@ rsync -av --progress --files-from=data/fig_spectra/fig_spectra-files.txt cadence
 ```
 
 
-## Generate HDF version of DR25 chains.
-
-First run
-
-```
-run_ckscool.py create-chain-hdf
-```
-
-To read the chain info from its ascii format
-
-Notes
-- Chains take about 2s to read and store in hdf format or 4 hours for all 8000
-- 4MB per chain or 32 GB for all 8000.
-- There are roughly ~100 KOIs for which there are no chains
-
-```
-run_ckscool.py create-chain-summary # stores the precentile summary
-```
-
-Notes 
-- Takes about 30 min to complete.
-
-
-
 
 
 ## Access CKS-Cool dataset
 
 The full list of star and planet properties are in `data/ckscool-planets-cuts.csv ` see `data/column-definitions.txt` for a description of the columns.
 
-The `is*` columns correspond to cuts. See the ckscool/cuts.py for additional info. The radius gap be comes more clear when one adopts a koi_impact of > 0.7 or 0.8.
+The `is*` columns correspond to cuts. See the ckscool/cuts.py for additional info.
 
+## Other notes
 
+1. Running isoclassify on cadence
 
-
-
-
-
-For a description of the columns
-
-
-# Notes for running isoclassify on cadence
-
-Note when running on cadence, there was a really weird issue with h5py. Where it was taking 30s to read in the Combined Dustmap
+Note when running on cadence, there was a really weird issue with
+h5py. Where it was taking 30s to read in the Combined Dustmap
