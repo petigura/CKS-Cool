@@ -192,36 +192,20 @@ class GradientPerPrad(Gradient):
         """
 
         m, logR_10 = theta
-        P_domain = np.linspace(log10(3),log10(80),30)
+        nbins = 30
+        x0, x1 = log10(1), log10(100)
+        xbins = np.linspace(x0, x1, nbins+1)
+        xmid = 0.5 * ( xbins[1:] + xbins[:-1] )
+        y0 = self.prad_per(x0, m, logR_10)
+        y1 = self.prad_per(x1, m, logR_10)
+        ymid = self.prad_per(xmid, m, logR_10)
 
-        
-        logR_10_lim = [log10(1.3), log10(3.0)]
-        m_lim = [-0.15,0.15]
-
-        integral = 0.0
-
-        if  logR_10_lim[0] <= logR_10 <= logR_10_lim[1] \
-        and m_lim[0] <= m <= m_lim[1]:
-
-            for i in range(len(P_domain)-1):
-
-                L = sqrt( (P_domain[-1] - P_domain[0])**2 + (self.prad_per(P_domain[-1],m,logR_10) - self.prad_per(P_domain[0],m,logR_10))**2)
-                dl = L / len(P_domain)
-
-                R_mid = ( self.prad_per(P_domain[i+1],m,logR_10) + self.prad_per(P_domain[i],m,logR_10) ) / 2
-                P_mid = ( P_domain[i+1] + P_domain[i] ) / 2
-
-                contribution = KDE([P_mid, R_mid]) * dl
-
-                if contribution <= 1e-5: # spline sometimes <= 0 for masked region
-                    contribution = 0.0
-                    integral += contribution
-                else:
-                    integral += contribution
-
-            return integral
-        else:
-            return 1e10
+        L = sqrt( (x1 - x0)**2 + (y1 - y0)**2 )
+        dl = L / nbins
+        points = np.vstack([xmid, ymid]).T
+        integral = np.sum(KDE(points) * dl)
+        nintegral = integral / L # normalized integral
+        return nintegral
 
     def find_gradient(self, logP_array, logR_array, KDE):
         """
@@ -239,12 +223,23 @@ class GradientPerPrad(Gradient):
         # KDE interpolation
         map_interp = RegularGridInterpolator((logP_array, logR_array), KDE)
 
-        sol = optimize.minimize(self.line_integral_per, x0=[0.01,log10(1.7)], args=(map_interp),
-                                method='Nelder-Mead')
-        return sol.x
+        params = Parameters()
+        params.add('m', value=-0.01,min=-0.15,max=0.15)
+        params.add('logRp_10', value=log10(1.7),min=log10(1.4),max=log10(2.3))
+        def obj(params):
+            theta = (params['m'].value,params['logRp_10'].value)
+            return self.line_integral_per(theta, map_interp)
+
+        out = minimize(obj,params, method='Nelder-Meade')
+        theta = np.array([out.params['m'].value,out.params['logRp_10'].value])
+        return theta
+
+
+from lmfit import minimize, Parameters
+
+
 
 class GradientSincPrad(Gradient):
-
 
     def prad_sinc(self,logS,m,logR_100):
         """
@@ -262,8 +257,6 @@ class GradientSincPrad(Gradient):
         return m * logS + logR_100 - 2*m
 
 
-
-
     def line_integral_sinc(self, theta, KDE):
         """
         Return the line integral for a given straight line
@@ -279,37 +272,22 @@ class GradientSincPrad(Gradient):
             Total line integral from S[min] to S[max] with contributions coming from
             the occurence map.
         """
-
+        
         m, logR_100 = theta
-        S_domain = np.linspace(log10(10),log10(1000),30)
+        nbins = 30
+        x0, x1 = log10(3), log10(100)
+        xbins = np.linspace(x0, x1, nbins+1)
+        xmid = 0.5 * ( xbins[1:] + xbins[:-1] )
+        y0 = self.prad_sinc(x0, m, logR_100)
+        y1 = self.prad_sinc(x1, m, logR_100)
+        ymid = self.prad_sinc(xmid, m, logR_100)
 
-        logR_100_lim = [log10(1.3), log10(3.0)]
-        m_lim = [-0.15,0.15]
-
-        integral = 0.0
-
-        if  logR_100_lim[0] <= logR_100 <= logR_100_lim[1] \
-        and m_lim[0] <= m <= m_lim[1]:
-
-            for i in range(len(S_domain)-1):
-
-                L = sqrt( (S_domain[-1] - S_domain[0])**2 + (self.prad_sinc(S_domain[-1],m,logR_100) - self.prad_sinc(S_domain[0],m,logR_100))**2)
-                dl = L / len(S_domain)
-
-                R_mid = ( self.prad_sinc(S_domain[i+1],m,logR_100) + self.prad_sinc(S_domain[i],m,logR_100) ) / 2
-                S_mid = ( S_domain[i+1] + S_domain[i] ) / 2
-
-                contribution = KDE([S_mid, R_mid]) * dl
-
-                if contribution <= 1e-5: # spline sometimes <= 0 for masked region
-                    contribution = 0.0
-                    integral += contribution
-                else:
-                    integral += contribution
-
-            return integral
-        else:
-            return 1e10
+        L = sqrt( (x1 - x0)**2 + (y1 - y0)**2 )
+        dl = L / nbins
+        points = np.vstack([xmid, ymid]).T
+        integral = np.sum(KDE(points) * dl)
+        nintegral = integral / L # normalized integral
+        return nintegral
 
 
     def find_gradient(self, logS_array, logR_array, KDE):
@@ -328,9 +306,17 @@ class GradientSincPrad(Gradient):
         # KDE interpolation
         map_interp = RegularGridInterpolator((logS_array, logR_array), KDE)
 
-        sol = optimize.minimize(self.line_integral_sinc, x0=[0.01,log10(1.7)], args=(map_interp),
-                                method='Nelder-Mead')
-        return sol.x
+
+        params = Parameters()
+        params.add('m', value=0.05,min=-0.1,max=0.2)
+        params.add('logRp_100', value=log10(1.7),min=log10(1.4),max=log10(2.4))
+        def obj(params):
+            theta = (params['m'].value,params['logRp_100'].value)
+            return self.line_integral_sinc(theta, map_interp)
+
+        out = minimize(obj,params, method='Nelder-Meade')
+        theta = np.array([out.params['m'].value,out.params['logRp_100'].value])
+        return theta
 
 def construct_grad(objkey, limits, N_cores=4, N_sample=10000):
 

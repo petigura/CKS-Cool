@@ -60,8 +60,8 @@ class OccurrencePerPrad(Occurrence2D):
     """
     xk = 'per'
     yk = 'prad'
-    xbw = log10(1 + 1)
-    ybw = log10(1 + 0.05)
+    xbw = log10(1 + 1) # Setting the bandwidth for period
+    ybw = log10(1 + 0.05) # Setting the bandwidth for radius 7%
     def __init__(self,*args):
         super(OccurrencePerPrad,self).__init__(*args)
         assert isinstance(self.comp,CompletenessPerPrad), \
@@ -110,8 +110,8 @@ class OccurrencePerPrad(Occurrence2D):
 class OccurrenceSincPrad(Occurrence2D):
     xk = 'sinc'
     yk = 'prad'
-    xbw = log10(1 + 1)
-    ybw = log10(1 + 0.05)
+    xbw = log10(1 + 1) # Setting the bandwidth for flux 
+    ybw = log10(1 + 0.05) # Setting the bandwidth for radius
     def __init__(self,*args):
         super(OccurrenceSincPrad,self).__init__(*args)
         assert isinstance(self.comp,CompletenessSincPrad), \

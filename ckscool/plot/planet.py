@@ -56,7 +56,8 @@ class NDPlotter(object):
         self.y = df[yk]
         self.xk = xk
         self.smass_lims = smass_lims
-        
+        self.bwy = log10(1+0.05)
+
         if xk=='koi_period':
             if zoom:
                 xmin = 1
@@ -74,7 +75,6 @@ class NDPlotter(object):
             xticks = [0.3,1,3,10,30,100,300]
             xlabel = 'Orbital Period (days)'
             self.bwx = log10(1 + 1)
-            self.bwy = log10(1+0.05)
             
         if xk=='giso_sinc':
             if zoom:
@@ -92,7 +92,6 @@ class NDPlotter(object):
             xticks = [1,3,10,30,100,300,1000,3000,10000]
             xlabel = 'Incident Bolometric Flux (Earth-units)'
             self.bwx = log10(1 + 1)
-            self.bwy = log10(1+0.05)
            
         if xk=='giso_smass':
             if zoom:
@@ -111,7 +110,7 @@ class NDPlotter(object):
             xticks = [0.5,0.7,1.0,1.4]
             xlabel = 'Stellar Mass (Solar-masses)'
             self.bwx = log10(1 + 0.15)
-            self.bwy = log10(1+0.05)
+
             
         if xk=='cks_smet':
             xerr = 0.15
@@ -129,7 +128,6 @@ class NDPlotter(object):
             xticks = [-0.5,-0.4,-0.3,-0.2,-0.1,0.0,0.1,0.2,0.3,0.4,0.5]
             xlabel = '[Fe/H]'
             self.bwx = 0.1
-            self.bwy = log10(1+0.05)
             xscale='lin'
             yscale='log'
 
