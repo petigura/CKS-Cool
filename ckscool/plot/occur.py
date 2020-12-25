@@ -201,15 +201,13 @@ class ORDPlotter(object):
         elif xk == 'giso_sinc':
             grad = ckscool.io.load_object('grad-sinc-prad_smass={0}-{1}'.format(smass_lims[0],smass_lims[1]),cache=1)
 
-        grad_chain = grad.grad_chain
-
-        grad_realisations = np.ndarray((grad_chain.shape[0],len(kx)))
-
-        for i in range(grad_realisations.shape[0]):
-            if xk == 'koi_period':
-                grad_realisations[i,:] = [grad.prad_per(j,grad_chain[i,2],grad_chain[i,3]) for j in kx]
-            if xk == 'giso_sinc':
-                grad_realisations[i,:] = [grad.prad_sinc(j,grad_chain[i,2],grad_chain[i,3]) for j in kx]
+        nchain = len(grad.grad_chain)
+        nx = len(kx)
+        grad_realisations = np.zeros( (nchain, nx) )
+        for i in range(nchain):
+            # 1 index corresponds to occurrence
+            params = grad.grad_chain[i][1].params
+            grad_realisations[i,:] = grad.func(params, kx)
 
         gradient_lims = np.percentile(grad_realisations, [16,84], axis=0)
 

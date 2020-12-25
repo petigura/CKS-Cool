@@ -944,14 +944,9 @@ def load_object(key,cache=0, verbose=1, N_cores=None):
             limits['smass2'] = float(smass2)
 
         N_cores = 8
-        if N_cores:
-            obj = ckscool.gradient.construct_grad(
-                objkey, limits, N_cores=N_cores, N_sample=1000
-            )
-        else:
-            obj = ckscool.gradient.construct_grad(
-                objkey, limits, N_sample=1000
-            )
+        obj = ckscool.gradient.construct_grad(
+            objkey, limits, N_cores=N_cores, N_sample=16
+        )
     
     elif objkey=='mps':
         if params.count('size-se'):

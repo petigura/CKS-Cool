@@ -56,7 +56,7 @@ class NDPlotter(object):
         self.y = df[yk]
         self.xk = xk
         self.smass_lims = smass_lims
-        self.bwy = log10(1+0.05)
+        self.bwy = log10(1+0.1)
 
         if xk=='koi_period':
             if zoom:
@@ -292,19 +292,20 @@ class ContourPlotter(object):
         elif xk == 'giso_sinc':
             objkey = 'grad-sinc-prad_smass={0}-{1}'.format(smass_lims[0],smass_lims[1])
         grad = ckscool.io.load_object(objkey,cache=1)
-        grad_chain = grad.grad_chain
-        grad_realisations = np.ndarray((grad_chain.shape[0],len(kx)))
-
-        for i in range(grad_realisations.shape[0]):
-            if xk == 'koi_period':
-                grad_realisations[i,:] = [grad.prad_per(j,grad_chain[i,0],grad_chain[i,1]) for j in kx]
-            if xk == 'giso_sinc':
-                grad_realisations[i,:] = [grad.prad_sinc(j,grad_chain[i,0],grad_chain[i,1]) for j in kx]
+        nchain = len(grad.grad_chain)
+        nx = len(kx)
+        grad_realisations = np.zeros( (nchain, nx) )
+        for i in range(nchain):
+            # 0 index corresponds to detections
+            params = grad.grad_chain[i][0].params
+            grad_realisations[i,:] = grad.func(params, kx)
 
         gradient_lims = np.percentile(grad_realisations, [16,84], axis=0)
         fill_between(
             kx, gradient_lims[0,:], gradient_lims[1,:], color='b', alpha=0.4
         )
+        axvline(log10(grad.x0))
+        axvline(log10(grad.x1))
         
 
         

@@ -1,33 +1,25 @@
 from __future__ import division
 import time
+
 import numpy as np
 import matplotlib.pyplot as plt
-
-from scipy import stats
-from scipy import interpolate
-from scipy import optimize
-from numpy import random as rand
-import corner
-from numpy import logspace, log10, arange, sqrt
 from joblib import Parallel, delayed
-from scipy import interpolate
-from scipy.interpolate import RegularGridInterpolator
-import cPickle as pickle
+from lmfit import minimize, Parameters
 import pandas as pd
-
+from scipy.interpolate import RegularGridInterpolator
 
 import ckscool.comp
 import ckscool.io
-import ckscool.grid
 import ckscool.occur
 import ckscool.plot.occur
-import ckscool.gradient
-from ckscool.plot.planet import NDPlotter
-from ckscool.plot.occur import ORDPlotter
-
 
 class Gradient(object):
+    """
+    Gradient 
 
+    base class to compute gradients
+    """
+    
     def __init__(self, objkey, smass_lims):
         self.objkey = objkey
         self.smass_lims = smass_lims
@@ -36,7 +28,8 @@ class Gradient(object):
 
         # first calculate detection gradient
         # resample with replacement (seeded)
-        plnt = plnt_full.sample(len(plnt_full),replace=True, random_state=iteration)
+        nplnt = len(plnt_full)
+        plnt = plnt_full.sample(nplnt, replace=True, random_state=iteration)
         if self.objkey=='grad-per-prad':
             Occurrence = ckscool.occur.OccurrencePerPrad
         elif self.objkey=='grad-sinc-prad':
@@ -50,18 +43,17 @@ class Gradient(object):
         )
         # produce arrays for gradient calculations
         if self.objkey=='grad-per-prad':
-            pl = NDPlotter(df,'koi_period',zoom=False)
+            pl = ckscool.plot.planet.NDPlotter(df,'koi_period',zoom=False)
         elif self.objkey=='grad-sinc-prad':
-            pl = NDPlotter(df,'giso_sinc',zoom=False)
+            pl = ckscool.plot.planet.NDPlotter(df,'giso_sinc',zoom=False)
         x, y, Z_det = pl.plot(gradient_array=True)
 
         # find line of least detection
         sol_det = self.find_gradient(x, y, Z_det)
 
-
         # then calculate occurrence gradient
         cp = pl.cp
-        pl = ORDPlotter(occ, cp)
+        pl = ckscool.plot.occur.ORDPlotter(occ, cp)
         x_occ, y_occ, Z_occ = pl.plot_ord(gradient_array=True)
         Z_comp, ntrials_min = pl.plot_completeness(gradient_array=True)
 
@@ -72,11 +64,9 @@ class Gradient(object):
 
         # find line of least occurrence
         sol_occ = self.find_gradient(x, y, Z_occ)
-
         print('{0} complete...'.format(iteration))
 
-        return [sol_det[0], sol_det[1], sol_occ[0], sol_occ[1]]
-
+        return [sol_det, sol_occ]
 
     def gradient_chain(self, N_cores, N_iter):
 
@@ -94,246 +84,128 @@ class Gradient(object):
         plnt = plnt.rename(columns=namemap)
         field = field[field.smass.between(smass1,smass2)]
         plnt = plnt[plnt.smass.between(smass1,smass2)]
-
         field = field.dropna(subset=ckscool.comp.__STARS_REQUIRED_COLUMNS__)
         nstars = len(field)
 
         # load completeness object
         if self.objkey=='grad-per-prad':
-            comp = ckscool.io.load_object('comp-per-prad_smass={0}-{1}'.format(smass1,smass2),cache=1)
+            key = 'comp-per-prad_smass={0}-{1}'.format(smass1,smass2)
         elif self.objkey=='grad-sinc-prad':
-            comp = ckscool.io.load_object('comp-sinc-prad_smass={0}-{1}'.format(smass1,smass2),cache=1)
+            key = 'comp-sinc-prad_smass={0}-{1}'.format(smass1,smass2)
+        comp = ckscool.io.load_object(key,cache=1)
 
         # compute gradient chain (parallelised)
         self.grad_chain = Parallel(n_jobs=N_cores)(delayed(self.resampled_gradient)(plnt, comp, nstars, i) for i in np.arange(N_iter))
-        #self.grad_chain = []
-        #for i in np.arange(N_iter):
-        #    self.grad_chain = self.resampled_gradient(plnt, comp, nstars, i)
-        self.grad_chain = np.array(self.grad_chain)
 
-    def gradient_file(self):
-
-        """
-        Writes gradient values (to be quoted in paper) to pandas dataframe
-        """
-
-        grad_chain = self.grad_chain
-
-        m_det_bounds = np.percentile(grad_chain[:,0], [16,50,84])
-        m_det_err = [m_det_bounds[2]-m_det_bounds[1], m_det_bounds[1]-m_det_bounds[0]]
-
-        m_occ_bounds = np.percentile(grad_chain[:,2], [16,50,84])
-        m_occ_err = [m_occ_bounds[2]-m_occ_bounds[1], m_occ_bounds[1]-m_occ_bounds[0]]
-
-        R0_det_bounds = np.percentile(grad_chain[:,1], [16,50,84])
-        R0_det_err = [10**R0_det_bounds[2]-10**R0_det_bounds[1], 10**R0_det_bounds[1]-10**R0_det_bounds[0]]
-
-        R0_occ_bounds = np.percentile(grad_chain[:,3], [16,50,84])
-        R0_occ_err = [10**R0_occ_bounds[2]-10**R0_occ_bounds[1], 10**R0_occ_bounds[1]-10**R0_occ_bounds[0]]
-
-        if self.objkey=='grad-per-prad':
-            data = {'m'        :  [m_det_bounds[1], m_occ_bounds[1]],
-                    'm_err1'   :  [m_det_err[0], m_occ_err[0]],
-                    'm_err2'   :  [-m_det_err[1], -m_occ_err[1]],
-                    'Rp10'     :  [10**R0_det_bounds[1], 10**R0_occ_bounds[1]],
-                    'Rp10_err1':  [R0_det_err[0], R0_occ_err[0]],
-                    'Rp10_err2':  [-R0_det_err[1], -R0_occ_err[1]],
-                    'map'      :  ['Detection', 'Occurrence']
-                    }
-
-        elif self.objkey=='grad-sinc-prad':
-            data = {'m'         :  [m_det_bounds[1], m_occ_bounds[1]],
-                    'm_err1'    :  [m_det_err[0], m_occ_err[0]],
-                    'm_err2'    :  [-m_det_err[1], -m_occ_err[1]],
-                    'Rp10'      :  [R0_det_bounds[1], R0_occ_bounds[1]],
-                    'Rp100_err1':  [10**R0_det_err[0], 10**R0_occ_err[0]],
-                    'Rp100_err2':  [-R0_det_err[1], -R0_occ_err[1]],
-                    'map'       :  ['Detection', 'Occurrence']
-                    }
-
-
-        self.output_data = pd.DataFrame(data=data)
-
-
-class GradientPerPrad(Gradient):
-
-
-    def prad_per(self,logP,m,logR_10):
-        """
-        Returns the value of the radius versus period line.
+    def line_integral(self, params, KDE):
+        """Return the line integral for a given line
 
         Arguments:
-        logP    : log period (days) value
-        m       : gradient
-        logR_10 : log intercept at 10 day period
 
-        Returns:
-        log R: log radius (R_earths)
-        """
+            params: array of parameters that will be passed to self.func
 
-        return m * logP + logR_10 - m
-
-
-    def line_integral_per(self, theta, KDE):
-
-        """
-        Return the line integral for a given straight line
-
-
-        Arguments:
-            theta:       array of [m,logR_10] where m is gradient and logR_10 is
-                        intercept at 10 days
-            occurence:   interpolated occurence / detection map, must be from the following -
-                        scipy.interpolate.RectBivariateSpline(S_array, R_array, occ)
+            KDE: interpolated occurence / detection map, must be from
+                        the following -
+                        scipy.interpolate.RectBivariateSpline(S_array,
+                        R_array, occ)
 
         Returns:
             Total line integral from P[min] to P[max] with contributions coming from
             the occurence map.
+
         """
 
-        m, logR_10 = theta
         nbins = 30
-        x0, x1 = log10(1), log10(100)
+        x0, x1 = np.log10(self.x0), np.log10(self.x1)
         xbins = np.linspace(x0, x1, nbins+1)
         xmid = 0.5 * ( xbins[1:] + xbins[:-1] )
-        y0 = self.prad_per(x0, m, logR_10)
-        y1 = self.prad_per(x1, m, logR_10)
-        ymid = self.prad_per(xmid, m, logR_10)
-
-        L = sqrt( (x1 - x0)**2 + (y1 - y0)**2 )
+        y0 = self.func(params, x0)
+        y1 = self.func(params, x1)
+        ymid = self.func(params, xmid)
+        L = np.sqrt( (x1 - x0)**2 + (y1 - y0)**2 )
         dl = L / nbins
         points = np.vstack([xmid, ymid]).T
         integral = np.sum(KDE(points) * dl)
         nintegral = integral / L # normalized integral
         return nintegral
 
-    def find_gradient(self, logP_array, logR_array, KDE):
+    def find_gradient(self, x, y, z):
         """
-        Runs a minimisation algorithm to find the gradient and intercept that
-        minimise the line integral through the occurence map.
-
-        Arguments:
-            P_array:        Array of per values used to create meshgrid
-            R_array:        Array of radii values used to create meshgrid
-            occurence:      Occurence defined on meshgrid of np.meshgrid(P_array, R_array)
-
-        Returns:
-            Solution to minimisation problem:  [m, logR_10]
         """
         # KDE interpolation
-        map_interp = RegularGridInterpolator((logP_array, logR_array), KDE)
+        map_interp = RegularGridInterpolator((x, y), z)
 
+        def obj(params):
+            return self.line_integral(params, map_interp)
+
+        out = minimize(obj, self.params, method='Nelder-Meade')
+        return out
+    
+class GradientPerPrad(Gradient):
+    def __init__(self, *args):
+        super(GradientPerPrad, self).__init__(*args)
         params = Parameters()
         params.add('m', value=-0.01,min=-0.15,max=0.15)
-        params.add('logRp_10', value=log10(1.7),min=log10(1.4),max=log10(2.3))
-        def obj(params):
-            theta = (params['m'].value,params['logRp_10'].value)
-            return self.line_integral_per(theta, map_interp)
+        params.add('logR_10', value=np.log10(1.7),min=np.log10(1.4),max=np.log10(2.3))
+        self.params = params
+        self.x0 = 1
+        self.x1 = 100
+        
+    
+    def func(self,params, logP):
+        """Returns the value of the radius versus period line.
+        """
 
-        out = minimize(obj,params, method='Nelder-Meade')
-        theta = np.array([out.params['m'].value,out.params['logRp_10'].value])
-        return theta
-
-
-from lmfit import minimize, Parameters
-
-
+        p = params.valuesdict()
+        return p['m'] * logP + p['logR_10'] - p['m']
 
 class GradientSincPrad(Gradient):
-
-    def prad_sinc(self,logS,m,logR_100):
-        """
-        Returns the value of the radius versus sinc line.
-
-        Arguments:
-        logS     : log bolometric flux (Earth units) value
-        m        : gradient
-        logR_100 : log intercept at 100 x Earth incident bolometric flux
-
-        Returns:
-        log R: log radius (R_earths)
-        """
-
-        return m * logS + logR_100 - 2*m
-
-
-    def line_integral_sinc(self, theta, KDE):
-        """
-        Return the line integral for a given straight line
-
-
-        Arguments:
-            theta:       array of [m,logR_100] where m is gradient and logR_100 is
-                         intercept at 100 x earth incident flux
-            occurence:   interpolated occurence / detection map, must be from the following -
-                         scipy.interpolate.RectBivariateSpline(S_array, R_array, occ)
-
-        Returns:
-            Total line integral from S[min] to S[max] with contributions coming from
-            the occurence map.
-        """
-        
-        m, logR_100 = theta
-        nbins = 30
-        x0, x1 = log10(3), log10(100)
-        xbins = np.linspace(x0, x1, nbins+1)
-        xmid = 0.5 * ( xbins[1:] + xbins[:-1] )
-        y0 = self.prad_sinc(x0, m, logR_100)
-        y1 = self.prad_sinc(x1, m, logR_100)
-        ymid = self.prad_sinc(xmid, m, logR_100)
-
-        L = sqrt( (x1 - x0)**2 + (y1 - y0)**2 )
-        dl = L / nbins
-        points = np.vstack([xmid, ymid]).T
-        integral = np.sum(KDE(points) * dl)
-        nintegral = integral / L # normalized integral
-        return nintegral
-
-
-    def find_gradient(self, logS_array, logR_array, KDE):
-        """
-        Runs a minimisation algorithm to find the gradient and intercept that
-        minimise the line integral through the occurence map.
-
-        Arguments:
-            S_array:        Array of sinc values used to create meshgrid
-            R_array:        Array of radii values used to create meshgrid
-            occurence:      Occurence defined on meshgrid of np.meshgrid(P_array, R_array)
-
-        Returns:
-            Solution to minimisation problem:  [m, logS_100]
-        """
-        # KDE interpolation
-        map_interp = RegularGridInterpolator((logS_array, logR_array), KDE)
-
-
+    def __init__(self, *args):
+        super(GradientSincPrad, self).__init__(*args)
         params = Parameters()
-        params.add('m', value=0.05,min=-0.1,max=0.2)
-        params.add('logRp_100', value=log10(1.7),min=log10(1.4),max=log10(2.4))
-        def obj(params):
-            theta = (params['m'].value,params['logRp_100'].value)
-            return self.line_integral_sinc(theta, map_interp)
+        params.add('m', value=0.05, min=-0.05, max=0.2)
+        params.add('logR_100', value=np.log10(2.0), min=np.log10(1.5), max=np.log10(2.5))
+        self.params = params
+        self.x0 = 10
+        self.x1 = 1000
+    
+    def func(self,params, logS):
+        """Returns the value of the radius versus flux line.
+        """
 
-        out = minimize(obj,params, method='Nelder-Meade')
-        theta = np.array([out.params['m'].value,out.params['logRp_100'].value])
-        return theta
+        p = params.valuesdict()
+        return p['m'] * logS + p['logR_100'] - 2 * p['m']
 
 def construct_grad(objkey, limits, N_cores=4, N_sample=10000):
-
-    # constructs Gradient object, calculates chains 
-    # and makes output dataframe
+    # constructs Gradient object, calculates chains and makes output
+    # dataframe
 
     if limits.has_key('smass1'):
         smass1 = limits['smass1']  
         smass2 = limits['smass2']
 
     if objkey=='grad-per-prad':
-        Gradient = GradientPerPrad(objkey, [smass1, smass2])
+        grad = GradientPerPrad(objkey, [smass1, smass2])
     if objkey=='grad-sinc-prad':
-        Gradient = GradientSincPrad(objkey, [smass1, smass2])
+        grad = GradientSincPrad(objkey, [smass1, smass2])
+        if [smass1, smass2] == [0.5,0.7]:
+            x0 = 3
+            x1 = 100
+        elif [smass1, smass2] == [0.7,1.0]:
+            x0 = 10
+            x1 = 300
+        elif [smass1, smass2] == [1.0,1.4]:
+            x0 = 30
+            x1 = 1000
+        elif [smass1, smass2] == [0.5,1.4]:
+            x0 = 3
+            x1 = 1000
+        else:
+            assert False, "mass limits not supported"
 
-    Gradient.gradient_chain(N_cores, N_sample)
-    Gradient.gradient_file()
-
-    return Gradient
+        grad.x0 = x0 
+        grad.x1 = x1
+        
+    grad.gradient_chain(N_cores, N_sample)
+    return grad
 
