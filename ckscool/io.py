@@ -936,17 +936,8 @@ def load_object(key,cache=0, verbose=1, N_cores=None):
         fit.run_mcmc(short=False)
         obj = fit
 
-    elif objkey=='grad-per-prad' or objkey=='grad-sinc-prad':
-        limits = {}
-        if params.count('smass'):
-            smass1, smass2 = params.replace('smass=','').split('-')
-            limits['smass1'] = float(smass1)
-            limits['smass2'] = float(smass2)
-
-        N_cores = 8
-        obj = ckscool.gradient.construct_grad(
-            objkey, limits, N_cores=N_cores, N_sample=16
-        )
+    elif objkey.count('grad'):
+        obj = ckscool.gradient.load_gradient_chain(key)
     
     elif objkey=='mps':
         if params.count('size-se'):

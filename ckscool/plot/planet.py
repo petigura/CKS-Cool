@@ -17,7 +17,12 @@ def fig_sample(plot_gradient=False, **kwargs):
     # Period
     sca(axL[0,0])
     pl = NDPlotter(df,'koi_period',smass_lims=[0.5,1.4],**kwargs)
-    pl.plot(plot_gradient=plot_gradient)
+    pl.plot()
+    if plot_gradient:
+        key = 'grad-per-prad-det_smass=0.5-1.4'
+        grads = ckscool.io.load_object(key, cache=1) 
+        pl.cp.plot_gradients(grads)
+        
     fig_label('a')
     ax = axes([0.89, 0.85, 0.008, 0.1])
     cbar = colorbar(pl.qc,cax=ax,format='%.1f')
@@ -27,7 +32,12 @@ def fig_sample(plot_gradient=False, **kwargs):
     # Sinc
     sca(axL[0,1])
     pl = NDPlotter(df,'giso_sinc',smass_lims=[0.5,1.4],**kwargs)
-    pl.plot(plot_gradient=plot_gradient)
+    pl.plot()
+    if plot_gradient:
+        key = 'grad-sinc-prad-det_smass=0.5-1.4'
+        grads = ckscool.io.load_object(key, cache=1) 
+        pl.cp.plot_gradients(grads)
+
     xl = xlim()
     xlim(xl[1],xl[0])
     fig_label('b')
@@ -56,7 +66,7 @@ class NDPlotter(object):
         self.y = df[yk]
         self.xk = xk
         self.smass_lims = smass_lims
-        self.bwy = log10(1+0.1)
+        self.bwy = log10(1+0.07)
 
         if xk=='koi_period':
             if zoom:
@@ -74,7 +84,7 @@ class NDPlotter(object):
             yscale='log'
             xticks = [0.3,1,3,10,30,100,300]
             xlabel = 'Orbital Period (days)'
-            self.bwx = log10(1 + 1)
+            self.bwx = log10(1 + 0.5)
             
         if xk=='giso_sinc':
             if zoom:
@@ -149,7 +159,7 @@ class NDPlotter(object):
         self.ylabel = ylabel
         self.xlabel = xlabel
 
-    def plot(self, plot_gradient=False, gradient_array=False):
+    def plot(self, gradient_array=False):
         ds = self.cp.meshgrid()
         Z = gaussian_2d_kde(array(ds.kxc), array(ds.kyc), self.kx,
                             self.ky, self.bwx, self.bwy)
@@ -160,18 +170,18 @@ class NDPlotter(object):
     
 
         ds['Z'] = (['kx','ky'],Z)
-        qc = self.cp.contour(ds['Z'], normalize=True, cmap=plt.cm.afmhot_r,zorder=0)
+        qc = self.cp.contour(
+            ds['Z'], normalize=True, cmap=plt.cm.afmhot_r,zorder=0
+        )
         self.qc = qc
-        self.cp.errorbar(self.x, self.y, yerr=None, fmt='o',
-                         mfc='none', elinewidth=0, ms=2, mew=0.4,
-                         mec='w', zorder=9)
+        self.cp.errorbar(
+            self.x, self.y, yerr=None, fmt='o', mfc='none', elinewidth=0,
+            ms=2, mew=0.4, mec='w', zorder=9
+        )
 
         self.cp.errorbar(self.x, self.y, yerr=None, fmt='o',
                          mfc='none', elinewidth=0, ms=2, mew=0.2,
                          mec='k', zorder=10)
-
-        if plot_gradient:
-            self.cp.gradient_plot(self.xk, self.smass_lims)
 
         self.cp.yticks(self.yticks)
         self.cp.xticks(self.xticks)
@@ -278,34 +288,22 @@ class ContourPlotter(object):
         
         errorbar(x,y, **kwargs)
 
-    def gradient_plot(self, xk, smass_lims):
-        if self.xscale=='log':
-            kx = np.linspace(log10(self.xmin), log10(self.xmax), self._kde_nx)
-            x = 10**kx
-        else:
-            x = kx = np.linspace(self.xmin, self.xmax, self._kde_nx)
-
-        if xk == 'koi_period':
-            objkey = 'grad-per-prad_smass={0}-{1}'.format(
-                smass_lims[0],smass_lims[1]
-            )
-        elif xk == 'giso_sinc':
-            objkey = 'grad-sinc-prad_smass={0}-{1}'.format(smass_lims[0],smass_lims[1])
-        grad = ckscool.io.load_object(objkey,cache=1)
-        nchain = len(grad.grad_chain)
-        nx = len(kx)
-        grad_realisations = np.zeros( (nchain, nx) )
-        for i in range(nchain):
-            # 0 index corresponds to detections
-            params = grad.grad_chain[i][0].params
-            grad_realisations[i,:] = grad.func(params, kx)
-
-        gradient_lims = np.percentile(grad_realisations, [16,84], axis=0)
-        fill_between(
-            kx, gradient_lims[0,:], gradient_lims[1,:], color='b', alpha=0.4
-        )
+    def plot_gradient(self, grad):
+        kx = np.linspace(log10(grad.x0), log10(grad.x1), 100)
+        ky = grad.func(grad.out.params, kx)
+        plot(kx,ky)
         axvline(log10(grad.x0))
         axvline(log10(grad.x1))
+        
+    def plot_gradients(self, grads):
+        grad = grads[0]
+        kx = np.linspace(log10(grad.x0), log10(grad.x1), 100)
+        ky = []
+        for grad in grads:
+            ky += [grad.func(grad.out.params, kx)]
+        ky = np.vstack(ky)
+        lo, hi = np.percentile(ky,[16,84],axis=0)
+        fill_between(kx, lo, hi, color='b', alpha=0.4)
         
 
         

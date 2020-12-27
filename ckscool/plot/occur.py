@@ -78,19 +78,27 @@ class SixPlotter(object):
                 }
             )
             pl = NDPlotter(df,self.xk,smass_lims=[_mass1,_mass2],zoom=True)
-            pl.plot(plot_gradient)
+            pl.plot()
+
+            gradkey = key.replace('occur','grad').replace('prad','prad-det')
+            grads = ckscool.io.load_object(gradkey,cache=1)
+            pl.cp.plot_gradients(grads)
+            
             cbar = colorbar(pl.qc,shrink=0.5,format='%.1f')
             cbar.set_label('$dN/d \log P/ d \log R_p$',size='x-small')
             cbar.ax.tick_params(labelsize='xx-small')
-
+            
+            
             # Occurrence rate 
             sca(axo)
             cp = pl.cp
             pl = self.ORDPlotter(occ, cp)
             pl.plot_ord()
+            pl.plot_completeness()
+            '''
             if plot_gradient:
                 pl.gradient_plot(self.xk, [_mass1,_mass2])
-            pl.plot_completeness()
+            '''
             title = '$M_\star = {}-{}\, M_\odot$ '.format(_mass1,_mass2)
             setp(axL[i,:],title=title)
             i+=1
@@ -367,7 +375,6 @@ def plot_sinc_rates(fit, logsinc1, logsinc2, dlogsinc, fmtkey, plot_band=True, b
         y = y * dlogsinc / np.log10(np.e) 
         lo,hi = np.percentile(y,[16,84],axis=0)
         fill_between(sinci,lo,hi, color=ptcolor[fmtkey],alpha=0.3)
-
 
 def plot_rates(xk, occur, fmtkey, fac=1.0, **kw):
     """

@@ -3,10 +3,10 @@ import time
 
 import numpy as np
 import matplotlib.pyplot as plt
-from joblib import Parallel, delayed
 from lmfit import minimize, Parameters
 import pandas as pd
 from scipy.interpolate import RegularGridInterpolator
+from joblib import Parallel, delayed
 
 import ckscool.comp
 import ckscool.io
@@ -23,79 +23,6 @@ class Gradient(object):
     def __init__(self, objkey, smass_lims):
         self.objkey = objkey
         self.smass_lims = smass_lims
-
-    def resampled_gradient(self, plnt_full, comp, nstars, iteration):
-
-        # first calculate detection gradient
-        # resample with replacement (seeded)
-        nplnt = len(plnt_full)
-        plnt = plnt_full.sample(nplnt, replace=True, random_state=iteration)
-        if self.objkey=='grad-per-prad':
-            Occurrence = ckscool.occur.OccurrencePerPrad
-        elif self.objkey=='grad-sinc-prad':
-            Occurrence = ckscool.occur.OccurrenceSincPrad
-        occ = Occurrence(plnt, comp, nstars)
-        df = occ.plnt.copy()
-        df = df.rename(
-            columns={
-                'prad':'gdir_prad','per':'koi_period','sinc':'giso_sinc'
-            }
-        )
-        # produce arrays for gradient calculations
-        if self.objkey=='grad-per-prad':
-            pl = ckscool.plot.planet.NDPlotter(df,'koi_period',zoom=False)
-        elif self.objkey=='grad-sinc-prad':
-            pl = ckscool.plot.planet.NDPlotter(df,'giso_sinc',zoom=False)
-        x, y, Z_det = pl.plot(gradient_array=True)
-
-        # find line of least detection
-        sol_det = self.find_gradient(x, y, Z_det)
-
-        # then calculate occurrence gradient
-        cp = pl.cp
-        pl = ckscool.plot.occur.ORDPlotter(occ, cp)
-        x_occ, y_occ, Z_occ = pl.plot_ord(gradient_array=True)
-        Z_comp, ntrials_min = pl.plot_completeness(gradient_array=True)
-
-        # set low completeness area to null occurrence
-        Z_comp[Z_comp <= ntrials_min] = 0.0
-        Z_comp[Z_comp >  ntrials_min] = 1.0
-        Z_occ = Z_occ * Z_comp
-
-        # find line of least occurrence
-        sol_occ = self.find_gradient(x, y, Z_occ)
-        print('{0} complete...'.format(iteration))
-
-        return [sol_det, sol_occ]
-
-    def gradient_chain(self, N_cores, N_iter):
-
-        [smass1, smass2] = self.smass_lims
-
-        # load planet sample
-        field = ckscool.io.load_table('field-cuts',cache=1)
-        field = field[~field.isany]
-        field = field.rename(columns={'ber20_srad':'srad','ber20_smass':'smass'})
-        plnt = ckscool.io.load_table('planets-cuts2')
-        plnt = plnt[~plnt.isany]
-
-        namemap = {'gdir_prad':'prad','koi_period':'per','giso_smass':'smass',
-                    'giso_sinc':'sinc'}
-        plnt = plnt.rename(columns=namemap)
-        field = field[field.smass.between(smass1,smass2)]
-        plnt = plnt[plnt.smass.between(smass1,smass2)]
-        field = field.dropna(subset=ckscool.comp.__STARS_REQUIRED_COLUMNS__)
-        nstars = len(field)
-
-        # load completeness object
-        if self.objkey=='grad-per-prad':
-            key = 'comp-per-prad_smass={0}-{1}'.format(smass1,smass2)
-        elif self.objkey=='grad-sinc-prad':
-            key = 'comp-sinc-prad_smass={0}-{1}'.format(smass1,smass2)
-        comp = ckscool.io.load_object(key,cache=1)
-
-        # compute gradient chain (parallelised)
-        self.grad_chain = Parallel(n_jobs=N_cores)(delayed(self.resampled_gradient)(plnt, comp, nstars, i) for i in np.arange(N_iter))
 
     def line_integral(self, params, KDE):
         """Return the line integral for a given line
@@ -129,7 +56,7 @@ class Gradient(object):
         nintegral = integral / L # normalized integral
         return nintegral
 
-    def find_gradient(self, x, y, z):
+    def compute_gradient(self, x, y, z):
         """
         """
         # KDE interpolation
@@ -138,8 +65,8 @@ class Gradient(object):
         def obj(params):
             return self.line_integral(params, map_interp)
 
-        out = minimize(obj, self.params, method='Nelder-Meade')
-        return out
+        self.out = minimize(obj, self.params, method='Nelder-Meade')
+        #self.out = minimize(obj, self.params, method='brute')
     
 class GradientPerPrad(Gradient):
     def __init__(self, *args):
@@ -148,9 +75,8 @@ class GradientPerPrad(Gradient):
         params.add('m', value=-0.01,min=-0.15,max=0.15)
         params.add('logR_10', value=np.log10(1.7),min=np.log10(1.4),max=np.log10(2.3))
         self.params = params
-        self.x0 = 1
-        self.x1 = 100
-        
+        self.x0 = 3
+        self.x1 = 30
     
     def func(self,params, logP):
         """Returns the value of the radius versus period line.
@@ -164,7 +90,7 @@ class GradientSincPrad(Gradient):
         super(GradientSincPrad, self).__init__(*args)
         params = Parameters()
         params.add('m', value=0.05, min=-0.05, max=0.2)
-        params.add('logR_100', value=np.log10(2.0), min=np.log10(1.5), max=np.log10(2.5))
+        params.add('logR_100', value=np.log10(1.7), min=np.log10(1.5), max=np.log10(2.5))
         self.params = params
         self.x0 = 10
         self.x1 = 1000
@@ -176,17 +102,33 @@ class GradientSincPrad(Gradient):
         p = params.valuesdict()
         return p['m'] * logS + p['logR_100'] - 2 * p['m']
 
-def construct_grad(objkey, limits, N_cores=4, N_sample=10000):
+def load_gradient(objkey, seed=None, full_output=False):
     # constructs Gradient object, calculates chains and makes output
     # dataframe
 
-    if limits.has_key('smass1'):
-        smass1 = limits['smass1']  
-        smass2 = limits['smass2']
-
-    if objkey=='grad-per-prad':
+    s1, s2 = objkey.split('_')
+    name, xk, yk, mode = s1.split('-')
+    smass1, smass2 = s2.replace('smass=','').split('-')
+    smass1, smass2 = float(smass1),float(smass2)
+    occkey = ( objkey.replace('grad','occur')
+               .replace('-det','')
+               .replace('-occ','') )
+                
+    occ = ckscool.io.load_object(occkey,cache=1,verbose=0)
+    plnt = occ.plnt.copy()
+    nplnt = len(plnt)
+    if seed is not None:
+        print("seed = {}".format(seed))
+        plnt = plnt.sample(nplnt, replace=True, random_state=seed)
+        
+    if xk=='per':
+        ndplotterkey = 'koi_period'
+        Occurrence = ckscool.occur.OccurrencePerPrad
         grad = GradientPerPrad(objkey, [smass1, smass2])
-    if objkey=='grad-sinc-prad':
+
+    elif xk=='sinc':
+        ndplotterkey = 'giso_sinc'
+        Occurrence = ckscool.occur.OccurrenceSincPrad
         grad = GradientSincPrad(objkey, [smass1, smass2])
         if [smass1, smass2] == [0.5,0.7]:
             x0 = 3
@@ -205,7 +147,39 @@ def construct_grad(objkey, limits, N_cores=4, N_sample=10000):
 
         grad.x0 = x0 
         grad.x1 = x1
-        
-    grad.gradient_chain(N_cores, N_sample)
+
+    namemap = {'prad':'gdir_prad','per':'koi_period','sinc':'giso_sinc'}
+    pl = ckscool.plot.planet.NDPlotter(
+        plnt.rename(columns=namemap),ndplotterkey,zoom=False
+    )
+    if mode=='det':
+        x, y, Z_det = pl.plot(gradient_array=True)
+        grad.compute_gradient(x, y, Z_det)
+
+    if mode=='occ':
+        occ = Occurrence(plnt, occ.comp, occ.nstars)
+        cp = pl.cp
+        pl = ckscool.plot.occur.ORDPlotter(occ, cp)
+        x_occ, y_occ, Z_occ = pl.plot_ord(gradient_array=True)
+        Z_comp, ntrials_min = pl.plot_completeness(gradient_array=True)
+
+        # set low completeness area to null occurrence
+        Z_comp[Z_comp <= ntrials_min] = 0.0
+        Z_comp[Z_comp >  ntrials_min] = 1.0
+        Z_occ = Z_occ * Z_comp
+
+        # find line of least occurrence
+        grad.compute_gradient(x, y, Z_occ)
+
+    if full_output:
+        return grad, pl    
+
     return grad
 
+
+def load_gradient_chain(key):
+    niter = 128
+    Ncores = 8
+    func = lambda i : load_gradient(key, seed=i)
+    obj = Parallel(n_jobs=Ncores)(delayed(func)(i) for i in range(niter))
+    return obj
