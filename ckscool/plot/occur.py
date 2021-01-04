@@ -87,17 +87,21 @@ def fig_occur_per():
             )
             fit = ckscool.io.load_object(key,cache=1)
             fmtkey = 'smass{}'.format(i+1)
-            plot_per_rates(fit,log10(xlim_points[0]),log10(xlim_points[1])+0.1,dlogper,fmtkey)
-            s = '$M_\star$ = {}$-${} $M_\odot$'.format(smass1, smass2)
-            text(0.6,0.15 - i*0.05,s,color=ptcolor[fmtkey],transform=ax.transAxes)
+            plot_per_rates(
+                fit, log10(xlim_points[0]), log10(xlim_points[1])+0.1,
+                dlogper,fmtkey
+            )
+            if size=='se':
+                s = '$M_\star$ = {}$-${} $M_\odot$'.format(smass1, smass2)
+                text(0.6,0.15 - i*0.05,s,color=ptcolor[fmtkey],transform=ax.transAxes)
         title(_title)
             
     sca(axL[0])
-    setp(axL, xlabel='Orbital Period', ylim=(1e-4,1e0))
+    setp(axL, xlabel='Orbital Period (days)', ylim=(1e-4,1e0))
     setp(
         axL[0],
         ylabel = 'Planets per Star per {} dex Period Interval'.format(dlogper),
-        xlim =(1,100),
+        xlim =(1,300),
     )
     setp(axL[1], xlim =(1,300))
     tight_layout(True)
@@ -112,9 +116,14 @@ def fig_occur_sinc():
         smass = [0.5,0.7,1.0,1.4]
         if size=='se':
             prad1, prad2 = 1.0, 1.7
+            _title = 'Super-Earths'
+            xlim_points = [1,1e4]
         elif size=='sn':
             prad1, prad2 = 1.7, 4.0
+            _title = 'Sub-Neptunes'
+            xlim_points = [1,1e4]
 
+        _title += ' ($R_p$ = {}$-${} $R_\oplus$)'.format(prad1,prad2) 
         dlogsinc = 0.5
         for i in range(3):
             smass1, smass2 = smass[i],smass[i+1]
@@ -123,11 +132,15 @@ def fig_occur_sinc():
             )
             fit = ckscool.io.load_object(key,cache=1)
             fmtkey = 'smass{}'.format(i+1)
-            plot_sinc_rates(fit,log10(1),log10(10000)+0.1,dlogsinc,fmtkey)
+            plot_sinc_rates(
+                fit, log10(xlim_points[0]), log10(xlim_points[1])+0.1,
+                dlogsinc, fmtkey
+            )
             loglog()
+        title(_title)
 
     sca(axL[0])
-    setp(axL, xlabel='Incident Flux', ylim=(1e-4,1e0))
+    setp(axL, xlabel='Incident Stellar Flux (Earth-units)', ylim=(1e-4,1e0))
     setp(
         axL[0],
         ylabel = 'Planets per Star per {} dex Flux Interval'.format(dlogsinc),
@@ -377,7 +390,7 @@ def plot_sinc_rates(fit, logsinc1, logsinc2, dlogsinc, fmtkey, plot_band=True, b
 
     rates = pd.DataFrame(rates)    
     rates = pd.concat([df,rates],ignore_index=False,axis=1)
-    sinci = np.logspace(np.log10(1),np.log10(10000),300)
+    sinci = np.logspace(np.log10(fit.x1),np.log10(fit.x2),300)
     ckscool.plot.occur.plot_rates('sincc',rates,fmtkey)
     if hasattr(fit,'mi'):
         f = 10**fit.mi.params['logf']
