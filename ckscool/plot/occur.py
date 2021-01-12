@@ -60,7 +60,7 @@ def fig_mean_planet_size():
 def fig_occur_per():
     sns.set_context('paper',font_scale=1.1)
     fig, axL = subplots(ncols=2,figsize=(8,4),sharey=True)
-    sizes = ['se','sn']
+    sizes = ['sn','se']
     for i in range(2):
         loglog()
         size = sizes[i]
@@ -109,7 +109,7 @@ def fig_occur_per():
 def fig_occur_sinc():
     sns.set_context('paper',font_scale=1.1)
     fig, axL = subplots(ncols=2,figsize=(8,4),sharey=True)
-    sizes = ['se','sn']
+    sizes = ['sn','se']
     for i in range(2):
         size = sizes[i]
         sca(axL[i])
