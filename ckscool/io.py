@@ -835,10 +835,10 @@ def load_object(key,cache=0, verbose=1, N_cores=None):
         prad1 = float(prad1)
         prad2 = float(prad2)
         if params.count('prad=1.0-1.7'):
-            per1 = 1
+            per1 = 0.3
             per2 = 30
         elif params.count('prad=1.7-4.0'):
-            per1 = 1
+            per1 = 0.3
             per2 = 300
         else:
             assert False,'key not recognized'

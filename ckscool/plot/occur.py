@@ -70,11 +70,11 @@ def fig_occur_per():
         if size=='se':
             prad1, prad2 = 1.0, 1.7
             _title = 'Super-Earths'
-            xlim_points = [1,100]
+            xlim_points = [0.3,100]
         elif size=='sn':
             prad1, prad2 = 1.7, 4.0
             _title = 'Sub-Neptunes'
-            xlim_points = [1,300]
+            xlim_points = [0.3,300]
 
         _title += ' ($R_p$ = {}$-${} $R_\oplus$)'.format(prad1,prad2) 
             
@@ -101,9 +101,9 @@ def fig_occur_per():
     setp(
         axL[0],
         ylabel = 'Planets per Star per {} dex Period Interval'.format(dlogper),
-        xlim =(1,300),
+        xlim =(0.3,300),
     )
-    setp(axL[1], xlim =(1,300))
+    setp(axL[1], xlim =(0.3,300))
     tight_layout(True)
     
 def fig_occur_sinc():
