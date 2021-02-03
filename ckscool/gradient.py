@@ -24,7 +24,7 @@ class Gradient(object):
         self.objkey = objkey
         self.smass_lims = smass_lims
 
-    def line_integral(self, params, KDE):
+    def line_integral(self, params, KDE, width=0):
         """Return the line integral for a given line
 
         Arguments:
@@ -49,11 +49,23 @@ class Gradient(object):
         y0 = self.func(params, x0)
         y1 = self.func(params, x1)
         ymid = self.func(params, xmid)
+        '''
         L = np.sqrt( (x1 - x0)**2 + (y1 - y0)**2 )
         dl = L / nbins
         points = np.vstack([xmid, ymid]).T
         integral = np.sum(KDE(points) * dl)
         nintegral = integral / L # normalized integral
+        '''
+        if width==0:
+            points = np.vstack([xmid, ymid]).T
+        if width > 0:
+            nbinsy = 5
+            dy = np.linspace(-0.5*width, 0.5*width, nbinsy)
+            ymid = ymid.reshape(-1,1) + dy.reshape(1,-1)
+            xmid = np.vstack([xmid] * nbinsy)
+            points = np.array([xmid.flatten(),ymid.flatten()]).T
+            
+        nintegral = np.sum(KDE(points) )
         return nintegral
 
     def compute_gradient(self, x, y, z):
@@ -72,7 +84,7 @@ class GradientPerPrad(Gradient):
     def __init__(self, *args):
         super(GradientPerPrad, self).__init__(*args)
         params = Parameters()
-        params.add('m', value=-0.01,min=-0.15,max=0.15)
+        params.add('m', value=-0.01,min=-0.25,max=0.15)
         params.add('logR_10', value=np.log10(1.7),min=np.log10(1.4),max=np.log10(2.3))
         self.params = params
         self.x0 = 3
@@ -156,6 +168,7 @@ def load_gradient(objkey, seed=None, full_output=False):
         x, y, Z_det = pl.plot(gradient_array=True)
         grad.compute_gradient(x, y, Z_det)
 
+        
     if mode=='occ':
         occ = Occurrence(plnt, occ.comp, occ.nstars)
         cp = pl.cp
