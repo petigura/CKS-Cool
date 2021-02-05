@@ -55,7 +55,140 @@ def fig_sample(plot_gradient=False, **kwargs):
     fig_label('d')
     tight_layout(True)
 
+
+def fig_gupta_comparison(plot_gradient=False, **kwargs):
+    sns.set_context('paper',font_scale=1.0)
+    fig,axL = subplots(ncols=3,nrows=2,figsize=(10,6))
+
+    kwline = dict(linestyle='--',color='white')
+    df = ckscool.io.load_table('planets-cuts2',cache=1)
+    df = df[~df.isany]
+
+    # Mass
+    pl = NDPlotter(df,'giso_smass',zoom=True,**kwargs)
+    xi = linspace(log10(0.5),log10(1.4))
+    yi = 0.33 * xi + log10(1.6)
+
+    sca(axL[0,0])
+    pl.plot()
+    plot(xi,yi,**kwline)
+
+    sca(axL[1,0])
+    pl.plot(column_normalize=True)
+    plot(xi,yi,**kwline)
+    
+    # Metalicity
+    pl = NDPlotter(df,'cks_smet',zoom=True)
+    xi = linspace(-0.4,0.4)
+    yi = 0.1 * xi + log10(2.3)
+
+    sca(axL[0,1])
+    pl.plot()
+    plot(xi,yi,**kwline)
+
+    sca(axL[1,1])
+    pl.cp.xmin=-0.3
+    pl.cp.xmax=0.3
+    pl.plot(column_normalize=True)
+    pl.cp.xlim(-0.4,0.4)
+    plot(xi,yi,**kwline)
+    
+    # Age
+    df = ckscool.io.load_table('planets-cuts2',cache=1)
+    df = df[~df.isany]
+    df = df.query('cks_steff > 5500')
+    pl = NDPlotter(df,'giso_sage',zoom=True)
+
+    xi = linspace(log10(1),log10(10))
+    yi = -0.1 * xi + log10(2.5)
+    sca(axL[0,2])
+    pl.plot()
+    pl.cp.xlim(1,10)
+    plot(xi,yi,**kwline)
+
+    sca(axL[1,2])
+
+    pl.cp.xmin=1.2
+    pl.cp.xmax=10
+    pl.plot(column_normalize=True)
+    pl.cp.xlim(1,10)
+    plot(xi,yi,**kwline)
+    tight_layout(True)
+
+'''    
+    
+    
+
+plot(df.giso_slogage,df.gdir_prad,'.')
+
+# Period
+#sca(axL[0,0])
+
+
+pl = NDPlotter(df,'giso_sage',zoom=True)
+
+
+
+df = ckscool.io.load_table('planets-cuts2',cache=1)
+df = df[~df.isany]
+#df = df.query('-0.2 < cks_smet < 0.2 and 0.5 < giso_smass < 1.0')
+pl = NDPlotter(df,'cks_smet',zoom=True)
+pl.cp.xmin=-0.35
+pl.cp.xmax=0.35
+pl.plot(column_normalize=True)
+pl.cp.xlim(-0.4,0.4)
+
+
+
+figure()
+
+pl.plot(column_normalize=False)
+
+
+
+    
+    # Period
+    sca(axL[0,0])
+    pl = NDPlotter(df,'koi_period',smass_lims=[0.5,1.4],**kwargs)
+    pl.plot()
+    if plot_gradient:
+        key = 'grad-per-prad-det_smass=0.5-1.4'
+        grads = ckscool.io.load_object(key, cache=1) 
+        pl.cp.plot_gradients(grads)
         
+    fig_label('a')
+    ax = axes([0.89, 0.85, 0.008, 0.1])
+    cbar = colorbar(pl.qc,cax=ax,format='%.1f')
+    cbar.set_label('relative density',size='x-small')
+    cbar.ax.tick_params(labelsize='xx-small')
+
+    # Sinc
+    sca(axL[0,1])
+    pl = NDPlotter(df,'giso_sinc',smass_lims=[0.5,1.4],**kwargs)
+    pl.plot()
+    if plot_gradient:
+        key = 'grad-sinc-prad-det_smass=0.5-1.4'
+        grads = ckscool.io.load_object(key, cache=1) 
+        pl.cp.plot_gradients(grads)
+
+    xl = xlim()
+    xlim(xl[1],xl[0])
+    fig_label('b')
+
+    # Mass 
+    sca(axL[1,0])
+    pl = NDPlotter(df,'giso_smass',**kwargs)
+    pl.plot()
+    fig_label('c')
+    
+    # Metallicity
+    sca(axL[1,1])
+    pl = NDPlotter(df,'cks_smet',**kwargs)
+    pl.plot()
+    fig_label('d')
+    tight_layout(True)
+'''
+    
 class NDPlotter(object):
     """
     Class to facillitate plotting of occurrence number density
@@ -121,7 +254,6 @@ class NDPlotter(object):
             xlabel = 'Stellar Mass (Solar-masses)'
             self.bwx = log10(1 + 0.15)
 
-            
         if xk=='cks_smet':
             xerr = 0.15
             if zoom:
@@ -141,6 +273,25 @@ class NDPlotter(object):
             xscale='lin'
             yscale='log'
 
+        if xk=='giso_sage':
+            if zoom:
+                xmin = 1
+                xmax = 10
+                ymin = 1
+                ymax = 4
+            else:
+                xmin = 1
+                xmax = 15
+                ymin = 0.5
+                ymax = 16
+
+            xscale='log'
+            yscale='log'
+            xticks = [1,3,10]
+            xlabel = 'Stellar Age (Gyr)'
+            self.bwx = log10(1 + 0.25)
+            
+
         yticks = [0.5,0.7,1.0,1.4,2.0,2.8,4.0,5.6,8.0,11.3,16.0]
         ylabel = 'Planet Size (Earth-radii)'
         cp = ContourPlotter(xmin, xmax, ymin, ymax,xscale=xscale,yscale=yscale)
@@ -159,7 +310,7 @@ class NDPlotter(object):
         self.ylabel = ylabel
         self.xlabel = xlabel
 
-    def plot(self, gradient_array=False):
+    def plot(self, gradient_array=False, column_normalize=False):
         ds = self.cp.meshgrid()
         Z = gaussian_2d_kde(array(ds.kxc), array(ds.kyc), self.kx,
                             self.ky, self.bwx, self.bwy)
@@ -171,7 +322,8 @@ class NDPlotter(object):
 
         ds['Z'] = (['kx','ky'],Z)
         qc = self.cp.contour(
-            ds['Z'], normalize=True, cmap=plt.cm.afmhot_r,zorder=0
+            ds['Z'], normalize=True, cmap=plt.cm.afmhot_r,zorder=0,
+            column_normalize=column_normalize
         )
         self.qc = qc
         self.cp.errorbar(
@@ -232,7 +384,10 @@ class ContourPlotter(object):
         ds = xr.Dataset(data,coords=coords)
         return ds
        
-    def contour(self, Z, normalize=False, **kwargs):
+    def contour(self, Z, column_normalize=False, normalize=False, **kwargs):
+        if column_normalize:
+            Z = Z / Z.sum('ky')
+
         if normalize:
             fac = 1.2
             Z /= Z.max()
@@ -243,6 +398,9 @@ class ContourPlotter(object):
         else:
             qc = Z.plot.contourf(x='kx', add_colorbar=False,**kwargs)
             
+
+
+
         return qc
 
     def set_lim(self):
