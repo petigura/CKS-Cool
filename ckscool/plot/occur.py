@@ -105,6 +105,61 @@ def fig_occur_per():
     )
     setp(axL[1], xlim =(1,300))
     tight_layout(True)
+
+
+def fig_occur_per_thin():
+    """
+    same as above, but thinner defintions of s
+    """
+    sns.set_context('paper',font_scale=1.1)
+    fig, axL = subplots(ncols=2,figsize=(8,4),sharey=True)
+    sizes = ['sn','se']
+    for i in range(2):
+        loglog()
+        size = sizes[i]
+        ax = axL[i] 
+        sca(ax)
+        smass = [0.5, 0.7, 1.0, 1.4]
+        if size=='se':
+            prad1, prad2 = 1.0, 1.5
+            _title = 'Super-Earths'
+            xlim_points = [1,100]
+        elif size=='sn':
+            prad1, prad2 = 2.0, 3.0
+            _title = 'Sub-Neptunes'
+            xlim_points = [1,300]
+
+        _title += ' ($R_p$ = {}$-${} $R_\oplus$)'.format(prad1,prad2) 
+            
+        dlogper = 0.25
+        
+        for i in range(3):
+            smass1, smass2 = smass[i],smass[i+1]
+            key = 'fitper_smass={}-{}-prad={}-{}'.format(
+                smass1, smass2, prad1, prad2,
+            )
+            fit = ckscool.io.load_object(key,cache=1)
+            fmtkey = 'smass{}'.format(i+1)
+            plot_per_rates(
+                fit, log10(xlim_points[0]), log10(xlim_points[1])+0.1,
+                dlogper,fmtkey
+            )
+            if size=='se':
+                s = '$M_\star$ = {}$-${} $M_\odot$'.format(smass1, smass2)
+                text(0.6,0.15 - i*0.05,s,color=ptcolor[fmtkey],transform=ax.transAxes)
+        title(_title)
+            
+    sca(axL[0])
+    setp(axL, xlabel='Orbital Period (days)', ylim=(1e-4,1e0))
+    setp(
+        axL[0],
+        ylabel = 'Planets per Star per {} dex Period Interval'.format(dlogper),
+        xlim =(1,300),
+    )
+    setp(axL[1], xlim =(1,300))
+    tight_layout(True)
+
+
     
 def fig_occur_sinc():
     sns.set_context('paper',font_scale=1.1)
@@ -375,6 +430,30 @@ def plot_per_rates(fit, logper1, logper2, dlogper, fmtkey, plot_band=True, bandk
         lo,hi = np.percentile(y,[16,84],axis=0)
         fill_between(peri,lo,hi, color=ptcolor[fmtkey],alpha=0.3)
 
+
+def plot_per_rates_ratio(fit1, fit2, logper1, logper2, dlogper, fmtkey, plot_band=True, bandkw={}):
+    """
+    """
+    logper = np.arange(logper1,logper2,dlogper)
+    per = 10**logper
+    peri = np.logspace(np.log10(fit1.x1),np.log10(fit1.x2),300)
+
+    yL = []
+    for fit in [fit1, fit2]:
+        chain = fit.res.flatchain.sample(300)
+        chain['f'] = 10**chain['logf']
+        rate_lambda = fit.rate_lambda_sample(peri, chain) # nchain x nper
+        rate = np.array(chain['f']).reshape(-1,1) * rate_lambda
+        y = peri.reshape(1,-1) * rate # planets per e interval dN/dnper
+        y = y * dlogper / np.log10(np.e) 
+        yL.append(y)
+
+    y = yL[1] / yL[0]
+    lo,hi = np.percentile(y,[16,84],axis=0)
+    fill_between(peri,lo,hi, color=ptcolor[fmtkey],alpha=0.3)
+
+
+        
 def plot_sinc_rates(fit, logsinc1, logsinc2, dlogsinc, fmtkey, plot_band=True, bandkw={}):
     """
     """

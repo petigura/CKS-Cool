@@ -840,6 +840,12 @@ def load_object(key,cache=0, verbose=1, N_cores=None):
         elif params.count('prad=1.7-4.0'):
             per1 = 1
             per2 = 300
+        elif params.count('prad=1.0-1.5'):
+            per1 = 1
+            per2 = 30
+        elif params.count('prad=2.0-3.0'):
+            per1 = 1
+            per2 = 300
         else:
             assert False,'key not recognized'
             
