@@ -13,17 +13,21 @@ import ckscool.io
 import ckscool.occur
 import ckscool.plot.occur
 
+import pandas as pd
+            
+
 class Gradient(object):
     """
     Gradient 
 
     base class to compute gradients
+
+    Implements the following methods
+        - line-integral which minimizes the line integral
+        - chisq which minimizes chisq along the lowest minimum between two specified bounds. 
+
     """
     
-    def __init__(self, objkey, smass_lims):
-        self.objkey = objkey
-        self.smass_lims = smass_lims
-
     def line_integral(self, params, KDE, width=0):
         """Return the line integral for a given line
 
@@ -49,13 +53,6 @@ class Gradient(object):
         y0 = self.func(params, x0)
         y1 = self.func(params, x1)
         ymid = self.func(params, xmid)
-        '''
-        L = np.sqrt( (x1 - x0)**2 + (y1 - y0)**2 )
-        dl = L / nbins
-        points = np.vstack([xmid, ymid]).T
-        integral = np.sum(KDE(points) * dl)
-        nintegral = integral / L # normalized integral
-        '''
         if width==0:
             points = np.vstack([xmid, ymid]).T
         if width > 0:
@@ -68,18 +65,48 @@ class Gradient(object):
         nintegral = np.sum(KDE(points) )
         return nintegral
 
-    def compute_gradient(self, x, y, z):
-        """
-        """
-        # KDE interpolation
-        map_interp = RegularGridInterpolator((x, y), z)
-
-        def obj(params):
-            return self.line_integral(params, map_interp)
-
-        self.out = minimize(obj, self.params, method='Nelder-Meade')
-        #self.out = minimize(obj, self.params, method='brute')
     
+    def compute_gradient(self, x, y, z, method):
+        """
+        x: grid of x values
+        y: grid of y values
+        z: grid of z values
+        method: fitting method
+        """
+
+        if method=='line-integral':
+            # KDE interpolation
+            map_interp = RegularGridInterpolator((x, y), z)
+
+            def obj(params):
+                return self.line_integral(params, map_interp)
+
+            self.out = minimize(obj, self.params, method='Nelder-Meade')
+
+        if method=='valley-chisq':
+            # have to transpose the array to make indexing work
+            Z = z.T
+
+            nrows = Z.shape[0]
+            irows = np.arange(1,nrows-1)
+            b = (Z[irows,:] < Z[irows+1,:]) & (Z[irows,:] < Z[irows-1,:])
+
+            irows2,icols2 = np.meshgrid(irows,range(Z.shape[1]),indexing='ij')
+            lmin = pd.DataFrame(dict(row=irows2[b],col=icols2[b]))
+            lmin['x'] = x[lmin.col]
+            lmin['y'] = y[lmin.row]
+            lmin['z'] = Z[lmin.row,lmin.col]
+
+            # only consider the minima winthin the prespecified range
+            lmin = lmin.query('0.5 < x  < 1.5 and 0.15 < y <  0.35') 
+            lmin  = lmin.sort_values(by=['x','z']).groupby('x',as_index=False).first()
+
+            def obj(params):
+                ymod = self.func(params, lmin.x)
+                return np.sum((lmin.y - ymod)**2)
+
+            self.out = minimize(obj, self.params, method='Nelder-Meade')
+            
 class GradientPerPrad(Gradient):
     def __init__(self, *args):
         super(GradientPerPrad, self).__init__(*args)
@@ -114,10 +141,15 @@ class GradientSincPrad(Gradient):
         p = params.valuesdict()
         return p['m'] * logS + p['logR_100'] - 2 * p['m']
 
-def load_gradient(objkey, seed=None, full_output=False):
+    
+def load_z(objkey, seed=None, full_output=False):
+    """
+    Loads x, y, z arrays that are used in gradient calculations
+    """
     # constructs Gradient object, calculates chains and makes output
     # dataframe
 
+    
     s1, s2 = objkey.split('_')
     name, xk, yk, mode = s1.split('-')
     smass1, smass2 = s2.replace('smass=','').split('-')
@@ -136,12 +168,10 @@ def load_gradient(objkey, seed=None, full_output=False):
     if xk=='per':
         ndplotterkey = 'koi_period'
         Occurrence = ckscool.occur.OccurrencePerPrad
-        grad = GradientPerPrad(objkey, [smass1, smass2])
 
     elif xk=='sinc':
         ndplotterkey = 'giso_sinc'
         Occurrence = ckscool.occur.OccurrenceSincPrad
-        grad = GradientSincPrad(objkey, [smass1, smass2])
         if [smass1, smass2] == [0.5,0.7]:
             x0 = 3
             x1 = 100
@@ -157,8 +187,6 @@ def load_gradient(objkey, seed=None, full_output=False):
         else:
             assert False, "mass limits not supported"
 
-        grad.x0 = x0 
-        grad.x1 = x1
 
     namemap = {'prad':'gdir_prad','per':'koi_period','sinc':'giso_sinc'}
     pl = ckscool.plot.planet.NDPlotter(
@@ -166,8 +194,7 @@ def load_gradient(objkey, seed=None, full_output=False):
     )
     if mode=='det':
         x, y, Z_det = pl.plot(gradient_array=True)
-        grad.compute_gradient(x, y, Z_det)
-
+        z = Z_det
         
     if mode=='occ':
         occ = Occurrence(plnt, occ.comp, occ.nstars)
@@ -180,19 +207,22 @@ def load_gradient(objkey, seed=None, full_output=False):
         Z_comp[Z_comp <= ntrials_min] = 0.0
         Z_comp[Z_comp >  ntrials_min] = 1.0
         Z_occ = Z_occ * Z_comp
+        z = Z_occ
+        
+    return x, y, z
 
-        # find line of least occurrence
-        grad.compute_gradient(x, y, Z_occ)
-
-    if full_output:
-        return grad, pl    
-
+def load_gradient(objkey, seed=None, full_output=False):
+    x, y, z = load_z(objkey, seed=seed)
+    s1, s2 = objkey.split('_')
+    name, xk, yk, mode = s1.split('-')
+    if xk=='per':
+        grad = GradientPerPrad()
+    grad.compute_gradient(x,y,z,'valley-chisq')
     return grad
-
-
+    
 def load_gradient_chain(key):
-    niter = 128
-    Ncores = 8
+    niter = 100
+    Ncores = 1
     func = lambda i : load_gradient(key, seed=i)
     obj = Parallel(n_jobs=Ncores)(delayed(func)(i) for i in range(niter))
     return obj

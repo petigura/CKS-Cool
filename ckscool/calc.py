@@ -25,8 +25,8 @@ def update_planet_parameters(df):
     nsamp = 10000
 
     # load up chains:
-    namemap = {'RD1':'dr25_ror','RHO':'dr25_rho','BB1':'dr25_b','PE1':'dr25_period'}
-    samp = dict(dr25_ror=[],dr25_rho=[],dr25_b=[],dr25_period=[]) 
+    namemap = {'RD1':'dr25_ror','RHO':'dr25_rho','BB1':'dr25_b','PE1':'dr25_period','DIL':'dr25_dil'}
+    samp = dict(dr25_ror=[],dr25_rho=[],dr25_b=[],dr25_period=[],dr25_dil=[]) 
     print("loading up {} chains".format(len(df)))
     drop = []
     for i, row in df.iterrows():
@@ -110,7 +110,7 @@ def update_planet_parameters(df):
     period = np.array(df[['koi_period']])
     samp['giso_tau0'] = (TAU_CONST * period**0.33 * samp['giso_srho']**-0.33)
 
-    keys = 'dr25_period dr25_ror dr25_rho dr25_b dr25_tau gdir_prad giso_prad giso_sinc giso_sma giso_tau0'.split()
+    keys = 'dr25_period dr25_ror dr25_rho dr25_b dr25_tau dr25_dil gdir_prad giso_prad giso_sinc giso_sma giso_tau0'.split()
     for k in keys:
         kerr1 = k+'_err1'
         kerr2 = k+'_err2'
