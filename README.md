@@ -105,6 +105,10 @@ rsync -av --progress --files-from=data/fig_spectra/fig_spectra-files.txt cadence
 
 
 
+## Create plots and build paper
+
+## Run gapfitting jupyter to generate gap fits. 
+
 
 ## Access CKS-Cool dataset
 
@@ -118,3 +122,4 @@ The `is*` columns correspond to cuts. See the ckscool/cuts.py for additional inf
 
 Note when running on cadence, there was a really weird issue with
 h5py. Where it was taking 30s to read in the Combined Dustmap
+
