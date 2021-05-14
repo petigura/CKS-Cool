@@ -235,7 +235,6 @@ def create_workflow():
     w.table['planet-stub'] = lambda: f2()[:5] + f2()[-5:]
 
     # val
-    w.val['stat'] = ckscool.value.val_stat
     w.val['sample'] = ckscool.value.val_sample
     w.val['fit'] = ckscool.value.val_fit
     w.val['grad'] = ckscool.value.val_grad
