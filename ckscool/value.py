@@ -153,7 +153,23 @@ def val_sample(return_dict=False):
         .median()
     )
 
-    
+    # number of planets used in the small occurrence bins 
+    smass = [
+        [0.5,1.4],
+        [0.5,0.7],
+        [0.7,1.0],
+        [1.0,1.4],
+    ]
+
+    for i in range(4):
+        smass0 = smass[i][0]
+        smass1 = smass[i][1]
+        occ = ckscool.io.load_object(
+            'occur-per-prad_smass={}-{}'.format(smass0,smass1),cache=1
+        )
+        d['occ-nplnt_smass={}-{}'.format(smass0,smass1)] = len(occ.plnt)
+
+     
     lines = []
     for k, v in d.iteritems():
         line = r"{{{}}}{{{}}}".format(k,v)
@@ -273,20 +289,33 @@ def val_fit(return_dict=False):
 
 def val_grad(return_dict=False):
     d = OrderedDict()
-    smass = ['0.5-0.7','0.7-1.0','1.0-1.4','0.5-1.4']
-    outdir = 'gapfitting-comparison/gradient-column/'
-    for _smass in smass:
-        fn = '{}/grad-per-prad-det_smass={}.csv'.format(outdir, _smass)
-        key = 'per-prad-det_smass={}'.format(_smass)
-        df = pd.read_csv(fn)
-        df['Rp10'] = 10**df.y0
+
+    keys =[]
+    
+    for xk in ['per','sinc','smass','smet']:
+        if (xk=='per') or (xk=='sinc'):
+            smass = ['0.5-0.7','0.7-1.0','1.0-1.4','0.5-1.4']
+        if (xk=='smass') or (xk=='smet'):
+            smass = ['0.5-1.4']
+            
+        for _smass in smass:
+            key = '{}-prad-det_smass={}'.format(xk,_smass)
+            keys.append(key)
+
+    for key in keys:
+        gradkey = 'grad-'+key
+        grad = ckscool.gradient.Gradient(gradkey)
+        grad.load_csv()
+        df = grad.fits.copy()
+        df['Rp0'] = 10**df.y0
         q = df.quantile([0.14,0.5,0.86])
         q.loc['up'] = q.loc[0.86] - q.loc[0.50]
         q.loc['lo'] = q.loc[0.14] - q.loc[0.50]
-        d[key+'-Rp10'] = "{:.2f}^{{ +{:.2f} }}_{{ {:.2f} }}".format(*q.loc[[0.5,'up','lo'],'Rp10'].tolist())
-        d[key+'-m'] = "{:.2f}^{{ +{:.2f} }}_{{ {:.2f} }}".format(*q.loc[[0.5,'up','lo'],'m'].tolist())
-        
-        
+        for k in ['Rp0','m']:
+            vals = q.loc[[0.5,'up','lo'],k].tolist()
+            valkey = key+'-'+k
+            d[valkey] = "{:.2f}^{{ +{:.2f} }}_{{ {:.2f} }}".format(*vals)
+
     lines = []
     for k, v in d.iteritems():
         line = r"{{{}}}{{{}}}".format(k,v)

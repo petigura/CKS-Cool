@@ -14,48 +14,81 @@ def fig_sample(plot_gradient=False, **kwargs):
     df = ckscool.io.load_table('planets-cuts2',cache=1)
     df = df[~df.isany]
 
-    # Period
-    sca(axL[0,0])
-    pl = NDPlotter(df,'koi_period',smass_lims=[0.5,1.4],**kwargs)
-    pl.plot()
-    if plot_gradient:
-        key = 'grad-per-prad-det_smass=0.5-1.4'
-        grads = ckscool.io.load_object(key, cache=1) 
-        pl.cp.plot_gradients(grads)
+    ndplotkey = ['koi_period','giso_sinc','giso_smass','cks_smet']
+    #gradkey = ['grad-per-prad-det_smass=0.5-1.4','grad-sinc-prad-det_smass=0.5-1.4','grad-smass-prad-det_smass=0.5-1.4','grad-smet-prad-det_smass=0.5-1.4']
+    labels = 'abcd'
+
+    gradkey = ['grad-per-prad-det_smass=0.5-1.4','grad-sinc-prad-det_smass=0.5-1.4','grad-smass-prad-det_smass=0.5-1.4','grad-smet-prad-det_smass=0.5-1.4']
+
+    for i in range(4):
+        ax = axL.flatten()[i]
+        sca(ax)
         
-    fig_label('a')
-    ax = axes([0.89, 0.85, 0.008, 0.1])
-    cbar = colorbar(pl.qc,cax=ax,format='%.1f')
-    cbar.set_label('relative density',size='x-small')
-    cbar.ax.tick_params(labelsize='xx-small')
+        pl = NDPlotter(df,ndplotkey[i],smass_lims=[0.5,1.4],**kwargs)
+        pl.plot()
+        
+        fig_label(labels[i])
+        if plot_gradient:
+            grad = ckscool.gradient.Gradient(gradkey[i])
+            grad.load_csv()
+            grad.plot_gradients('band')
 
-    # Sinc
-    sca(axL[0,1])
-    pl = NDPlotter(df,'giso_sinc',smass_lims=[0.5,1.4],**kwargs)
-    pl.plot()
-    if plot_gradient:
-        key = 'grad-sinc-prad-det_smass=0.5-1.4'
-        grads = ckscool.io.load_object(key, cache=1) 
-        pl.cp.plot_gradients(grads)
+        if i==0:
+            ax = axes([0.89, 0.85, 0.008, 0.1])
+            cbar = colorbar(pl.qc,cax=ax,format='%.1f')
+            cbar.set_label('relative density',size='x-small')
+            cbar.ax.tick_params(labelsize='xx-small')
 
-    xl = xlim()
-    xlim(xl[1],xl[0])
-    fig_label('b')
+        if i==1:
+            xl = xlim()
+            xlim(xl[1],xl[0])
 
-    # Mass 
-    sca(axL[1,0])
-    pl = NDPlotter(df,'giso_smass',**kwargs)
-    pl.plot()
-    fig_label('c')
-    
-    # Metallicity
-    sca(axL[1,1])
-    pl = NDPlotter(df,'cks_smet',**kwargs)
-    pl.plot()
-    fig_label('d')
     tight_layout(True)
 
 
+def fig_sample_smass():
+    sns.set_context('paper',font_scale=1.1)
+    fig,ax = subplots(ncols=1,nrows=1,figsize=(6,4))
+
+    df = ckscool.io.load_table('planets-cuts2',cache=1)
+    df = df[~df.isany]
+
+    ndplotkey = 'giso_smass'
+    gradkey = 'grad-smass-prad-det_smass=0.5-1.4'
+
+    
+    sca(ax)
+
+    pl = NDPlotter(df,ndplotkey,zoom=True)
+    pl.plot()
+
+    grad = ckscool.gradient.Gradient(gradkey)
+    grad.load_csv()
+    #ylim(1,4.0)
+    xl = xlim()
+    logsmass= linspace(xl[0],xl[1],100)
+
+    grad.plot_gradients('band',xi =logsmass )
+
+    logprad = log10(2.5) + 0.25 * logsmass 
+    plot(logsmass, logprad,'r-')
+    text(log10(1.45),log10(2.8),r'$\alpha = 0.25$')
+    
+    logprad = log10(1.4) + 0.25 * logsmass 
+    plot(logsmass, logprad,'r-')
+    text(log10(1.45),log10(1.5),r'$\alpha = 0.25$')
+
+    mps = ckscool.io.load_object('mps_size-se',cache=1)
+    fill_between(mps.logsmassci, log10(mps.q16),log10(mps.q84) ,alpha=0.5)
+
+
+    mps = ckscool.io.load_object('mps_size-sn',cache=1)
+    fill_between(mps.logsmassci, log10(mps.q16),log10(mps.q84) ,alpha=0.5)
+    #import pdb;pdb.set_trace()
+    #tight_layout(True)
+
+
+    
 def fig_gupta_comparison(plot_gradient=False, **kwargs):
     sns.set_context('paper',font_scale=1.0)
     fig,axL = subplots(ncols=3,nrows=2,figsize=(10,6))

@@ -43,6 +43,7 @@ warnings.simplefilter(action='ignore', category=UserWarning)
 FILE = os.path.dirname(__file__)
 DATADIR = os.path.join(FILE, '../data/')
 CACHEDIR = os.path.join(FILE, '../cache/')
+ANALYSISDIR = os.path.join(FILE, '../analysis/')
 CACHEFN = os.path.join(CACHEDIR, 'load_table_cache.hdf')
 os.system('mkdir -p {}'.format(CACHEDIR)) # creates CACHEDIR if doesn't exist
 KBCFN = os.path.join(DATADIR,'kbcvel.csv')

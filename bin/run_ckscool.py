@@ -11,6 +11,7 @@ import ckscool.io     # module for reading and writing datasets
 import ckscool.value  # module for computing creating table
 import ckscool.table  # module for computing scalar values for table
 import ckscool._isoclassify
+import ckscool.gradient
 
 from ckscool import plot as plot
 
@@ -53,6 +54,9 @@ def main():
     psr2 = subpsr.add_parser('create-csv', parents=[psr_parent], )
     psr2.add_argument('name',type=str)
     psr2.set_defaults(func=create_csv)
+
+    psr2 = subpsr.add_parser('create-gradient', parents=[psr_parent], )
+    psr2.set_defaults(func=create_gradient)
 
     psr2 = subpsr.add_parser('build', parents=[psr_parent], )
     psr2.add_argument('type',type=str)
@@ -172,6 +176,31 @@ def create_chain_summary(args):
     df = pd.DataFrame(df)
     df.to_hdf('data/dr25-mcmc-summary.hdf','dr25')
 
+
+def create_gradient(args):
+
+
+    objkeys = []
+    smass = ['0.5-1.4','0.5-0.7','0.7-1.0','1.0-1.4']
+
+    # we compute per and sinc gradients in three bins of stellar mass.
+    xk = ['per','sinc']
+    # xk = ['sinc']
+    for _smass in smass:
+        for _xk in xk:
+            objkey = 'grad-{}-prad-det_smass={}'.format(_xk,_smass)
+            objkeys.append(objkey)
+
+    # smass smet only apply to full stellar mass range.
+    xk = ['smass','smet']
+    for _xk in xk:
+        objkey = 'grad-{}-prad-det_smass=0.5-1.4'.format(_xk,)
+        objkeys.append(objkey)
+
+    for objkey in objkeys:
+        grad = ckscool.gradient.Gradient(objkey)
+        grad.sample(1000,nplots=5)
+    
 ## functions to build plots/tables/val for papers
 
 def build(args):
@@ -201,6 +230,7 @@ def create_workflow():
     w.plot['planet-prad'] =  plot.planet.fig_sample
     w.plot['planet-prad-zoom'] =  lambda : plot.planet.fig_sample(plot_gradient=True,zoom=True)
 
+
     w.plot['compare-ckscool-mann13'] = lambda : fig_compare('ckscool-mann13')
     w.plot['compare-ckscool-dressing13'] = (
         lambda : fig_compare('ckscool-dressing13')
@@ -219,6 +249,9 @@ def create_workflow():
     w.plot['mean-planet-size'] = plot.occur.fig_mean_planet_size
     w.plot['occur-per'] = plot.occur.fig_occur_per
     w.plot['occur-sinc'] = plot.occur.fig_occur_sinc
+    w.plot['occur-per-3'] = plot.occur.fig_occur_per3
+    w.plot['occur-sinc-3'] = plot.occur.fig_occur_sinc3
+
     
     # table
     f1 = ckscool.table.tab_star

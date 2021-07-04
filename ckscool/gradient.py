@@ -7,6 +7,7 @@ from lmfit import minimize, Parameters
 import pandas as pd
 from scipy.interpolate import RegularGridInterpolator
 from joblib import Parallel, delayed
+import os
 
 import ckscool.comp
 import ckscool.io
@@ -14,8 +15,151 @@ import ckscool.occur
 import ckscool.plot.occur
 
 import pandas as pd
+import copy 
+from matplotlib import pylab as plt
+from numpy import log10
+
+class Gradient(object):
+
+    def __init__(self, objkey):
+        s1, s2 = objkey.split('_')
+        self.name, self.xk, self.yk, self.mode = s1.split('-')
+        smass1, smass2 = s2.replace('smass=','').split('-')
+        smass1, smass2 = float(smass1),float(smass2)
+        self.occkey = ( objkey.replace('grad','occur')
+                   .replace('-det','')
+                   .replace('-occ','') )
+        self.outdir = os.path.join(ckscool.io.ANALYSISDIR, objkey)
+        os.system('mkdir -p {}'.format(self.outdir)) 
+        self.objkey = objkey
+        self.smass1 = smass1
+        self.smass2 = smass2
+
+        fn = self.objkey+'.csv'
+        fn = os.path.join(self.outdir,fn)
+        self.csvfn = fn
+
+        if self.xk=='per':
+            self.ndplotterkey = 'koi_period'
+            self.xlim = (0.5,1.5) # compute minima only over a certain range
+            self.ylim = (0.15,0.35)
+            self.x0 = 1 # log of anchor point
+
+        if self.xk=='sinc':
+            self.ndplotterkey = 'giso_sinc'
+            if smass1==0.5 and smass2==0.7:
+                self.xlim = (log10(3),log10(100)) 
+            if smass1==0.7 and smass2==1.0:
+                self.xlim = (log10(10),log10(300)) 
+            if smass1==1.0 and smass2==1.4:
+                self.xlim = (log10(30),log10(1000)) 
+            if smass1==0.5 and smass2==1.4:
+                self.xlim = (log10(10),log10(1000)) 
             
 
+            self.ylim = (0.15,0.35)
+            self.x0 = 2
+
+        if self.xk=='smass':
+            self.ndplotterkey = 'giso_smass'
+            self.xlim = (np.log10(0.6),np.log10(1.4))
+            self.ylim = (0.15,0.35)
+            self.x0 = 0
+
+            #ndplotkey = ['koi_period','giso_sinc','giso_smass','cks_smet']
+
+        if self.xk=='smet':
+            self.ndplotterkey = 'cks_smet'
+            self.xlim = (-0.3,0.3) # compute minima only over a certain range
+            self.ylim = (0.15,0.35)
+            self.x0 = 0
+
+        self.xi = np.linspace(self.xlim[0],self.xlim[1],100)
+
+    def sample(self, nsamples, nplots=20):
+        seeds = [None] + range(nsamples)
+        fits = []
+        i = 0
+        plnt = ckscool.io.load_table('planets-cuts2',cache=1)
+        plnt = plnt[~plnt.isany]
+        plnt = plnt[plnt.giso_smass.between(self.smass1,self.smass2)]
+        plnt0 = plnt.copy()
+        nplnt = len(plnt)
+
+        for seed in seeds:
+            outfile = self.objkey+'_seed={}.pdf'.format(seed)
+            outfile = os.path.join(self.outdir,outfile)
+            if seed is not None:
+                print("seed = {}".format(seed))
+                plnt = plnt0.sample(nplnt, replace=True, random_state=seed)
+
+            namemap = {'prad':'gdir_prad','per':'koi_period','sinc':'giso_sinc'}
+            pl = ckscool.plot.planet.NDPlotter(
+                 plnt.rename(columns=namemap),self.ndplotterkey,zoom=True
+            )
+
+            if self.mode=='det':
+                x, y, Z_det = pl.plot(gradient_array=True)
+
+            Z = Z_det.T
+
+            irows = np.arange(1,399)
+            b = (Z[irows,:] < Z[irows+1,:]) & (Z[irows,:] < Z[irows-1,:])
+
+            irows2,icols2 = np.meshgrid(irows,range(Z.shape[1]),indexing='ij')
+            df = pd.DataFrame(dict(row=irows2[b],col=icols2[b]))
+            df['x'] = x[df.col]
+            df['y'] = y[df.row]
+            df['z'] = Z[df.row,df.col]
+
+            # on consider the minima winthin the prespecified range
+            df = df[df.x.between(*self.xlim) & df.y.between(*self.ylim)]
+            dfmin  = df.sort_values(by=['x','z']) \
+                    .groupby('x',as_index=False).first()
+            
+            pfit = np.polyfit(dfmin.x - self.x0, dfmin.y, 1)
+            fits.append(dict(seed=seed,m=pfit[0],y0=pfit[1]) )
+            i += 1
+            if i > nplots:
+                continue
+            
+            plt.figure(figsize=(6,4))
+            pl.plot()
+            plt.plot(df.x,df.y,'.b')
+            plt.plot(dfmin.x,dfmin.y,'.r')
+            plt.plot(self.xi,np.polyval(pfit,self.xi-self.x0))
+            plt.tight_layout()
+            plt.gcf().savefig(outfile)
+                
+        fits = pd.DataFrame(fits)
+        fits.to_csv(self.csvfn)
+
+    def load_csv(self):
+        self.fits = pd.read_csv(self.csvfn)
+
+    def plot_gradients(self, mode, xi=None):
+        if xi==None:
+            xi = self.xi
+
+        yi = []
+        for i, row in self.fits.iterrows():
+            pfit = np.array([row.m, row.y0])
+            yi += [np.polyval(pfit,xi-self.x0)]
+        yi = np.vstack(yi)
+
+        if mode=='band':
+            lo, hi = np.percentile(yi,[16,84],axis=0)
+            plt.fill_between(xi, lo, hi, color='b', alpha=0.4)
+            return 
+
+        if mode=='samples':
+            plt.plot(xi, yi.T, 'r')
+            return
+
+        assert False, "mode = {} not supported ".format(mode)
+            
+        
+'''    
 class Gradient(object):
     """
     Gradient 
@@ -92,7 +236,7 @@ class Gradient(object):
             b = (Z[irows,:] < Z[irows+1,:]) & (Z[irows,:] < Z[irows-1,:])
 
             irows2,icols2 = np.meshgrid(irows,range(Z.shape[1]),indexing='ij')
-            lmin = pd.DataFrame(dict(row=irows2[b],col=icols2[b]))
+            lmink_ = pd.DataFrame(dict(row=irows2[b],col=icols2[b]))
             lmin['x'] = x[lmin.col]
             lmin['y'] = y[lmin.row]
             lmin['z'] = Z[lmin.row,lmin.col]
@@ -141,7 +285,7 @@ class GradientSincPrad(Gradient):
         p = params.valuesdict()
         return p['m'] * logS + p['logR_100'] - 2 * p['m']
 
-    
+'''    
 def load_z(objkey, seed=None, full_output=False):
     """
     Loads x, y, z arrays that are used in gradient calculations

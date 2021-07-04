@@ -27,21 +27,23 @@ def fig_contour_six_sinc(plot_gradient=False):
     pl = SixPlotterSincPrad()
     pl.plot(plot_gradient)
 
-def fig_mean_planet_size():
+def fig_mean_planet_size(annotate=True):
     sns.set_context('paper')
     fig, axL = subplots(nrows=1,figsize=(3.5,3.5),sharex=True)
 
     loglog()
-    mps = ckscool.io.load_object('mps_size-se')
-    errorbar(mps.smassc,mps.mn,yerr=mps.std,fmt='o')
-    fill_between(10**mps.logsmassci, mps.q16,mps.q84 ,alpha=0.5)
+    mps = ckscool.io.load_object('mps_size-se',cache=1)
+    errorbar(mps.smassc,mps.mn,yerr=mps.std,fmt='o',color='g')
+
+    xi = 10**mps.logsmassci
+    fill_between(xi, mps.q16,mps.q84 ,alpha=0.5,color='g')
 
 
-    mps = ckscool.io.load_object('mps_size-sn')
-    errorbar(mps.smassc,mps.mn,yerr=mps.std,fmt='o')
-    fill_between(10**mps.logsmassci, mps.q16,mps.q84 ,alpha=0.5)
+    mps = ckscool.io.load_object('mps_size-sn',cache=1)
+    errorbar(mps.smassc,mps.mn,yerr=mps.std,fmt='o',color='b')
+    fill_between(xi, mps.q16,mps.q84 ,alpha=0.5,color='b')
 
-    yt = np.round(arange(1.2,3.001,0.2),1)
+    yt = np.round(arange(1.0,3.201,0.2),1)
     xt = [0.5,0.7,1.0,1.4] 
 
     minorticks_off()
@@ -49,13 +51,25 @@ def fig_mean_planet_size():
     xticks(xt,xt)
 
     setp(axL,ylabel='Mean Planet Size (Earth-radii)')
-    text(0.55,2.8,'Sub-Neptunes (P < 100)')
-    text(0.55,1.4,'Super-Earths (P < 30)')
+    text(0.5,2.8,'Sub-Neptunes (P < 100)')
+    text(0.5,1.4,'Super-Earths (P < 30)')
 
     #setp(axL,title='Super-Earths (P < 30)')
     setp(axL,xlabel='Stellar Mass (Solar-Masses)')
-    ylim(1.2,3)
+    ylim(1.0,3.2)
+
+    if annotate:
+        plot(xi, 2.5 * xi**0.25,'k--')
+        text(1.35,1.55,r'$\alpha=0.25$',ha='right',size='small',rotation=16)
+        plot(xi, 1.4 * xi**0.25,'k--')
+        text(1.35,2.75,r'$\alpha=0.25$',ha='right',size='small',rotation=16)
+
+        
     tight_layout()
+
+#def fig_mean_planet_size_ann()
+
+
 
 def fig_occur_per():
     sns.set_context('paper',font_scale=1.1)
@@ -159,8 +173,6 @@ def fig_occur_per_thin():
     setp(axL[1], xlim =(1,300))
     tight_layout(True)
 
-
-    
 def fig_occur_sinc():
     sns.set_context('paper',font_scale=1.1)
     fig, axL = subplots(ncols=2,figsize=(8,4),sharey=True)
@@ -204,6 +216,168 @@ def fig_occur_sinc():
     setp(axL[1], xlim =(1e4,1))
     tight_layout(True)
 
+def fig_occur_per3():
+    sns.set_context('paper',font_scale=1.1)
+    fig, axL = subplots(ncols=3,figsize=(12,4),sharey=True)
+    sizes = ['se','sn']
+    for i in range(2):
+        size = sizes[i]
+        smass = [0.5, 0.7, 1.0, 1.4]
+        if size=='se':
+            prad1, prad2 = 1.0, 1.7
+            _title = 'Super-Earths'
+            xlim_points = [1,100]
+        elif size=='sn':
+            prad1, prad2 = 1.7, 4.0
+            _title = 'Sub-Neptunes'
+            xlim_points = [1,300]
+            
+        dlogper = 0.25
+       
+        for j in range(3):
+            ax = axL[j] 
+            sca(ax)
+            smass1, smass2 = smass[j],smass[j+1]
+            key = 'fitper_smass={}-{}-prad={}-{}'.format(
+                smass1, smass2, prad1, prad2,
+            )
+            fit = ckscool.io.load_object(key,cache=1)
+            fmtkey = 'prad{}'.format(i+1)
+            plot_per_rates(
+                fit, log10(xlim_points[0]), log10(xlim_points[1]) + 0.1,
+                dlogper,fmtkey
+            )
+            fit.res.flatchain['logx0']
+            if size=='se':
+                s = '$M_\star$ = {}$-${} $M_\odot$'.format(smass1, smass2)
+                text(0.6,0.15 - i*0.05,s,color=ptcolor[fmtkey],transform=ax.transAxes)
+
+            lo,mi,hi = 10**fit.res.flatchain['logx0'].quantile([0.16,0.5,0.84])
+            axvline(mi,color=ptcolor[fmtkey],alpha=1,zorder=0)
+            axvspan(lo,hi,color=ptcolor[fmtkey],alpha=0.5,zorder=0)
+            
+            
+                
+    sca(axL[0])
+    setp(axL, xlabel='Orbital Period (days)', ylim=(1e-4,1e0))
+    setp(
+        axL[0],
+        ylabel = 'Planets per Star per {} dex Period Interval'.format(dlogper),
+        xlim =(1,300),
+    )
+    setp(axL[1], xlim =(1,300))
+    for i in range(3):
+        sca(axL[i])
+        loglog()
+
+    tight_layout(True)
+    
+def fig_occur_sinc3():
+    sns.set_context('paper',font_scale=1.1)
+    fig, axL = subplots(ncols=3,figsize=(12,4),sharey=True)
+    sizes = ['se','sn']
+    for i in range(2):
+        size = sizes[i]
+        sca(axL[i])
+        smass = [0.5,0.7,1.0,1.4]
+        if size=='se':
+            prad1, prad2 = 1.0, 1.7
+            _title = 'Super-Earths'
+            xlim_points = [1,1e4]
+        elif size=='sn':
+            prad1, prad2 = 1.7, 4.0
+            _title = 'Sub-Neptunes'
+            xlim_points = [1,1e4]
+            
+        dlogsinc = 0.5
+       
+        for j in range(3):
+            ax = axL[j] 
+            sca(ax)
+            smass1, smass2 = smass[j],smass[j+1]
+            key = 'fitsinc_smass={}-{}-prad={}-{}'.format(
+                smass1, smass2, prad1, prad2,
+            )
+            fit = ckscool.io.load_object(key,cache=1)
+            fmtkey = 'prad{}'.format(i+1)
+            plot_sinc_rates(
+                fit, log10(xlim_points[0]), log10(xlim_points[1]) + 0.1,
+                dlogsinc,fmtkey
+            )
+            fit.res.flatchain['logx0']
+            if size=='se':
+                s = '$M_\star$ = {}$-${} $M_\odot$'.format(smass1, smass2)
+                text(0.6,0.15 - i*0.05,s,color=ptcolor[fmtkey],transform=ax.transAxes)
+
+            lo,mi,hi = 10**fit.res.flatchain['logx0'].quantile([0.16,0.5,0.84])
+            axvline(mi,color=ptcolor[fmtkey],alpha=1,zorder=0)
+            axvspan(lo,hi,color=ptcolor[fmtkey],alpha=0.5,zorder=0)
+            
+            
+                
+    sca(axL[0])
+    setp(axL, xlabel='Incident Stellar Flux (Earth-units)', ylim=(1e-4,1e0))
+    setp(
+        axL[0],
+        ylabel = 'Planets per Star per {} dex Flux Interval'.format(dlogsinc),
+        xlim =(1e4,1)
+    )
+    setp(axL,xlim =(1e4,1))
+    for i in range(3):
+        sca(axL[i])
+        loglog()
+
+    tight_layout(True)
+    
+
+def fig_occur_per():
+    sns.set_context('paper',font_scale=1.1)
+    fig, axL = subplots(ncols=2,figsize=(8,4),sharey=True)
+    sizes = ['sn','se']
+    for i in range(2):
+        loglog()
+        size = sizes[i]
+        ax = axL[i] 
+        sca(ax)
+        smass = [0.5, 0.7, 1.0, 1.4]
+        if size=='se':
+            prad1, prad2 = 1.0, 1.7
+            _title = 'Super-Earths'
+            xlim_points = [1,100]
+        elif size=='sn':
+            prad1, prad2 = 1.7, 4.0
+            _title = 'Sub-Neptunes'
+            xlim_points = [1,300]
+
+        _title += ' ($R_p$ = {}$-${} $R_\oplus$)'.format(prad1,prad2) 
+            
+        dlogper = 0.25
+        
+        for i in range(3):
+            smass1, smass2 = smass[i],smass[i+1]
+            key = 'fitper_smass={}-{}-prad={}-{}'.format(
+                smass1, smass2, prad1, prad2,
+            )
+            fit = ckscool.io.load_object(key,cache=1)
+            fmtkey = 'smass{}'.format(i+1)
+            plot_per_rates(
+                fit, log10(xlim_points[0]), log10(xlim_points[1])+0.1,
+                dlogper,fmtkey
+            )
+            if size=='se':
+                s = '$M_\star$ = {}$-${} $M_\odot$'.format(smass1, smass2)
+                text(0.6,0.15 - i*0.05,s,color=ptcolor[fmtkey],transform=ax.transAxes)
+        title(_title)
+            
+    sca(axL[0])
+    setp(axL, xlabel='Orbital Period (days)', ylim=(1e-4,1e0))
+    setp(
+        axL[0],
+        ylabel = 'Planets per Star per {} dex Period Interval'.format(dlogper),
+        xlim =(1,300),
+    )
+    setp(axL[1], xlim =(1,300))
+    tight_layout(True)
 
 
     
@@ -236,11 +410,11 @@ class SixPlotter(object):
             pl.plot()
 
             gradkey = key.replace('occur','grad').replace('prad','prad-det')
-            grads = ckscool.io.load_object(gradkey,cache=1)
-            pl.cp.plot_gradients(grads)
-            
+            grad = ckscool.gradient.Gradient(gradkey)
+            grad.load_csv()
+            grad.plot_gradients('band')
             cbar = colorbar(pl.qc,shrink=0.5,format='%.1f')
-            cbar.set_label('$dN/d \log P/ d \log R_p$',size='x-small')
+            cbar.set_label(self.clabel,size='x-small')
             cbar.ax.tick_params(labelsize='xx-small')
             
             
@@ -282,6 +456,7 @@ class SixPlotterPerPrad(SixPlotter):
         self.ORDPlotter = ORDPlotterPerPrad
         self.xlabel='Orbital Period (days)'
         self.ylabel='Planet Size (Earth-radii)'
+        self.clabel='$dN/d \log P/ d \log R_p$'
         
 class SixPlotterSincPrad(SixPlotter):
     def __init__(self):
@@ -295,6 +470,7 @@ class SixPlotterSincPrad(SixPlotter):
         self.ORDPlotter = ORDPlotterSincPrad
         self.xlabel='Incident Flux (Earth-units)'
         self.ylabel='Planet Size (Earth-radii)'
+        self.clabel='$dN/d \log Sinc/ d \log R_p$'
 
 class ORDPlotter(object):
     """
@@ -451,8 +627,6 @@ def plot_per_rates_ratio(fit1, fit2, logper1, logper2, dlogper, fmtkey, plot_ban
     y = yL[1] / yL[0]
     lo,hi = np.percentile(y,[16,84],axis=0)
     fill_between(peri,lo,hi, color=ptcolor[fmtkey],alpha=0.3)
-
-
         
 def plot_sinc_rates(fit, logsinc1, logsinc2, dlogsinc, fmtkey, plot_band=True, bandkw={}):
     """
@@ -540,12 +714,16 @@ ptcolor = {
     'smass1':'r',
     'smass2':'g',
     'smass3':'b',
+    'prad1':'g',
+    'prad2':'b',
 }
 
 bdcolor = {
     'smass1':'light red',
     'smass2':'light green',
-    'smass3':'light blue'
+    'smass3':'light blue',
+    'prad1':'light green',
+    'prad2':'light blue',
 }
 
 sns.set_style('ticks')
