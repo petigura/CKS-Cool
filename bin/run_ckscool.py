@@ -186,6 +186,7 @@ def create_gradient(args):
     # we compute per and sinc gradients in three bins of stellar mass.
     xk = ['per','sinc']
     # xk = ['sinc']
+    '''
     for _smass in smass:
         for _xk in xk:
             objkey = 'grad-{}-prad-det_smass={}'.format(_xk,_smass)
@@ -196,10 +197,17 @@ def create_gradient(args):
     for _xk in xk:
         objkey = 'grad-{}-prad-det_smass=0.5-1.4'.format(_xk,)
         objkeys.append(objkey)
+    '''
+    xk = ['per','sinc']
+    # xk = ['sinc']
+    for _smass in smass:
+        for _xk in xk:
+            objkey = 'grad-{}-prad-occ_smass={}'.format(_xk,_smass)
+            objkeys.append(objkey)
 
     for objkey in objkeys:
         grad = ckscool.gradient.Gradient(objkey)
-        grad.sample(1000,nplots=5)
+        grad.sample(1000,nplots=20)
     
 ## functions to build plots/tables/val for papers
 

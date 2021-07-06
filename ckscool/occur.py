@@ -27,7 +27,6 @@ class Occurrence2D(object):
     def planet_weights(self):
         return 1 / self.comp.prob_trdet_interp(self.plntx,self.plnty)
 
-
     def occurrence_rate_density_idem(self, logx, logy):
         """
         Occurrence rate density (ORD) at logx logy
@@ -168,7 +167,6 @@ def gaussian_2d_kde(x, y, xi, yi, xbw, ybw, w=None):
     cov[:,0,0] *= xbw**2
     cov[:,1,1] *= ybw**2
     return gaussian(pos, mu, cov, w=w) 
-
 
 class MeanPlanetSize(object):
     def __init__(self,query):

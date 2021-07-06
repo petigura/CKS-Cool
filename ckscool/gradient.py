@@ -29,6 +29,7 @@ class Gradient(object):
         self.occkey = ( objkey.replace('grad','occur')
                    .replace('-det','')
                    .replace('-occ','') )
+
         self.outdir = os.path.join(ckscool.io.ANALYSISDIR, objkey)
         os.system('mkdir -p {}'.format(self.outdir)) 
         self.objkey = objkey
@@ -44,7 +45,9 @@ class Gradient(object):
             self.xlim = (0.5,1.5) # compute minima only over a certain range
             self.ylim = (0.15,0.35)
             self.x0 = 1 # log of anchor point
-
+            self.ORDPlotter = ckscool.plot.occur.ORDPlotterPerPrad
+            self.Occurrence2D = ckscool.occur.OccurrencePerPrad
+            
         if self.xk=='sinc':
             self.ndplotterkey = 'giso_sinc'
             if smass1==0.5 and smass2==0.7:
@@ -56,6 +59,7 @@ class Gradient(object):
             if smass1==0.5 and smass2==1.4:
                 self.xlim = (log10(10),log10(1000)) 
             
+            self.ORDPlotter = ckscool.plot.occur.ORDPlotterSincPrad
 
             self.ylim = (0.15,0.35)
             self.x0 = 2
@@ -86,6 +90,10 @@ class Gradient(object):
         plnt0 = plnt.copy()
         nplnt = len(plnt)
 
+        if self.mode=='occ':
+           occ0 = ckscool.io.load_object(self.occkey,cache=1)
+
+           
         for seed in seeds:
             outfile = self.objkey+'_seed={}.pdf'.format(seed)
             outfile = os.path.join(self.outdir,outfile)
@@ -93,41 +101,64 @@ class Gradient(object):
                 print("seed = {}".format(seed))
                 plnt = plnt0.sample(nplnt, replace=True, random_state=seed)
 
-            namemap = {'prad':'gdir_prad','per':'koi_period','sinc':'giso_sinc'}
-            pl = ckscool.plot.planet.NDPlotter(
-                 plnt.rename(columns=namemap),self.ndplotterkey,zoom=True
-            )
+            # NDPlotter needed for both detections and occurrence
+            # gradient calculations. Also needs planet radius 
 
+            
+            ndplotter = ckscool.plot.planet.NDPlotter(
+                plnt,self.ndplotterkey,zoom=True)
+            
             if self.mode=='det':
-                x, y, Z_det = pl.plot(gradient_array=True)
+                x, y, Z = ndplotter.plot(gradient_array=True)
 
-            Z = Z_det.T
+            if self.mode=='occ':
+                occ = copy.deepcopy(occ0)
+                namemap = {
+                    'koi_period':'per',
+                    'giso_sinc':'sinc',
+                    'gdir_prad':'prad'
+                }
+                occ = self.Occurrence2D(
+                    plnt.rename(columns=namemap),occ0.comp, occ0.nstars
+                )
+                ordplotter = self.ORDPlotter(occ, ndplotter.cp)
+                x, y, Z = ordplotter.plot_ord(gradient_array=True)
 
+            #import pdb;pdb.set_trace()
+            Z = Z.T # need to transpose array here
             irows = np.arange(1,399)
             b = (Z[irows,:] < Z[irows+1,:]) & (Z[irows,:] < Z[irows-1,:])
 
             irows2,icols2 = np.meshgrid(irows,range(Z.shape[1]),indexing='ij')
+            '''
             df = pd.DataFrame(dict(row=irows2[b],col=icols2[b]))
             df['x'] = x[df.col]
             df['y'] = y[df.row]
             df['z'] = Z[df.row,df.col]
 
-            # on consider the minima winthin the prespecified range
+            # only consider the minima winthin the prespecified range
             df = df[df.x.between(*self.xlim) & df.y.between(*self.ylim)]
             dfmin  = df.sort_values(by=['x','z']) \
                     .groupby('x',as_index=False).first()
             
             pfit = np.polyfit(dfmin.x - self.x0, dfmin.y, 1)
             fits.append(dict(seed=seed,m=pfit[0],y0=pfit[1]) )
+            '''
             i += 1
             if i > nplots:
                 continue
             
             plt.figure(figsize=(6,4))
-            pl.plot()
-            plt.plot(df.x,df.y,'.b')
-            plt.plot(dfmin.x,dfmin.y,'.r')
-            plt.plot(self.xi,np.polyval(pfit,self.xi-self.x0))
+
+            if self.mode=='det':
+                ndplotter.plot()
+
+            if self.mode=='occ':
+                ordplotter.plot_ord()
+            
+            #plt.plot(df.x,df.y,'.b')
+            #plt.plot(dfmin.x,dfmin.y,'.r')
+            #plt.plot(self.xi,np.polyval(pfit,self.xi-self.x0))
             plt.tight_layout()
             plt.gcf().savefig(outfile)
                 
