@@ -93,7 +93,6 @@ class Gradient(object):
         if self.mode=='occ':
            occ0 = ckscool.io.load_object(self.occkey,cache=1)
 
-           
         for seed in seeds:
             outfile = self.objkey+'_seed={}.pdf'.format(seed)
             outfile = os.path.join(self.outdir,outfile)
@@ -102,9 +101,7 @@ class Gradient(object):
                 plnt = plnt0.sample(nplnt, replace=True, random_state=seed)
 
             # NDPlotter needed for both detections and occurrence
-            # gradient calculations. Also needs planet radius 
-
-            
+            # gradient calculations. 
             ndplotter = ckscool.plot.planet.NDPlotter(
                 plnt,self.ndplotterkey,zoom=True)
             
@@ -130,7 +127,7 @@ class Gradient(object):
             b = (Z[irows,:] < Z[irows+1,:]) & (Z[irows,:] < Z[irows-1,:])
 
             irows2,icols2 = np.meshgrid(irows,range(Z.shape[1]),indexing='ij')
-            '''
+
             df = pd.DataFrame(dict(row=irows2[b],col=icols2[b]))
             df['x'] = x[df.col]
             df['y'] = y[df.row]
@@ -143,7 +140,7 @@ class Gradient(object):
             
             pfit = np.polyfit(dfmin.x - self.x0, dfmin.y, 1)
             fits.append(dict(seed=seed,m=pfit[0],y0=pfit[1]) )
-            '''
+
             i += 1
             if i > nplots:
                 continue
