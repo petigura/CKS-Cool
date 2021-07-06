@@ -105,8 +105,7 @@ class Gradient(object):
             ndplotter = ckscool.plot.planet.NDPlotter(
                 plnt,self.ndplotterkey,zoom=True)
             
-            if self.mode=='det':
-                x, y, Z = ndplotter.plot(gradient_array=True)
+            x, y, Z = ndplotter.plot(gradient_array=True)
 
             if self.mode=='occ':
                 occ = copy.deepcopy(occ0)
@@ -119,14 +118,24 @@ class Gradient(object):
                     plnt.rename(columns=namemap),occ0.comp, occ0.nstars
                 )
                 ordplotter = self.ORDPlotter(occ, ndplotter.cp)
-                x, y, Z = ordplotter.plot_ord(gradient_array=True)
 
-            #import pdb;pdb.set_trace()
+                # we need xy from ndplotter, but we overwrite Z with
+                # the gradient array
+                _, _, Z = ordplotter.plot_ord(gradient_array=True)
+
             Z = Z.T # need to transpose array here
-            irows = np.arange(1,399)
-            b = (Z[irows,:] < Z[irows+1,:]) & (Z[irows,:] < Z[irows-1,:])
 
-            irows2,icols2 = np.meshgrid(irows,range(Z.shape[1]),indexing='ij')
+            # generate a 2D meshgrids with all rows except top and
+            # bottom and all columns.
+            irows = np.arange(1, Z.shape[0] - 1) 
+            irows2, icols2 = np.meshgrid(
+                irows, range(Z.shape[1]), indexing='ij'
+            )
+
+            # Identfiy all points lower than the row directly above and below 
+            b = ( (Z[irows,:] < Z[irows+1,:])
+                  & (Z[irows,:] < Z[irows-1,:]) )
+
 
             df = pd.DataFrame(dict(row=irows2[b],col=icols2[b]))
             df['x'] = x[df.col]
@@ -153,9 +162,9 @@ class Gradient(object):
             if self.mode=='occ':
                 ordplotter.plot_ord()
             
-            #plt.plot(df.x,df.y,'.b')
-            #plt.plot(dfmin.x,dfmin.y,'.r')
-            #plt.plot(self.xi,np.polyval(pfit,self.xi-self.x0))
+            plt.plot(df.x,df.y,'.b')
+            plt.plot(dfmin.x,dfmin.y,'.r')
+            plt.plot(self.xi,np.polyval(pfit,self.xi-self.x0))
             plt.tight_layout()
             plt.gcf().savefig(outfile)
                 

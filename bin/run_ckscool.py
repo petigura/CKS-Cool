@@ -207,7 +207,7 @@ def create_gradient(args):
 
     for objkey in objkeys:
         grad = ckscool.gradient.Gradient(objkey)
-        grad.sample(1000,nplots=20)
+        grad.sample(100,nplots=20)
     
 ## functions to build plots/tables/val for papers
 
