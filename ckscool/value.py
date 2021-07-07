@@ -142,13 +142,35 @@ def val_sample(return_dict=False):
     d['ak-max kepmag>14.2'] = "{:.2f}".format(faint.gdir_avs.max()
                                               * av_to_ak)
 
-
+    # stellar radius uncert
     _eval = '100 * 0.5*(gdir_srad_err1 - gdir_srad_err2) / gdir_srad'
     d['gdir_srad-ferr-med kepmag<14.2'] = "{:.1f}".format(
         bright.eval(_eval)
         .median()
     )
     d['gdir_srad-ferr-med kepmag>14.2'] = "{:.1f}".format(
+        faint.eval(_eval)
+        .median()
+    )
+
+    # stellar mass uncert
+    _eval = '100 * 0.5*(giso_smass_err1 - giso_smass_err2) / giso_smass'
+    d['giso_smass-ferr-med kepmag<14.2'] = "{:.1f}".format(
+        bright.eval(_eval)
+        .median()
+    )
+    d['giso_smass-ferr-med kepmag>14.2'] = "{:.1f}".format(
+        faint.eval(_eval)
+        .median()
+    )
+
+    # stellar density uncert
+    _eval = '100 * 0.5*(giso_srho_err1 - giso_srho_err2) / giso_srho'
+    d['giso_srho-ferr-med kepmag<14.2'] = "{:.1f}".format(
+        bright.eval(_eval)
+        .median()
+    )
+    d['giso_srho-ferr-med kepmag>14.2'] = "{:.1f}".format(
         faint.eval(_eval)
         .median()
     )
@@ -291,7 +313,7 @@ def val_grad(return_dict=False):
     d = OrderedDict()
 
     keys =[]
-    
+    # detections
     for xk in ['per','sinc','smass','smet']:
         if (xk=='per') or (xk=='sinc'):
             smass = ['0.5-0.7','0.7-1.0','1.0-1.4','0.5-1.4']
@@ -302,6 +324,13 @@ def val_grad(return_dict=False):
             key = '{}-prad-det_smass={}'.format(xk,_smass)
             keys.append(key)
 
+    # occurrence
+    for xk in ['per','sinc']:
+        smass = ['0.5-0.7','0.7-1.0','1.0-1.4','0.5-1.4']
+        for _smass in smass:
+            key = '{}-prad-occ_smass={}'.format(xk,_smass)
+            keys.append(key)
+            
     for key in keys:
         gradkey = 'grad-'+key
         grad = ckscool.gradient.Gradient(gradkey)
@@ -316,6 +345,7 @@ def val_grad(return_dict=False):
             valkey = key+'-'+k
             d[valkey] = "{:.2f}^{{ +{:.2f} }}_{{ {:.2f} }}".format(*vals)
 
+            
     lines = []
     for k, v in d.iteritems():
         line = r"{{{}}}{{{}}}".format(k,v)

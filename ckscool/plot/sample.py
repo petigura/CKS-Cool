@@ -4,7 +4,7 @@ from matplotlib.pylab import *
 import seaborn as sns
 import pandas as pd
 from astropy import constants as c
-from ckscool.plot.config import *
+from .config import *
 
 errorbar_kw = dict(fmt='.',markersize=5,color='b')
 
@@ -94,12 +94,19 @@ def fig_cuts_all_multi3():
     plot(df.eval(xk),df.eval(yk),**starkw)
     df = df[~df.isany]
     plot(df.eval(xk),df.eval(yk),**starselkw)
-
+    ax = gca()
+    text(0.65,0.9,'All Stars',transform=ax.transAxes, color=starkw['color'],size='small')
+    text(0.65,0.85,'Selected Stars',transform=ax.transAxes, color=starselkw['color'],size='small')
+    fig_label('a')
+    
     sca(axL[0,1])
     df = ckscool.io.load_table('planets-cuts1')
     plot(df.eval(xk),df.eval(yk),**planetkw)
     df = df[~df.isany]
     plot(df.eval(xk),df.eval(yk),**planetselkw)
+    text(0.65,0.9,'All Hosts',transform=ax.transAxes, color=starkw['color'],size='small')
+    text(0.65,0.85,'Selected Hosts',transform=ax.transAxes, color=starselkw['color'],size='small')
+    fig_label('b')
 
     sca(axL[1,0])
     cut = ckscool.cuts.occur.CutGiantCMD(df,'field')
@@ -110,6 +117,7 @@ def fig_cuts_all_multi3():
     df = df[~df.isany]
     plot(df.eval(xk),df.eval(yk),**starselkw)
     x = linspace(0.5,2.5,100)
+    fig_label('c')
     
     sca(axL[1,1])
     df = ckscool.io.load_table('planets-cuts1')
@@ -117,6 +125,7 @@ def fig_cuts_all_multi3():
     df = df[~df.isany]
     plot(df.eval(xk),df.eval(yk),**planetselkw)
     x = linspace(0.5,2.5,100)
+    fig_label('d')
 
     for i in range(2):
         sca(axL[1,i])

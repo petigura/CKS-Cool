@@ -42,7 +42,9 @@ class Gradient(object):
 
         if self.xk=='per':
             self.ndplotterkey = 'koi_period'
-            self.xlim = (0.5,1.5) # compute minima only over a certain range
+
+            # compute minima only over a certain range of per-prad
+            self.xlim = (log10(3),log10(30)) 
             self.ylim = (0.15,0.35)
             self.x0 = 1 # log of anchor point
             self.ORDPlotter = ckscool.plot.occur.ORDPlotterPerPrad
@@ -50,6 +52,8 @@ class Gradient(object):
             
         if self.xk=='sinc':
             self.ndplotterkey = 'giso_sinc'
+
+            # compute minima only over a certain range of per-prad
             if smass1==0.5 and smass2==0.7:
                 self.xlim = (log10(3),log10(100)) 
             if smass1==0.7 and smass2==1.0:
@@ -58,19 +62,17 @@ class Gradient(object):
                 self.xlim = (log10(30),log10(1000)) 
             if smass1==0.5 and smass2==1.4:
                 self.xlim = (log10(10),log10(1000)) 
-            
-            self.ORDPlotter = ckscool.plot.occur.ORDPlotterSincPrad
-
             self.ylim = (0.15,0.35)
+
             self.x0 = 2
+            self.ORDPlotter = ckscool.plot.occur.ORDPlotterSincPrad
+            self.Occurrence2D = ckscool.occur.OccurrenceSincPrad
 
         if self.xk=='smass':
             self.ndplotterkey = 'giso_smass'
             self.xlim = (np.log10(0.6),np.log10(1.4))
             self.ylim = (0.15,0.35)
             self.x0 = 0
-
-            #ndplotkey = ['koi_period','giso_sinc','giso_smass','cks_smet']
 
         if self.xk=='smet':
             self.ndplotterkey = 'cks_smet'

@@ -176,7 +176,6 @@ def create_chain_summary(args):
     df = pd.DataFrame(df)
     df.to_hdf('data/dr25-mcmc-summary.hdf','dr25')
 
-
 def create_gradient(args):
 
 
@@ -199,7 +198,6 @@ def create_gradient(args):
         objkeys.append(objkey)
     '''
     xk = ['per','sinc']
-    # xk = ['sinc']
     for _smass in smass:
         for _xk in xk:
             objkey = 'grad-{}-prad-occ_smass={}'.format(_xk,_smass)
@@ -207,7 +205,7 @@ def create_gradient(args):
 
     for objkey in objkeys:
         grad = ckscool.gradient.Gradient(objkey)
-        grad.sample(100,nplots=20)
+        grad.sample(1000,nplots=20)
     
 ## functions to build plots/tables/val for papers
 

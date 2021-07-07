@@ -10,6 +10,7 @@ import ckscool.io
 import ckscool.plot.planet
 import ckscool.gradient 
 from .planet import NDPlotter
+from .config import *
 
 sns.set_style('ticks')
 sns.set_color_codes()
@@ -69,8 +70,6 @@ def fig_mean_planet_size(annotate=True):
 
 #def fig_mean_planet_size_ann()
 
-
-
 def fig_occur_per():
     sns.set_context('paper',font_scale=1.1)
     fig, axL = subplots(ncols=2,figsize=(8,4),sharey=True)
@@ -118,6 +117,11 @@ def fig_occur_per():
         xlim =(1,300),
     )
     setp(axL[1], xlim =(1,300))
+
+    for i in range(2):
+        sca(axL[i])
+        fig_label('ab'[i])
+    
     tight_layout(True)
 
 
@@ -205,7 +209,7 @@ def fig_occur_sinc():
             )
             loglog()
         title(_title)
-
+        
     sca(axL[0])
     setp(axL, xlabel='Incident Stellar Flux (Earth-units)', ylim=(1e-4,1e0))
     setp(
@@ -214,6 +218,10 @@ def fig_occur_sinc():
         xlim =(1e4,1)
     )
     setp(axL[1], xlim =(1e4,1))
+    for i in range(2):
+        sca(axL[i])
+        fig_label('cd'[i])
+
     tight_layout(True)
 
 def fig_occur_per3():
@@ -269,6 +277,7 @@ def fig_occur_per3():
     for i in range(3):
         sca(axL[i])
         loglog()
+        fig_label('abc'[i])
 
     tight_layout(True)
     
@@ -326,58 +335,10 @@ def fig_occur_sinc3():
     for i in range(3):
         sca(axL[i])
         loglog()
+        fig_label('def'[i])
 
     tight_layout(True)
     
-
-def fig_occur_per():
-    sns.set_context('paper',font_scale=1.1)
-    fig, axL = subplots(ncols=2,figsize=(8,4),sharey=True)
-    sizes = ['sn','se']
-    for i in range(2):
-        loglog()
-        size = sizes[i]
-        ax = axL[i] 
-        sca(ax)
-        smass = [0.5, 0.7, 1.0, 1.4]
-        if size=='se':
-            prad1, prad2 = 1.0, 1.7
-            _title = 'Super-Earths'
-            xlim_points = [1,100]
-        elif size=='sn':
-            prad1, prad2 = 1.7, 4.0
-            _title = 'Sub-Neptunes'
-            xlim_points = [1,300]
-
-        _title += ' ($R_p$ = {}$-${} $R_\oplus$)'.format(prad1,prad2) 
-            
-        dlogper = 0.25
-        
-        for i in range(3):
-            smass1, smass2 = smass[i],smass[i+1]
-            key = 'fitper_smass={}-{}-prad={}-{}'.format(
-                smass1, smass2, prad1, prad2,
-            )
-            fit = ckscool.io.load_object(key,cache=1)
-            fmtkey = 'smass{}'.format(i+1)
-            plot_per_rates(
-                fit, log10(xlim_points[0]), log10(xlim_points[1])+0.1,
-                dlogper,fmtkey
-            )
-            if size=='se':
-                s = '$M_\star$ = {}$-${} $M_\odot$'.format(smass1, smass2)
-                text(0.6,0.15 - i*0.05,s,color=ptcolor[fmtkey],transform=ax.transAxes)
-        title(_title)
-            
-    sca(axL[0])
-    setp(axL, xlabel='Orbital Period (days)', ylim=(1e-4,1e0))
-    setp(
-        axL[0],
-        ylabel = 'Planets per Star per {} dex Period Interval'.format(dlogper),
-        xlim =(1,300),
-    )
-    setp(axL[1], xlim =(1,300))
-    tight_layout(True)
 
 
     
@@ -424,10 +385,10 @@ class SixPlotter(object):
             pl = self.ORDPlotter(occ, cp)
             pl.plot_ord()
             pl.plot_completeness()
-            '''
-            if plot_gradient:
-                pl.gradient_plot(self.xk, [_mass1,_mass2])
-            '''
+            gradkey = key.replace('occur','grad').replace('prad','prad-occ')
+            grad = ckscool.gradient.Gradient(gradkey)
+            grad.load_csv()
+            grad.plot_gradients('band')
             title = '$M_\star = {}-{}\, M_\odot$ '.format(_mass1,_mass2)
             setp(axL[i,:],title=title)
             i+=1
@@ -529,28 +490,6 @@ class ORDPlotter(object):
     def label(self):
         xlabel(self.xlabel)
         ylabel(self.ylabel)
-
-    def gradient_plot(self, xk, smass_lims):
-
-        ds = self.ds
-        kx = ds.kxc.values[:,0]
-
-        if xk == 'koi_period':
-            grad = ckscool.io.load_object('grad-per-prad_smass={0}-{1}'.format(smass_lims[0],smass_lims[1]),cache=1)
-        elif xk == 'giso_sinc':
-            grad = ckscool.io.load_object('grad-sinc-prad_smass={0}-{1}'.format(smass_lims[0],smass_lims[1]),cache=1)
-
-        nchain = len(grad.grad_chain)
-        nx = len(kx)
-        grad_realisations = np.zeros( (nchain, nx) )
-        for i in range(nchain):
-            # 1 index corresponds to occurrence
-            params = grad.grad_chain[i][1].params
-            grad_realisations[i,:] = grad.func(params, kx)
-
-        gradient_lims = np.percentile(grad_realisations, [16,84], axis=0)
-
-        fill_between(kx, gradient_lims[0,:], gradient_lims[1,:], color='b', alpha=0.4)
         
 
 class ORDPlotterPerPrad(ORDPlotter):
