@@ -104,6 +104,7 @@ def fig_cuts_all_multi3():
     plot(df.eval(xk),df.eval(yk),**planetkw)
     df = df[~df.isany]
     plot(df.eval(xk),df.eval(yk),**planetselkw)
+    ax = gca()
     text(0.65,0.9,'All Hosts',transform=ax.transAxes, color=starkw['color'],size='small')
     text(0.65,0.85,'Selected Hosts',transform=ax.transAxes, color=starselkw['color'],size='small')
     fig_label('b')

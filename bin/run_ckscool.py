@@ -235,7 +235,7 @@ def create_workflow():
     w.plot['star-sample'] =  plot.star.fig_sample
     w.plot['planet-prad'] =  plot.planet.fig_sample
     w.plot['planet-prad-zoom'] =  lambda : plot.planet.fig_sample(plot_gradient=True,zoom=True)
-
+    w.plot['planet-gupta-compare'] = plot.planet.fig_gupta_comparison
 
     w.plot['compare-ckscool-mann13'] = lambda : fig_compare('ckscool-mann13')
     w.plot['compare-ckscool-dressing13'] = (

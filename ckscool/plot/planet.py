@@ -84,49 +84,54 @@ def fig_sample_smass():
 
     mps = ckscool.io.load_object('mps_size-sn',cache=1)
     fill_between(mps.logsmassci, log10(mps.q16),log10(mps.q84) ,alpha=0.5)
-    #import pdb;pdb.set_trace()
-    #tight_layout(True)
 
 
-    
 def fig_gupta_comparison(plot_gradient=False, **kwargs):
-    sns.set_context('paper',font_scale=1.0)
-    fig,axL = subplots(ncols=3,nrows=2,figsize=(10,6))
+    sns.set_context('paper',font_scale=1.3)
+    sns.set(
+        style='ticks',
+        rc={'ytick.major.size':3.0,'xtick.major.size':3.0,
+            'xtick.direction': u'in','ytick.direction': u'in'
+        }
+    )
+    #sns.set_style('whitegrid')
+    fig,axL = subplots(ncols=2,nrows=2,figsize=(8,6))
 
-    kwline = dict(linestyle='--',color='white')
+    kwline = dict(linestyle='--',color='white',zorder=10,lw=1)
+    kwline2 = dict(linestyle='-',color='black',zorder=9,lw=2)
+    def _plot(*args):
+        plot(xi,yi,**kwline)
+        plot(xi,yi,**kwline2)
+        
     df = ckscool.io.load_table('planets-cuts2',cache=1)
     df = df[~df.isany]
 
-    # Mass
-    pl = NDPlotter(df,'giso_smass',zoom=True,**kwargs)
-    xi = linspace(log10(0.5),log10(1.4))
-    yi = 0.33 * xi + log10(1.6)
-
-    sca(axL[0,0])
-    pl.plot()
-    plot(xi,yi,**kwline)
-
-    sca(axL[1,0])
-    pl.plot(column_normalize=True)
-    plot(xi,yi,**kwline)
-    
     # Metalicity
     pl = NDPlotter(df,'cks_smet',zoom=True)
     xi = linspace(-0.4,0.4)
     yi = 0.1 * xi + log10(2.3)
-
-    sca(axL[0,1])
+    xt = [-0.4,-0.2,0.0,0.2,0.4]
+    yt = [1.0,1.5,2.4,3.5]
+    
+    sca(axL[0,0])
     pl.plot()
-    plot(xi,yi,**kwline)
+    pl.cp.xlim(-0.5,0.5)
+    pl.cp.xticks(xt)
+    pl.cp.yticks(yt)
+    _plot(xi,yi)
 
-    sca(axL[1,1])
-    pl.cp.xmin=-0.3
-    pl.cp.xmax=0.3
+    sca(axL[1,0])
+    pl.cp.xmin=-0.4
+    pl.cp.xmax=0.4
     pl.plot(column_normalize=True)
-    pl.cp.xlim(-0.4,0.4)
-    plot(xi,yi,**kwline)
+    pl.cp.xlim(-0.5,0.5)
+    pl.cp.xticks(xt)
+    pl.cp.yticks(yt)
+    _plot(xi,yi)
     
     # Age
+    xt = [1,3,10]
+
     df = ckscool.io.load_table('planets-cuts2',cache=1)
     df = df[~df.isany]
     df = df.query('cks_steff > 5500')
@@ -134,19 +139,29 @@ def fig_gupta_comparison(plot_gradient=False, **kwargs):
 
     xi = linspace(log10(1),log10(10))
     yi = -0.1 * xi + log10(2.5)
-    sca(axL[0,2])
+    sca(axL[0,1])
+    pl.cp.xmin=1.2
+    pl.cp.xmax=12
     pl.plot()
-    pl.cp.xlim(1,10)
-    plot(xi,yi,**kwline)
+    pl.cp.xlim(0.5,12)
+    pl.cp.xticks(xt)
+    pl.cp.yticks(yt)
+    _plot(xi,yi)
 
-    sca(axL[1,2])
+    sca(axL[1,1])
 
     pl.cp.xmin=1.2
-    pl.cp.xmax=10
+    pl.cp.xmax=12
     pl.plot(column_normalize=True)
-    pl.cp.xlim(1,10)
-    plot(xi,yi,**kwline)
+    pl.cp.xlim(0.5,12)
+    _plot(xi,yi)
     tight_layout(True)
+
+    labels = 'cdef'
+    for i in range(4):
+        sca(axL.flatten()[i])
+        grid()
+        fig_label(labels[i])
 
 '''    
     
