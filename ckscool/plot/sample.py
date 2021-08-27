@@ -52,28 +52,6 @@ def fig_cuts_all_multi():
     tight_layout()
 
 
-def fig_cuts_all_multi2():
-    """
-    Same as multi1, but plotting 
-    """
-    sns.set_style('ticks')
-    sns.set_context('paper',font_scale=1.0)
-    sns.set_color_codes()
-
-
-    fig,axL = subplots(nrows=2,ncols=2,figsize=(7,5))
-    sca(axL[0,0])
-    fig_cuts_all('field-cuts',evalBR,'m17_kepmag')
-    sca(axL[0,1])
-    fig_cuts_all('planets-cuts1',evalBR,'m17_kepmag')
-
-    sca(axL[1,0])
-    fig_cuts_all('field-cuts',evalBR,evalMG)
-    sca(axL[1,1])
-    fig_cuts_all('planets-cuts1',evalBR,evalMG)
-    tight_layout()
-
-
 def fig_cuts_all_multi3():
     sns.set_style('ticks')
     sns.set_context('paper',font_scale=1.0)
@@ -117,7 +95,6 @@ def fig_cuts_all_multi3():
     plot(df.eval(xk),df.eval(yk),**starkw)
     df = df[~df.isany]
     plot(df.eval(xk),df.eval(yk),**starselkw)
-    x = linspace(0.5,2.5,100)
     fig_label('c')
     
     sca(axL[1,1])
@@ -125,14 +102,14 @@ def fig_cuts_all_multi3():
     plot(df.eval(xk),df.eval(yk),**planetkw)
     df = df[~df.isany]
     plot(df.eval(xk),df.eval(yk),**planetselkw)
-    x = linspace(0.5,2.5,100)
     fig_label('d')
-
     for i in range(2):
-        sca(axL[1,i])
-        plot(x,cut.fabove(x),color='r',ls='--',lw=0.5)
-        plot(x,cut.fbelow(x),color='r',ls='--',lw=0.5)
-
+        ax = axL[1,i]
+        xy = np.vstack([cut.points1,cut.points2[::-1]])
+        patch  = matplotlib.patches.Polygon(xy,zorder=10, fc='none', ls='--',ec='r')
+        ax.add_patch(patch)
+        #plot(xy[])
+        
     setp(axL[0,:],ylim=(17,8),xlim=(7000,3000),xlabel=texteff,ylabel='$Kp$ (mag)')
     setp(axL[1,:],ylim=(13,-2),xlim=(0,3),xlabel='$B_p - R_p$ (mag)',ylabel='$M_G$ (mag)')
     tight_layout()

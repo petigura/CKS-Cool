@@ -93,22 +93,27 @@ class CutGiantCMD(CutBase):
     cuttype = 'giantcmd'
     plotstr = 'Not giant'
     texstr = 'Not giant'
+    
 
-    points = np.array(
-        [[.8,2],
+
+    points1 = np.array(
+        [[0.5,2],
+         [0.8,2],
          [1.25,5.7],
-         [2.5,9.25]
-        ]
+         [2.5,9.25]]
     )
+
     points2 = np.array(
         [[.5,3.25],
          [0.8,5.5],
-         [2.5,10.4]
-        ]
+         [2.5,10.4]]
     )
 
+    assert points1[0][0]==points2[0][0]
+    assert points1[-1][0]==points2[-1][0]
+
     def fabove(self,x):
-        return np.interp(x,self.points[:,0],self.points[:,1])
+        return np.interp(x,self.points1[:,0],self.points1[:,1])
 
     def fbelow(self,x):
         return np.interp(x,self.points2[:,0],self.points2[:,1])
@@ -120,8 +125,9 @@ class CutGiantCMD(CutBase):
         ys =  'gaia2_gmag - dmod'
         babove = m.eval(ys) < self.fabove(m.eval(xs))
         bbelow = m.eval(ys) > self.fbelow(m.eval(xs))
-        return babove | bbelow
-
+        btoored = m.eval(xs) > self.points1[-1][0]
+        btooblue = m.eval(xs) < self.points1[0][0]
+        return babove | bbelow | btoored | btooblue
 
 class CutFaint(CutBase):
     cuttype = 'faint'

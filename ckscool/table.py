@@ -57,6 +57,7 @@ class TableStar(Table):
         self.df = df
         self.formats = {
             'id_koi':'0.0f',
+            'id_gaia2':'f',
             'm17_kmag':'0.1f',
             'm17_kmag_err':'0.1f',
             'gaia2_sparallax':'0.2f',
@@ -99,7 +100,7 @@ def tab_star():
 
 def tab_star_csv():
     t = TableStar()
-    cols = """id_koi m17_kmag m17_kmag_err gaia2_sparallax gaia2_sparallax_err
+    cols = """id_koi id_gaia2 m17_kmag m17_kmag_err gaia2_sparallax gaia2_sparallax_err
 cks_steff cks_steff_err cks_smet cks_smet_err cks_svsini gdir_srad
 gdir_srad_err1 gdir_srad_err2 giso_smass giso_smass_err1
 giso_smass_err2 giso_srad giso_srad_err1 giso_srad_err2 giso_srho
@@ -138,6 +139,7 @@ class TablePlanet(Table):
             'giso_sinc':'0.2f',
             'giso_sinc_err1':'0.2f',
             'giso_sinc_err2':'0.2f',
+            'isany':'d',
         }
 
 def tab_planet():
@@ -149,6 +151,6 @@ def tab_planet():
 
 def tab_planet_csv():
     t = TablePlanet()
-    cols = 'id_koicand koi_period koi_period_err1 koi_period_err2 dr25_ror dr25_ror_err1 dr25_ror_err2 dr25_tau dr25_tau_err1 dr25_tau_err2 gdir_prad gdir_prad_err1 gdir_prad_err2 giso_tau0 giso_tau0_err1 giso_tau0_err2 giso_sma giso_sma_err1 giso_sma_err2 giso_sinc giso_sinc_err1 giso_sinc_err2'.split()
+    cols = 'id_koicand koi_period koi_period_err1 koi_period_err2 dr25_ror dr25_ror_err1 dr25_ror_err2 dr25_tau dr25_tau_err1 dr25_tau_err2 gdir_prad gdir_prad_err1 gdir_prad_err2 giso_tau0 giso_tau0_err1 giso_tau0_err2 giso_sma giso_sma_err1 giso_sma_err2 giso_sinc giso_sinc_err1 giso_sinc_err2 isany'.split()
     return t.to_csv(cols)
 
