@@ -142,13 +142,6 @@ class CutFaint(CutBase):
         return b
 
 
-class CutSNR(CutBase):
-    cuttype = 'lowsnr'
-    plotstr = 'snr'
-    texstr = 'snr'
-    def cut(self):
-        b = self.df['koi_max_mult_ev'] < 10
-        return b
 
 ##########################################
 # Cuts only applied to planet population #
@@ -176,7 +169,7 @@ class CutNotReliable(CutBase):
     """Remove stars Remove stars with a FP designation from a number of catalogs
 
     koi_disposition is the disposition on the exoplanet archive.
-    koi_disposition_sup is the disposition on the exoplanet archive.
+    koi_disposition_sup is the disposition on the exoplanet archive supplemental
     koi_pdisposition is the disposition based on kepler data
 
     must not be listed as a false positive based on kepler project,
@@ -191,12 +184,28 @@ class CutNotReliable(CutBase):
             b1 = self.df.koi_pdisposition.str.contains('FALSE')  
             b2 = self.df.koi_score < cd['max-score']
             b3 = self.df.koi_disposition_sup.str.contains('FALSE')
-            return b1 | b2 | b3
+            return b1 |  b2 | b3
         elif self.sample=='koi-mullally15':
             b1 = self.df.koi_disposition.str.contains('FALSE')  
             return b1
         else:
             assert False," error"
+
+class CutSNR(CutBase):
+    cuttype = 'lowsnr'
+    plotstr = 'snr'
+    texstr = 'snr'
+    def cut(self):
+        b = self.df['koi_max_mult_ev'] < 10
+        return b
+
+class CutMCMC(CutBase):
+    cuttype = 'nomcmc'
+    plotstr = 'mcmc'
+    texstr = 'mcmc'
+    def cut(self):
+        b = ~self.df.koi_fittype.str.contains('MCMC')
+        return b
 
 class CutImpact(CutBase):
     """Remove planets with high impact parameters"""

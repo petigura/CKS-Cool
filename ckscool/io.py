@@ -266,7 +266,7 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         star = load_table('m17+cdpp+gaia2+ber20',cache=1)
         plnt = load_table('koi-thompson18')
         df = pd.merge(star,plnt)
-        cuttypes = ['none','faint','giantcmd','ruwe','notreliable','lowsnr']
+        cuttypes = ['none','faint','giantcmd','ruwe','notreliable','lowsnr','nomcmc']
         df.sample = 'koi-thompson18'
         df = ckscool.cuts.occur.add_cuts(df, cuttypes, 'koi-thompson18')
 
@@ -703,10 +703,9 @@ def load_table_koi(table):
             'koi_tce_delivname',
             'koi_quarters',
             'koi_bin_oedp_sig',
-
+            'koi_fittype'
         ]
         df = df[names]
-
         csvfn = 'q1_q17_dr25_sup_koi_2020.08.14_12.09.28.csv'
         csvfn = os.path.join(DATADIR,csvfn)
         df2 = pd.read_csv(csvfn,comment='#',index_col=0)
