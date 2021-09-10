@@ -1,12 +1,19 @@
 # CKS-Cool
 
-## Computing environment
+1. [Computing Environemnt](#computing)
+2. [Target List Construction](#targetlist)
+3. [Cookbook For CKS-X](#cksx)
+4. [Data Access](#dataaccess)
+5. [Isoclassify Cadence](#isoclassify-cadence)
+6. [Kepler Headers](#kepler-headers)
+
+
+## Computing environment <a name="computing"></a>
 
 Use the ckscool environment on Petigura's laptop
 
 ```bash
 conda activate ckscool 
-```
 conda install numpy==1.15.4 # this avoids the ValueError: cannot set WRITEABLE flag to True of this array #24839
 conda install scipy matplotlib astropy pandas d seaborn scikit-learn pytables
 conda install -c conda-forge healpy # needed for dustmaps also got healpy==1.11 to work
@@ -16,15 +23,16 @@ pip install mwdust
 pip install pyephem
 pip install lmfit
 pip install ebfpy
+```
 
 isoclassify on f6f16e
 
-## Cookbook for target list construction 
+## Cookbook for target list construction <a name="targetlist"></a>
 
-- [Construct target list](docs/observing.md)
-- [Plan/execute observations](docs/observing.md)
+1. [Construct target list](docs/observing.md)
+1. [Plan/execute observations](docs/observing.md)
 
-## Cookbook for occurrence analysis
+## Cookbook for occurrence analysis <a name="cksx"></a>
 
 - Compute stellar/planet parameters
 - Access the CKS-Cool dataset
@@ -92,22 +100,20 @@ isoclassify on f6f16e
    ```
 
 
-3. Generate ReaMatch table
+### Generate ReaMatch table
 
-   Run `ReaMatch.ipynb` and copy output file to `reamatch.csv` to `~/Dropbox/CKS-Cool/hires/reamatch.csv`. Howard Isaacson will then add the appropriate RM designations to file.
+Run `ReaMatch.ipynb` and copy output file to `reamatch.csv` to `~/Dropbox/CKS-Cool/hires/reamatch.csv`. Howard Isaacson will then add the appropriate RM designations to file.
 
 
-4. Create final table of stellar / planet parameters
-
-5. Generate representative spectra figure
+### Generate representative spectra figure
 
    Run the 3_Spectra-Figure ipython notebook
 
    ```
    rsync -av --progress --files-from=data/fig_spectra/fig_spectra-files.txt cadence:/ data/fig_spectra/ 
    ```
-
-6. Run the gap fitting code.
+   
+### Run the gap fitting code.
 
    Takes about 1 hour to run with a 1000 samples
 
@@ -115,11 +121,9 @@ isoclassify on f6f16e
    bin/run_ckscool.py create-gradient # stores results in analysis/ to do a fresh run, remove or move this directory
    ```
 
-   (This used to be done in a jupyter notebook) 
+   Calling this will generate a bunch of other cached results
 
-## Run gapfitting jupyter to generate gap fits. 
-
-## Create plots and build paper
+### Create plots and build paper
 
 run_ckscool.py build plot all 
 run_ckscool.py build table all 
@@ -129,36 +133,28 @@ run_ckscool.py build csv all
 http://localhost:8889/notebooks/gapfitting-comparison/gapfitting.ipynb
 
 
-## Access CKS-Cool dataset
+## Access to the CKS-Cool dataset <a name="dataaccess"></a>
 
 The full list of star and planet properties are in `data/ckscool-planets-cuts.csv ` see `data/column-definitions.txt` for a description of the columns.
 
 The `is*` columns correspond to cuts. See the ckscool/cuts.py for additional info.
 
-# Other notes
 
-
-## Running isoclassify on cadence
+## Running isoclassify on cadence <a name="isoclassify-cadence"></a>
 
 Note when running on cadence, there was a really weird issue with
 h5py. Where it was taking 30s to read in the Combined Dustmap
 
-## Download all Kepler headers (this is needed for the dilution cut)
+## Download all Kepler headers (this is needed for the dilution cut) <a name="kepler-headers"></a>
 
-List of wget scripts from all quarters
+1. Get bactch download script [here](https://exoplanetarchive.ipac.caltech.edu/bulk_data_download/Kepler_Quarterly_wget.tar.gz)
+2. Combine wget scripts and cat them into one file and only pull the fits files.
 
-https://exoplanetarchive.ipac.caltech.edu/bulk_data_download/Kepler_Quarterly_wget.tar.gz
+   ```bash
+   cat ~/Downloads/Kepler_Quarterly_wget/Kepler_Q* | grep fits > Kepler_wget.bat
+   ```
+3. Download onto `cadence:/data/user/petigura/lightcurve-all` cadence Should take about 4 hours to download all.
 
-Combine wget scripts and cat them into one file and only pull the fits files.
-
-```
-cat ~/Downloads/Kepler_Quarterly_wget/Kepler_Q* | grep fits > Kepler_wget.bat
-```
-
-Run this script on cadence
-
-Downloads about 150 lightcurves/s. Should take about 4 hours to download all.
-
-```
-scrape_headers.py
-```
+   ```
+   scrape_headers.py
+   ```
