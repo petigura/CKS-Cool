@@ -57,7 +57,7 @@ class CutDiluted(CutBase):
     plotstr = 'Not diluted'
     texstr = 'Not diluted'
     def cut(self):
-        b = (self.df['gaia2_gflux_ratio'] > 1.1) | (self.df['gaia2_kflux_ratio'] > 1.1)
+        b = self.df['gaia2_gflux_dilution'] > 1.1
         return b
 
 class CutRizzuto(CutBase):
@@ -203,6 +203,14 @@ class CutMCMC(CutBase):
     cuttype = 'nomcmc'
     plotstr = 'mcmc'
     texstr = 'mcmc'
+    def cut(self):
+        b = ~self.df.koi_fittype.str.contains('MCMC')
+        return b
+
+class CutCROWDSAP(CutBase):
+    cuttype = 'dilutedsap'
+    plotstr = 'sap'
+    texstr = 'sap'
     def cut(self):
         b = ~self.df.koi_fittype.str.contains('MCMC')
         return b

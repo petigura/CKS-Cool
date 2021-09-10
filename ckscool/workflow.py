@@ -91,14 +91,13 @@ class Workflow(object):
                 ]
 
                 lines2 = [
-                    "}[XX]",
+                    "}[{{\color{red}XX}}]",
                     "}"
                 ]
                 lines = lines1 + lines + lines2
 
                 with open(fn,'w') as f:
                     f.writelines("%\n".join(lines))
-
             i+=1
 
         if i==0:

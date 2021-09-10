@@ -32,6 +32,12 @@ def main():
     subpsr = psr.add_subparsers(title="subcommands", dest='subcommand')
     psr_parent = ArgumentParser(add_help=False)
 
+    psr2 = subpsr.add_parser('download-lightcurves', parents=[psr_parent],)
+    psr2.add_argument('wget_dir',type=str)
+    psr2.add_argument('output_dir',type=str)
+    psr2.add_argument('--first',type=int,default=-1)
+    psr2.set_defaults(func=download_lightcurves)
+
     psr2 = subpsr.add_parser('create-kbc', parents=[psr_parent],)
     psr2.set_defaults(func=create_kbc)
 
@@ -70,6 +76,22 @@ def main():
     args = psr.parse_args()
     args.func(args)
 
+
+def download_lightcurves(args):
+    import cpsutils.kbc
+    df = cpsutils.kbc.loadkbc()
+    b = ( df.type.str.contains('t') 
+          & df.name.str.contains(r'^K\d{5}$|^CK\d{5}$') )
+    df = df[b]
+    df['id_koi'] = df.name.str.slice(start=-5).astype(int)
+    df = df['obs name id_koi'.split()]
+    namemap = {'obs':'id_obs','name':'id_name'}
+    df = df.rename(columns=namemap)
+    fn = ckscool.io.KBCFN
+    df.to_csv()
+    print "created {}".format(fn)
+
+    
 def create_kbc(args):
     import cpsutils.kbc
     df = cpsutils.kbc.loadkbc()

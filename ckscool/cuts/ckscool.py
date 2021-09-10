@@ -80,7 +80,7 @@ class CutDiluted(CutBase):
     plotstr = 'Not diluted'
     texstr = 'Not diluted'
     def cut(self):
-        b = self.df['gaia2_gflux_ratio'] > 1.1
+        b = self.df['gaia2_gflux_dilution'] > 1.1
         return b
 
 class CutFurlan(CutBase):

@@ -116,6 +116,31 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
     elif table=='gaia2':
         fn = os.path.join(DATADIR,'xmatch_gaia2_m17_ruwe_tmass-result.csv')
         df = pd.read_csv(fn)
+
+        # compute extra flux within 4 arcsec due to neighboring stars.
+        distarcsec_neighbor = 4
+        contrast_bright = 2.5
+
+        fn = os.path.join(DATADIR,'xmatch_gaia2_m17_ruwe_tmass_10arcsec-result.csv')
+        nei = pd.read_csv(fn)
+        nei['distarcsec'] = nei.dist * 3600
+        nei = nei[nei.distarcsec < distarcsec_neighbor]
+        nei = nei.sort_values(by=['id_gaia2_primary','dist'])
+        g = nei.groupby('id_gaia2_primary')
+
+        pri = g.first()
+        nei = nei.set_index('id_gaia2_primary')
+        nei['gaia2_gmag_contrast'] = nei.gaia2_gmag - pri.gaia2_gmag
+        pri['gaia2_gflux_dilution'] = g['gaia2_gflux'].sum() / g['gaia2_gflux'].first()
+        pri['gaia2_n_neighbors'] = nei[nei.dist > 0].groupby('id_gaia2_primary').size()
+        pri['gaia2_n_neighbors_bright'] = (nei[(nei.dist > 0) & (nei.gaia2_gmag_contrast<contrast_bright)]
+                                           .query('dist > 0 and gaia2_gmag_contrast<2.5')
+                                           .groupby('id_gaia2_primary').size())
+        
+        pri = pri.fillna(dict(gaia2_n_neighbor=0,gaia2_n_neighbor_bright=0))
+        pri = pri['gaia2_gflux_dilution gaia2_n_neighbors gaia2_n_neighbors_bright'.split()]
+        df = pd.merge(df,pri,left_on='id_gaia2',right_index=True)
+  
         # Apply systematic offset from Zinn et al. (2018)
         df['gaia2_sparallax'] += 0.053
 
@@ -259,14 +284,14 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
 
     elif table == 'field-cuts':
         df = load_table('m17+cdpp+gaia2+ber20',cache=1)
-        cuttypes = ['none','faint','giantcmd','ruwe']
+        cuttypes = ['none','faint','giantcmd','diluted','ruwe']
         df = ckscool.cuts.occur.add_cuts(df, cuttypes, 'field')
 
     elif table == 'planets-cuts1':
         star = load_table('m17+cdpp+gaia2+ber20',cache=1)
         plnt = load_table('koi-thompson18')
         df = pd.merge(star,plnt)
-        cuttypes = ['none','faint','giantcmd','ruwe','notreliable','lowsnr','nomcmc']
+        cuttypes = ['none','faint','giantcmd','diluted','ruwe','notreliable','lowsnr','nomcmc']
         df.sample = 'koi-thompson18'
         df = ckscool.cuts.occur.add_cuts(df, cuttypes, 'koi-thompson18')
 
