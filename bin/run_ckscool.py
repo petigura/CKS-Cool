@@ -199,26 +199,16 @@ def create_chain_summary(args):
     df.to_hdf('data/dr25-mcmc-summary.hdf','dr25')
 
 def create_gradient(args):
-
-
     objkeys = []
-    smass = ['0.5-1.4','0.5-0.7','0.7-1.0','1.0-1.4']
-
-    # we compute per and sinc gradients in three bins of stellar mass.
-    xk = ['per','sinc']
-    # xk = ['sinc']
-    '''
-    for _smass in smass:
-        for _xk in xk:
-            objkey = 'grad-{}-prad-det_smass={}'.format(_xk,_smass)
-            objkeys.append(objkey)
 
     # smass smet only apply to full stellar mass range.
     xk = ['smass','smet']
     for _xk in xk:
         objkey = 'grad-{}-prad-det_smass=0.5-1.4'.format(_xk,)
         objkeys.append(objkey)
-    '''
+
+    # we compute per and sinc gradients in three bins of stellar mass.
+    smass = ['0.5-1.4','0.5-0.7','0.7-1.0','1.0-1.4']
     xk = ['per','sinc']
     for _smass in smass:
         for _xk in xk:
@@ -227,8 +217,9 @@ def create_gradient(args):
 
     for objkey in objkeys:
         grad = ckscool.gradient.Gradient(objkey)
+        #grad.sample(20,nplots=20)
         grad.sample(1000,nplots=20)
-    
+        
 ## functions to build plots/tables/val for papers
 
 def build(args):
