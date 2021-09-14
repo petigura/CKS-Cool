@@ -301,7 +301,7 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         dr12 = load_table('DR1+DR2')
         df2 = []
         for i, row in dr12.iterrows():
-            d = dict(row['id_kic id_koi in_dr1 in_dr2'.split()])
+            d = dict(row['id_kic id_koi id_name id_obs in_dr1 in_dr2'.split()])
             if row.smemp_teff < SMEMPLIMIT:
                 d['cks_steff'] = row.smemp_teff
                 d['cks_steff_err'] = row.smemp_teff_err
@@ -403,7 +403,7 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
     elif table=='planets-cuts2':
         df = load_table('planets-cuts1+iso+dr25',cache=1)
         cuttypes = [
-            'none','badvsini','sb2','badspecparallax',
+            'none','badvsini','badspecparallax','sb2',
             'badimpact','badimpacttau','badprad','badpradprec'
         ]
         df = ckscool.cuts.occur.add_cuts(df, cuttypes, 'koi-thompson18')
@@ -412,7 +412,7 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
     # Tables from other papers #
     ############################
     elif table == 'reamatch':
-        fn = os.path.join(DATADIR, 'reamatch.csv')
+        fn = os.path.join(DATADIR, 'hires/reamatch.csv')
         df = pd.read_csv(fn,index_col=None, usecols=range(6))
         df['id_koi'] = df.name.str.slice(start=-5).astype(int)
         namemap = {'id_koi':'id_koi','is_sb2':'rm_sb2'}

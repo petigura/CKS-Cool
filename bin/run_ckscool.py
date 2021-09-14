@@ -201,6 +201,7 @@ def create_chain_summary(args):
 def create_gradient(args):
     objkeys = []
 
+    '''
     # smass smet only apply to full stellar mass range.
     xk = ['smass','smet']
     for _xk in xk:
@@ -213,6 +214,14 @@ def create_gradient(args):
     for _smass in smass:
         for _xk in xk:
             objkey = 'grad-{}-prad-occ_smass={}'.format(_xk,_smass)
+            objkeys.append(objkey)
+    '''
+    # we compute per and sinc gradients in three bins of stellar mass.
+    smass = ['0.5-1.4','0.5-0.7','0.7-1.0','1.0-1.4']
+    xk = ['per','sinc']
+    for _smass in smass:
+        for _xk in xk:
+            objkey = 'grad-{}-prad-det_smass={}'.format(_xk,_smass)
             objkeys.append(objkey)
 
     for objkey in objkeys:

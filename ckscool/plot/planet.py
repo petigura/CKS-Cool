@@ -15,7 +15,6 @@ def fig_sample(plot_gradient=False, **kwargs):
     df = df[~df.isany]
 
     ndplotkey = ['koi_period','giso_sinc','giso_smass','cks_smet']
-    #gradkey = ['grad-per-prad-det_smass=0.5-1.4','grad-sinc-prad-det_smass=0.5-1.4','grad-smass-prad-det_smass=0.5-1.4','grad-smet-prad-det_smass=0.5-1.4']
     labels = 'abcd'
 
     gradkey = ['grad-per-prad-det_smass=0.5-1.4','grad-sinc-prad-det_smass=0.5-1.4','grad-smass-prad-det_smass=0.5-1.4','grad-smet-prad-det_smass=0.5-1.4']
@@ -162,80 +161,6 @@ def fig_gupta_comparison(plot_gradient=False, **kwargs):
         sca(axL.flatten()[i])
         grid()
         fig_label(labels[i])
-
-'''    
-    
-    
-
-plot(df.giso_slogage,df.gdir_prad,'.')
-
-# Period
-#sca(axL[0,0])
-
-
-pl = NDPlotter(df,'giso_sage',zoom=True)
-
-
-
-df = ckscool.io.load_table('planets-cuts2',cache=1)
-df = df[~df.isany]
-#df = df.query('-0.2 < cks_smet < 0.2 and 0.5 < giso_smass < 1.0')
-pl = NDPlotter(df,'cks_smet',zoom=True)
-pl.cp.xmin=-0.35
-pl.cp.xmax=0.35
-pl.plot(column_normalize=True)
-pl.cp.xlim(-0.4,0.4)
-
-
-
-figure()
-
-pl.plot(column_normalize=False)
-
-
-
-    
-    # Period
-    sca(axL[0,0])
-    pl = NDPlotter(df,'koi_period',smass_lims=[0.5,1.4],**kwargs)
-    pl.plot()
-    if plot_gradient:
-        key = 'grad-per-prad-det_smass=0.5-1.4'
-        grads = ckscool.io.load_object(key, cache=1) 
-        pl.cp.plot_gradients(grads)
-        
-    fig_label('a')
-    ax = axes([0.89, 0.85, 0.008, 0.1])
-    cbar = colorbar(pl.qc,cax=ax,format='%.1f')
-    cbar.set_label('relative density',size='x-small')
-    cbar.ax.tick_params(labelsize='xx-small')
-
-    # Sinc
-    sca(axL[0,1])
-    pl = NDPlotter(df,'giso_sinc',smass_lims=[0.5,1.4],**kwargs)
-    pl.plot()
-    if plot_gradient:
-        key = 'grad-sinc-prad-det_smass=0.5-1.4'
-        grads = ckscool.io.load_object(key, cache=1) 
-        pl.cp.plot_gradients(grads)
-
-    xl = xlim()
-    xlim(xl[1],xl[0])
-    fig_label('b')
-
-    # Mass 
-    sca(axL[1,0])
-    pl = NDPlotter(df,'giso_smass',**kwargs)
-    pl.plot()
-    fig_label('c')
-    
-    # Metallicity
-    sca(axL[1,1])
-    pl = NDPlotter(df,'cks_smet',**kwargs)
-    pl.plot()
-    fig_label('d')
-    tight_layout(True)
-'''
     
 class NDPlotter(object):
     """
