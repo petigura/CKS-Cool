@@ -34,9 +34,9 @@ def fig_sample(plot_gradient=False, **kwargs):
 
         if i==0:
             ax = axes([0.89, 0.85, 0.008, 0.1])
-            cbar = colorbar(pl.qc,cax=ax,format='%.1f')
+            cbar = colorbar(pl.qc,cax=ax,format='%.2f')
             cbar.set_label('relative density',size='x-small')
-            cbar.ax.tick_params(labelsize='xx-small')
+            cbar.ax.tick_params(labelsize=0.4 * rcParams['font.size'])
 
         if i==1:
             xl = xlim()
@@ -362,11 +362,11 @@ class ContourPlotter(object):
             Z = Z / Z.sum('ky')
 
         if normalize:
-            fac = 1.2
+            fac = 1.2 # Fac is a factor that determins how saturated the darkest contour is 
             Z /= Z.max()
             Z /= fac
             qc = Z.plot.contourf(
-                x='kx', levels=arange(0,1.001,0.05),
+                x='kx', levels=arange(0,fac + 0.001,0.05),
                 vmax=1,add_colorbar=False,**kwargs)
         else:
             qc = Z.plot.contourf(x='kx', add_colorbar=False,**kwargs)

@@ -26,13 +26,17 @@ class Plotter():
     limits = {
         'steff':(6750,3750),
         'srad': (0.4,2.4),
-        'smet': (-0.5,0.5),
-        'smass': (0.4,2.0),
+        'smet': (-0.6,0.6),
+        'smass': (0.45,2.4),
         'sage': (0,15)
     }
 
-    def scatter(self,*args,**kwargs):
-        scatter(*args, c=self.slogage_err,s=8, vmin=0, vmax=1,**kwargs)
+    from matplotlib.colors import ListedColormap
+    #cmap = ListedColormap(sns.color_palette("mako").as_hex())
+
+    cmap = ListedColormap(sns.color_palette("viridis_r").as_hex())
+
+    kw = dict(s=10,cmap=cmap,edgecolor='k',linewidths=0.5)
     
     def __init__(self):
         df = ckscool.io.load_table('planets-cuts2',cache=1)
@@ -42,11 +46,12 @@ class Plotter():
         self.srad = df.gdir_srad
         self.smet = df.cks_smet
         self.sage = df.giso_sage
+        self.slogage = df.giso_slogage
         self.slogage_err = df.eval('giso_slogage_err1 - giso_slogage_err2').tolist()
         self.smass = df.giso_smass
 
     def hr(self):
-        self.scatter(self.steff,self.srad)
+        scatter(self.steff,self.srad, c=self.slogage_err,vmin=0,vmax=1,**self.kw)
         semilogy()
         xlim()
         minorticks_off()
@@ -55,18 +60,18 @@ class Plotter():
         
     def smet_smass(self):
         semilogy()
-        plot(self.smet,self.smass,'.')
+        scatter(self.smet,self.smass, c=self.slogage,vmin=9,vmax=10.2,**self.kw)
         yticks(rstarticks,rstarticks)
         minorticks_off()
         self.setp('smet','smass')
         
     def smet_sage(self):
-        scatter(self.smet,self.sage,s=8)
+        scatter(self.smet,self.sage,c=self.smass, vmin=0.5,vmax=1.4, **self.kw)
         self.setp('smet','sage')
     
     def smass_sage(self):
         semilogx()
-        self.scatter(self.smass,self.sage)
+        scatter(self.smass,self.sage, c=self.slogage_err,vmin=0,vmax=1,**self.kw)
         self.setp('smass','sage')
         xticks(rstarticks,rstarticks)
         minorticks_off()
@@ -84,25 +89,37 @@ def fig_sample():
     sca(axL[0,0])
     p.smet_smass()
     fig_label('a')
+    ax = axes([0.4, 0.85, 0.01, 0.1])
+    cbar = colorbar(cax=ax,shrink=20)
+    cbar.set_label('log(age)',size='x-small')
+    cbar.ax.tick_params(labelsize='xx-small')
 
     # HR diagram
     sca(axL[0,1])
     p.hr()
     fig_label('b')
-    ax = axes([0.6, 0.6, 0.01, 0.15])
-    cbar = colorbar(cax=ax,shrink=10)
-    cbar.set_label('log(age) error',size='small')
-    cbar.ax.tick_params(labelsize='x-small')
+    ax = axes([0.9, 0.85, 0.01, 0.1])
+    cbar = colorbar(cax=ax,shrink=20)
+    cbar.set_label('log(age) error',size='x-small')
+    cbar.ax.tick_params(labelsize='xx-small')
 
     # Metallicity and age
     sca(axL[1,0])
     p.smet_sage()
     fig_label('c')
+    ax = axes([0.4, 0.35, 0.01, 0.1])
+    cbar = colorbar(cax=ax,shrink=20)
+    cbar.set_label('mass',size='x-small')
+    cbar.ax.tick_params(labelsize='xx-small')
 
     # Mass and age
     sca(axL[1,1])
     p.smass_sage()
     fig_label('d')
+    ax = axes([0.9, 0.35, 0.01, 0.1])
+    cbar = colorbar(cax=ax,shrink=20)
+    cbar.set_label('log(age) error',size='x-small')
+    cbar.ax.tick_params(labelsize='xx-small')
 
     tight_layout(True)
 
