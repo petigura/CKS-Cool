@@ -8,6 +8,7 @@ import scipy.integrate
 from scipy.stats import gamma
 from astropy import constants as c
 from astropy import units as u
+import ckscool.io
 import copy
 
 TDUR_EARTH_SUN_HRS = (
@@ -93,6 +94,10 @@ class Completeness2D(object):
         self.impact = impact
         self.mesfac = mesfac
 
+        if method.count('christiansen20'):
+            self.cf = ChristiansenFit()
+            self.cf.fit()
+            
     def snr(self, per, prad):
         """
         Calculate expected transit SNR
@@ -228,8 +233,10 @@ class Completeness2D(object):
             _prob_det = fulton_gamma(snr).sum() / self.nstars
         elif self.method=='fulton-gamma-clip':
             snr = self.snr(per, prad)
-            _prob_det = fulton_gamma_clip(snr).sum() / self.nstars
-
+            _prob_det = (fulton_gamma(snr) * (snr > 10)).sum() / self.nstars
+        elif self.method=='christiansen20-clip':
+            snr = self.snr(per, prad)
+            _prob_det = (christiansen20_gamma(snr) * (snr > 10)).sum() / self.nstars
         return _prob_det
 
     def compute_grid_prob_det(self, verbose=0):
@@ -515,6 +522,12 @@ def fulton_gamma(snr):
     theta = 0.49
     return gamma.cdf(snr, k, l, theta)
 
-def fulton_gamma_clip(snr):
-    return fulton_gamma(snr) * (snr > 10)
+def christiansen20_gamma(snr):
+    """
+    Coefficiants determined through fitting
+    """
+    a = 26.09
+    b = 0.3196
+    c = 0.9406
+    return c * scipy.stats.gamma.cdf(snr, a, scale=b)
 

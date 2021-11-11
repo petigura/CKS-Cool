@@ -591,6 +591,10 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         readme = os.path.join(DATADIR,'huber13/J_ApJ_767_127/ReadMe')
         df = read_huber13(fn,readme)
 
+    elif table=='christiansen20':
+        df = astropy.io.ascii.read('kplr_dr25_inj1_plti.txt')
+        df = df.to_pandas().rename(columns={'KIC_ID':'id_kic'})
+        
 
     else:
         assert False, "table {} not valid table name".format(table)
