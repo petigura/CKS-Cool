@@ -115,7 +115,7 @@ Run `ReaMatch.ipynb` and copy output file to `reamatch.csv` to `~/Dropbox/CKS-Co
    
 ### Run the gap fitting code.
 
-   Takes about 1 hour to run with a 1000 samples
+   Takes about 1 hour to run with 1000 samples
 
    ```bash 
    bin/run_ckscool.py create-gradient # stores results in analysis/ to do a fresh run, remove or move this directory

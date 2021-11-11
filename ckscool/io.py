@@ -1000,7 +1000,7 @@ def load_object(key,cache=0, verbose=1, N_cores=None):
 def load_comp(objkey, limits):
 
     # Derive completeness object
-    method = 'fulton-gamma-clip' # treatment for planet detectability
+    method = 'christiansen20-gamma-clip' # treatment for planet detectability
     impact = 0.8 # maximum impact parameter considered.
 
     field = ckscool.io.load_table('field-cuts',cache=1)
@@ -1053,7 +1053,7 @@ def load_occur(objkey, limits, debug=False):
     """
 
     # Derive completeness object
-    method = 'fulton-gamma-clip' # treatment for planet detectability
+    method = 'christiansen20-gamma-clip' # treatment for planet detectability
     impact = 0.8 # maximum impact parameter considered.
 
     field = ckscool.io.load_table('field-cuts',cache=1)

@@ -94,10 +94,6 @@ class Completeness2D(object):
         self.impact = impact
         self.mesfac = mesfac
 
-        if method.count('christiansen20'):
-            self.cf = ChristiansenFit()
-            self.cf.fit()
-            
     def snr(self, per, prad):
         """
         Calculate expected transit SNR
@@ -234,7 +230,7 @@ class Completeness2D(object):
         elif self.method=='fulton-gamma-clip':
             snr = self.snr(per, prad)
             _prob_det = (fulton_gamma(snr) * (snr > 10)).sum() / self.nstars
-        elif self.method=='christiansen20-clip':
+        elif self.method=='christiansen20-gamma-clip':
             snr = self.snr(per, prad)
             _prob_det = (christiansen20_gamma(snr) * (snr > 10)).sum() / self.nstars
         return _prob_det
