@@ -94,8 +94,8 @@ def fig_gupta_comparison(plot_gradient=False, **kwargs):
         }
     )
     #sns.set_style('whitegrid')
-    fig,axL = subplots(ncols=2,nrows=2,figsize=(8,6))
-
+    fig,axL = subplots(ncols=2,nrows=2,figsize=(8,5))
+    #fig,axL = subplots(ncols=2,nrows=2,figsize=(10,6.25))
     kwline = dict(linestyle='--',color='white',zorder=10,lw=1)
     kwline2 = dict(linestyle='-',color='black',zorder=9,lw=2)
     def _plot(*args):
@@ -113,7 +113,7 @@ def fig_gupta_comparison(plot_gradient=False, **kwargs):
     yt = [1.0,1.5,2.4,3.5]
     
     sca(axL[0,0])
-    pl.plot()
+    pl.plot(add_colorbar=True,cbar_title='relative density of planets')
     pl.cp.xlim(-0.5,0.5)
     pl.cp.xticks(xt)
     pl.cp.yticks(yt)
@@ -122,7 +122,7 @@ def fig_gupta_comparison(plot_gradient=False, **kwargs):
     sca(axL[1,0])
     pl.cp.xmin=-0.4
     pl.cp.xmax=0.4
-    pl.plot(column_normalize=True)
+    pl.plot(add_colorbar=True,column_normalize=True, cbar_title='relative density of planets \n (at const [Fe/H])')
     pl.cp.xlim(-0.5,0.5)
     pl.cp.xticks(xt)
     pl.cp.yticks(yt)
@@ -141,7 +141,7 @@ def fig_gupta_comparison(plot_gradient=False, **kwargs):
     sca(axL[0,1])
     pl.cp.xmin=1.2
     pl.cp.xmax=12
-    pl.plot()
+    pl.plot(add_colorbar=True,cbar_title='relative density of planets')
     pl.cp.xlim(0.5,12)
     pl.cp.xticks(xt)
     pl.cp.yticks(yt)
@@ -151,7 +151,7 @@ def fig_gupta_comparison(plot_gradient=False, **kwargs):
 
     pl.cp.xmin=1.2
     pl.cp.xmax=12
-    pl.plot(column_normalize=True)
+    pl.plot(add_colorbar=True,column_normalize=True,cbar_title='relative density of planets \n (at const. age)')
     pl.cp.xlim(0.5,12)
     _plot(xi,yi)
     tight_layout(True)
@@ -283,7 +283,7 @@ class NDPlotter(object):
         self.ylabel = ylabel
         self.xlabel = xlabel
 
-    def plot(self, gradient_array=False, column_normalize=False):
+    def plot(self, gradient_array=False, column_normalize=False, **kwargs):
         ds = self.cp.meshgrid()
         Z = gaussian_2d_kde(array(ds.kxc), array(ds.kyc), self.kx,
                             self.ky, self.bwx, self.bwy)
@@ -296,7 +296,7 @@ class NDPlotter(object):
         ds['Z'] = (['kx','ky'],Z)
         qc = self.cp.contour(
             ds['Z'], normalize=True, cmap=plt.cm.afmhot_r,zorder=0,
-            column_normalize=column_normalize
+            column_normalize=column_normalize, **kwargs
         )
         self.qc = qc
         self.cp.errorbar(
@@ -357,7 +357,7 @@ class ContourPlotter(object):
         ds = xr.Dataset(data,coords=coords)
         return ds
        
-    def contour(self, Z, column_normalize=False, normalize=False, **kwargs):
+    def contour(self, Z, column_normalize=False, normalize=False, add_colorbar=False, cbar_title=None,  **kwargs):
         if column_normalize:
             Z = Z / Z.sum('ky')
 
@@ -368,11 +368,15 @@ class ContourPlotter(object):
             qc = Z.plot.contourf(
                 x='kx', levels=arange(0,fac + 0.001,0.05),
                 vmax=1,add_colorbar=False,**kwargs)
+
+
         else:
             qc = Z.plot.contourf(x='kx', add_colorbar=False,**kwargs)
             
-
-
+        if add_colorbar:
+            cbar = colorbar(qc,format='%.2f',shrink=0.5)
+            cbar.set_label(cbar_title,size='small')
+            cbar.ax.tick_params(labelsize=0.6 * rcParams['font.size'])
 
         return qc
 

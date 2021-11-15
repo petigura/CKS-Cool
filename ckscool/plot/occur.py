@@ -417,7 +417,7 @@ class SixPlotterPerPrad(SixPlotter):
         self.ORDPlotter = ORDPlotterPerPrad
         self.xlabel='Orbital Period (days)'
         self.ylabel='Planet Size (Earth-radii)'
-        self.clabel='$dN/d \log P/ d \log R_p$'
+        self.clabel='$\mathrm{d}N/\mathrm{d}\log P/\mathrm{d}\log R_p$'
         
 class SixPlotterSincPrad(SixPlotter):
     def __init__(self):
@@ -431,7 +431,7 @@ class SixPlotterSincPrad(SixPlotter):
         self.ORDPlotter = ORDPlotterSincPrad
         self.xlabel='Incident Flux (Earth-units)'
         self.ylabel='Planet Size (Earth-radii)'
-        self.clabel='$dN/d \log Sinc/ d \log R_p$'
+        self.clabel='$\mathrm{d} N / \mathrm{d} \log S_\mathrm{inc} / \mathrm{d} \log R_p$'
 
 class ORDPlotter(object):
     """
@@ -499,7 +499,7 @@ class ORDPlotterPerPrad(ORDPlotter):
         super(ORDPlotterPerPrad,self).__init__(occ,cp)
         self.xlabel = 'Orbital Period (days)'
         self.ylabel = 'Planet size (Earth-radii)'
-        self.cbarlabel = '$df/ d \log P / d \log R_p$'
+        self.cbarlabel='$\mathrm{d}f/\mathrm{d}\log P/\mathrm{d}\log R_p$'
 
 class ORDPlotterSincPrad(ORDPlotter):
     """
@@ -508,7 +508,8 @@ class ORDPlotterSincPrad(ORDPlotter):
         super(ORDPlotterSincPrad,self).__init__(occ,cp)
         self.xlabel = 'Incident Flux (Earth-units)'
         self.ylabel = 'Planet size (Earth-radii)'
-        self.cbarlabel = '$df/ d \log Sinc / d \log R_p$'
+        self.cbarlabel ='$\mathrm{d} f / \mathrm{d} \log S_\mathrm{inc} / \mathrm{d} \log R_p$'
+
 
     
 def plot_per_rates(fit, logper1, logper2, dlogper, fmtkey, plot_band=True, bandkw={}):
