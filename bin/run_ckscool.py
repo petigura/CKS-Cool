@@ -279,7 +279,8 @@ def create_workflow():
     w.plot['occur-sinc'] = plot.occur.fig_occur_sinc
     w.plot['occur-per-3'] = plot.occur.fig_occur_per3
     w.plot['occur-sinc-3'] = plot.occur.fig_occur_sinc3
-
+    w.plot['occur-violin'] = plot.occur.fig_occur_violin
+    
     
     # table
     f1 = ckscool.table.tab_star
