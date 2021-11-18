@@ -72,7 +72,7 @@ def fig_mean_planet_size(annotate=True):
 
 def fig_occur_per():
     sns.set_context('paper',font_scale=1.1)
-    fig, axL = subplots(ncols=2,figsize=(8,4),sharey=True)
+    fig, axL = subplots(ncols=2,figsize=(6,3),sharey=True)
     sizes = ['sn','se']
     for i in range(2):
         loglog()
@@ -130,7 +130,7 @@ def fig_occur_per_thin():
     same as above, but thinner defintions of s
     """
     sns.set_context('paper',font_scale=1.1)
-    fig, axL = subplots(ncols=2,figsize=(8,4),sharey=True)
+    fig, axL = subplots(ncols=2,figsize=(6,3),sharey=True)
     sizes = ['sn','se']
     for i in range(2):
         loglog()
@@ -226,7 +226,7 @@ def fig_occur_sinc():
 
 def fig_occur_per3():
     sns.set_context('paper',font_scale=1.1)
-    fig, axL = subplots(ncols=3,figsize=(12,4),sharey=True)
+    fig, axL = subplots(ncols=3,figsize=(6,3),sharey=True)
     sizes = ['se','sn']
     for i in range(2):
         size = sizes[i]
@@ -283,7 +283,7 @@ def fig_occur_per3():
     
 def fig_occur_sinc3():
     sns.set_context('paper',font_scale=1.1)
-    fig, axL = subplots(ncols=3,figsize=(12,4),sharey=True)
+    fig, axL = subplots(ncols=3,figsize=(6,3),sharey=True)
     sizes = ['se','sn']
     for i in range(2):
         size = sizes[i]
@@ -339,9 +339,84 @@ def fig_occur_sinc3():
 
     tight_layout(True)
     
+from chainconsumer import ChainConsumer
 
+def fig_occur_violin():
+    sns.set_context('paper',font_scale=1.1)
+    fig, axL = subplots(ncols=2,nrows=3,figsize=(6,6),sharex=True)
 
-    
+    smass = [0.5,0.7,1.0,1.4]
+    prad = [1.0,1.7,4.0]
+    for j in range(2):
+        prad1, prad2 = prad[j],prad[j+1]
+        data_f = []
+        data_per0 = []
+        data_sinc0 = []
+        
+        for i in range(3):
+            smass1, smass2 = smass[i],smass[i+1]
+
+            key = 'fitper_smass={}-{}-prad={}-{}'.format(
+                smass1, smass2, prad1, prad2,
+            )
+            fit = ckscool.io.load_object(key,cache=1)
+            chain = fit.res.flatchain
+            chain['x0'] = 10**chain['logx0']
+            chain['f'] = 10**chain['logf']
+            chain = chain[chain.x0.between(*chain.x0.quantile([0.01,0.99]))]
+            #data.append(10**chain['logx0'])
+            data_f.append(chain['logf'])
+            chain['x0'] = chain['logx0']
+            data_per0.append(chain['x0'])
+
+            key = 'fitsinc_smass={}-{}-prad={}-{}'.format(
+                smass1, smass2, prad1, prad2,
+            )
+            fit = ckscool.io.load_object(key,cache=1)
+            chain = fit.res.flatchain
+            #chain['x0'] = 10**chain['logx0']
+            chain['x0'] = chain['logx0']
+            chain = chain[chain.x0.between(*chain.x0.quantile([0.01,0.99]))]
+            data_sinc0.append(chain['x0'])
+
+        col = 1-j    
+        sca(axL[0,col])
+        kw = dict(color='LightGray',scale='width',cut=0,inner='quartile')
+        sns.violinplot(data=data_f, **kw)
+        sca(axL[1,col])
+        sns.violinplot(data=data_per0, **kw)
+        sca(axL[2,col])
+        sns.violinplot(data=data_sinc0, **kw)
+
+    setp(axL[-1,:],xlabel=r'Stellar Mass (Solar-Masses)')
+    xt=['0.5-0.7','0.7-1.0','1.0-1.4']
+    setp(axL[0,:],xticklabels=xt)
+
+    yt = [0.1,0.3,1,3]
+    _yt = np.log10(yt)
+    setp(axL[0,:],yticks=_yt)
+    setp(axL[0,:],yticklabels=yt)
+    setp(axL[0,1],title='Super-Earths ($R_p$ = 1.0-1.7 $R_\oplus$)')
+    setp(axL[0,0],title='Sub-Neptunes ($R_p$ = 1.7-4.0 $R_\oplus$)')
+
+    setp(axL[0,0],ylabel=r'$f_\star$')
+    yt = [1,3,10,30]
+    _yt = np.log10(yt)
+    setp(axL[1,0],ylabel=r'$P_0$ (days)')
+    setp(axL[1,:],yticks=_yt)
+    setp(axL[1,:],yticklabels=yt)
+
+    setp(axL[2,0],ylabel=r'$S_\mathrm{inc,0}$ (Earth-units)')
+    yt = [10,30,100,300,1000]
+    _yt = np.log10(yt)
+    setp(axL[2,:],yticks=_yt)
+    setp(axL[2,:],yticklabels=yt)
+
+    for i in range(6):
+        sca(axL.T.flatten()[i])
+        fig_label('abcdef'[i])
+    tight_layout(True)
+
 # Core plotting code
 
 
