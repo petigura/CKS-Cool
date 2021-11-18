@@ -269,7 +269,7 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
 
         df = df.fillna(False).sort_values(by='id_koi')
         df['id_kic'] = df['id_kic'].astype(int)
-        
+       
         
     elif table == 'm17+cdpp+gaia2+ber20':
         m17 = load_table('m17', cache=1)
@@ -299,6 +299,7 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
     elif table == 'star':
         # DR1+DR2 
         dr12 = load_table('DR1+DR2')
+        nstars1 = len(dr12)
         df2 = []
         for i, row in dr12.iterrows():
             d = dict(row['id_kic id_koi id_name id_obs in_dr1 in_dr2'.split()])
@@ -370,14 +371,16 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         rm = pd.merge(link,rm)['id_kic rm_sb2'.split()] # merge on kic
         df = pd.merge(df,rm,how='left')
         df.loc[df.in_dr1,'rm_sb2'] = 1 # stars in DR1 automatically pass
+        nstars2 = len(df)
 
-
+        assert nstars1==nstars2, "error, table={} should preserve nstars".format(table)
+        
     # Stellar sample
     elif table=='planets-cuts1+iso+dr25':
         plnt = load_table('planets-cuts1')
         plnt = plnt[~plnt.isany]
         star = load_table('star')
-
+        
         # select columns needed for updating parameters and making cuts
         cols = """
         cks_steff cks_steff_err 
@@ -394,14 +397,14 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         giso2_sparallax giso2_sparallax_err1 giso2_sparallax_err2
         """.split()
         star = star[cols]
-
+        import pdb;pdb.set_trace()
         df = pd.merge(plnt, star, on=['id_kic'])
         
         # Add in expected transit duration
         df, samp = ckscool.calc.update_planet_parameters(df)
 
     elif table=='planets-cuts2':
-        df = load_table('planets-cuts1+iso+dr25',cache=1)
+        df = load_table('planets-cuts1+iso+dr25',cache=2)
         cuttypes = [
             'none','badvsini','badspecparallax','sb2',
             'badimpact','badimpacttau','badprad','badpradprec'
@@ -417,7 +420,8 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         df['id_koi'] = df.name.str.slice(start=-5).astype(int)
         namemap = {'id_koi':'id_koi','is_sb2':'rm_sb2'}
         df = df.rename(columns=namemap)[namemap.values()]
-
+        df = df.drop_duplicates()
+        
     elif table == 'nrm-previous':
         # File is from an email that Adam sent me in 2017-11-02
         fn = os.path.join(DATADIR,'kraus/KOIours.txt')
