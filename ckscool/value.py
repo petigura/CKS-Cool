@@ -70,7 +70,6 @@ def val_sample(return_dict=False):
         d[key] = len(dfcut.id_kic.drop_duplicates())
         i+=1
 
-
     table = 'field-cuts'
     # needs to be freshly generated to get cuttypes
     df = ckscool.io.load_table(table,cache=2) 
@@ -114,8 +113,8 @@ def val_sample(return_dict=False):
     d['nstars smemp'] = s.emp
     d['nstars smsyn'] = s.syn
 
-    faint  = df.query('m17_kepmag>14.2 ')
-    bright  = df.query('m17_kepmag<14.2 ')
+    faint  = df.query('m17_kepmag > 14.2 ')
+    bright  = df.query('m17_kepmag < 14.2 ')
     d['kmag-err-med kepmag<14.2'] = "{:.2f}".format(
         bright.m17_kmag_err.median()
     )
@@ -175,6 +174,17 @@ def val_sample(return_dict=False):
         .median()
     )
 
+    # systematic shifts thompson vs. ckscool radii 
+    _eval = 'gdir_prad / koi_prad'
+    d['gdir_prad-on_koi-prad_ratio-mean'] = "{:.2f}".format(
+        dfcut.eval(_eval).mean()
+    )
+
+    # dispersion in thompson vs ckscool radii
+    d['gdir_prad-on_koi-prad_ratio-std'] = "{:.2f}".format(
+        dfcut.eval(_eval).std()
+    )
+    
     # number of planets used in the small occurrence bins 
     smass = [
         [0.5,1.4],
@@ -191,7 +201,7 @@ def val_sample(return_dict=False):
         )
         d['occ-nplnt_smass={}-{}'.format(smass0,smass1)] = len(occ.plnt)
 
-     
+
     lines = []
     for k, v in d.iteritems():
         line = r"{{{}}}{{{}}}".format(k,v)
