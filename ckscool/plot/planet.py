@@ -8,8 +8,8 @@ import ckscool.gradient
 from .config import *
     
 def fig_sample(plot_gradient=False, **kwargs):
-    sns.set_context('paper',font_scale=1.0)
-    fig,axL = subplots(ncols=2,nrows=2,figsize=(7,6))
+    sns.set_context('paper',font_scale=1.1)
+    fig,axL = subplots(ncols=2,nrows=2,figsize=(7,5.5))
 
     df = ckscool.io.load_table('planets-cuts2',cache=1)
     df = df[~df.isany]

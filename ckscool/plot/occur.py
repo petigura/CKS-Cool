@@ -18,7 +18,7 @@ sns.set_color_codes()
 # Functions that make pdf plots
 
 def fig_contour_six_per(plot_gradient=False):
-    sns.set_context('paper')
+    sns.set_context('paper', font_scale=1.0)
     pl = SixPlotterPerPrad()
     pl.occur_prefix = 'occur-per-prad'
     pl.plot(plot_gradient)
@@ -72,7 +72,7 @@ def fig_mean_planet_size(annotate=True):
 
 def fig_occur_per():
     sns.set_context('paper',font_scale=1.1)
-    fig, axL = subplots(ncols=2,figsize=(6,3),sharey=True)
+    fig, axL = subplots(ncols=2,figsize=(8,3.75),sharey=True)
     sizes = ['sn','se']
     for i in range(2):
         loglog()
@@ -104,16 +104,16 @@ def fig_occur_per():
                 fit, log10(xlim_points[0]), log10(xlim_points[1])+0.1,
                 dlogper,fmtkey
             )
-            if size=='se':
+            if size=='sn':
                 s = '$M_\star$ = {}$-${} $M_\odot$'.format(smass1, smass2)
-                text(0.6,0.15 - i*0.05,s,color=ptcolor[fmtkey],transform=ax.transAxes)
+                text(0.6, 0.15 - i*0.05, s, color=ptcolor[fmtkey], transform=ax.transAxes, size='small')                
         title(_title)
             
     sca(axL[0])
     setp(axL, xlabel='Orbital Period (days)', ylim=(1e-4,1e0))
     setp(
         axL[0],
-        ylabel = 'Planets per Star per {} dex Period Interval'.format(dlogper),
+        ylabel = 'Planets per Star'.format(dlogper),
         xlim =(1,300),
     )
     setp(axL[1], xlim =(1,300))
@@ -124,62 +124,9 @@ def fig_occur_per():
     
     tight_layout(True)
 
-
-def fig_occur_per_thin():
-    """
-    same as above, but thinner defintions of s
-    """
-    sns.set_context('paper',font_scale=1.1)
-    fig, axL = subplots(ncols=2,figsize=(6,3),sharey=True)
-    sizes = ['sn','se']
-    for i in range(2):
-        loglog()
-        size = sizes[i]
-        ax = axL[i] 
-        sca(ax)
-        smass = [0.5, 0.7, 1.0, 1.4]
-        if size=='se':
-            prad1, prad2 = 1.0, 1.5
-            _title = 'Super-Earths'
-            xlim_points = [1,100]
-        elif size=='sn':
-            prad1, prad2 = 2.0, 3.0
-            _title = 'Sub-Neptunes'
-            xlim_points = [1,300]
-
-        _title += ' ($R_p$ = {}$-${} $R_\oplus$)'.format(prad1,prad2) 
-            
-        dlogper = 0.25
-        
-        for i in range(3):
-            smass1, smass2 = smass[i],smass[i+1]
-            key = 'fitper_smass={}-{}-prad={}-{}'.format(
-                smass1, smass2, prad1, prad2,
-            )
-            fit = ckscool.io.load_object(key,cache=1)
-            fmtkey = 'smass{}'.format(i+1)
-            plot_per_rates(
-                fit, log10(xlim_points[0]), log10(xlim_points[1])+0.1,
-                dlogper,fmtkey
-            )
-            if size=='se':
-                s = '$M_\star$ = {}$-${} $M_\odot$'.format(smass1, smass2)
-                text(0.6,0.15 - i*0.05,s,color=ptcolor[fmtkey],transform=ax.transAxes)
-        title(_title)
-            
-    sca(axL[0])
-    setp(axL, xlabel='Orbital Period (days)', ylim=(1e-4,1e0))
-    setp(
-        axL[0],
-        ylabel = 'Planets per Star per {} dex Period Interval'.format(dlogper),
-        xlim =(1,300),
-    )
-    setp(axL[1], xlim =(1,300))
-    tight_layout(True)
-
 def fig_occur_sinc():
     sns.set_context('paper',font_scale=1.1)
-    fig, axL = subplots(ncols=2,figsize=(8,4),sharey=True)
+    fig, axL = subplots(ncols=2,figsize=(8,3.75),sharey=True)
     sizes = ['sn','se']
     for i in range(2):
         size = sizes[i]
@@ -214,7 +161,7 @@ def fig_occur_sinc():
     setp(axL, xlabel='Incident Stellar Flux (Earth-units)', ylim=(1e-4,1e0))
     setp(
         axL[0],
-        ylabel = 'Planets per Star per {} dex Flux Interval'.format(dlogsinc),
+        ylabel = 'Planets per Star'.format(dlogsinc),
         xlim =(1e4,1)
     )
     setp(axL[1], xlim =(1e4,1))
@@ -226,18 +173,19 @@ def fig_occur_sinc():
 
 def fig_occur_per3():
     sns.set_context('paper',font_scale=1.1)
-    fig, axL = subplots(ncols=3,figsize=(6,3),sharey=True)
+    fig, axL = subplots(ncols=3,figsize=(8,2.75),sharey=True)
     sizes = ['se','sn']
     for i in range(2):
         size = sizes[i]
         smass = [0.5, 0.7, 1.0, 1.4]
+
         if size=='se':
             prad1, prad2 = 1.0, 1.7
-            _title = 'Super-Earths'
+            _s = 'Super-Earths'
             xlim_points = [1,100]
         elif size=='sn':
             prad1, prad2 = 1.7, 4.0
-            _title = 'Sub-Neptunes'
+            _s = 'Sub-Neptunes'
             xlim_points = [1,300]
             
         dlogper = 0.25
@@ -246,6 +194,8 @@ def fig_occur_per3():
             ax = axL[j] 
             sca(ax)
             smass1, smass2 = smass[j],smass[j+1]
+            _title = '$M_\star$ = {}$-${} $M_\odot$'.format(smass1, smass2)
+            title(_title)
             key = 'fitper_smass={}-{}-prad={}-{}'.format(
                 smass1, smass2, prad1, prad2,
             )
@@ -256,21 +206,18 @@ def fig_occur_per3():
                 dlogper,fmtkey
             )
             fit.res.flatchain['logx0']
-            if size=='se':
-                s = '$M_\star$ = {}$-${} $M_\odot$'.format(smass1, smass2)
-                text(0.6,0.15 - i*0.05,s,color=ptcolor[fmtkey],transform=ax.transAxes)
+            if j==0:
+                text(0.6, 0.15 - i*0.07, _s, color=ptcolor[fmtkey], transform=ax.transAxes, size='small')
 
             lo,mi,hi = 10**fit.res.flatchain['logx0'].quantile([0.16,0.5,0.84])
             axvline(mi,color=ptcolor[fmtkey],alpha=1,zorder=0)
             axvspan(lo,hi,color=ptcolor[fmtkey],alpha=0.5,zorder=0)
-            
-            
-                
+
     sca(axL[0])
     setp(axL, xlabel='Orbital Period (days)', ylim=(1e-4,1e0))
     setp(
         axL[0],
-        ylabel = 'Planets per Star per {} dex Period Interval'.format(dlogper),
+        ylabel = 'Planets per Star'.format(dlogper),
         xlim =(1,300),
     )
     setp(axL[1], xlim =(1,300))
@@ -282,8 +229,8 @@ def fig_occur_per3():
     tight_layout(True)
     
 def fig_occur_sinc3():
-    sns.set_context('paper',font_scale=1.1)
-    fig, axL = subplots(ncols=3,figsize=(6,3),sharey=True)
+    sns.set_context('paper',font_scale=1.0)
+    fig, axL = subplots(ncols=3,figsize=(8,2.75),sharey=True)
     sizes = ['se','sn']
     for i in range(2):
         size = sizes[i]
@@ -314,9 +261,6 @@ def fig_occur_sinc3():
                 dlogsinc,fmtkey
             )
             fit.res.flatchain['logx0']
-            if size=='se':
-                s = '$M_\star$ = {}$-${} $M_\odot$'.format(smass1, smass2)
-                text(0.6,0.15 - i*0.05,s,color=ptcolor[fmtkey],transform=ax.transAxes)
 
             lo,mi,hi = 10**fit.res.flatchain['logx0'].quantile([0.16,0.5,0.84])
             axvline(mi,color=ptcolor[fmtkey],alpha=1,zorder=0)
@@ -325,10 +269,10 @@ def fig_occur_sinc3():
             
                 
     sca(axL[0])
-    setp(axL, xlabel='Incident Stellar Flux (Earth-units)', ylim=(1e-4,1e0))
+    setp(axL, xlabel='Incident Stellar Flux \n(Earth-units)', ylim=(1e-4,1e0))
     setp(
         axL[0],
-        ylabel = 'Planets per Star per {} dex Flux Interval'.format(dlogsinc),
+        ylabel = 'Planets per Star'.format(dlogsinc),
         xlim =(1e4,1)
     )
     setp(axL,xlim =(1e4,1))
@@ -343,7 +287,7 @@ from chainconsumer import ChainConsumer
 
 def fig_occur_violin():
     sns.set_context('paper',font_scale=1.1)
-    fig, axL = subplots(ncols=2,nrows=3,figsize=(6,6),sharex=True)
+    fig, axL = subplots(ncols=2,nrows=3,figsize=(6,5.5),sharex=True)
 
     smass = [0.5,0.7,1.0,1.4]
     prad = [1.0,1.7,4.0]
@@ -426,7 +370,7 @@ class SixPlotter(object):
         self.mass2 = [0.7,1.0,1.4]
         
     def plot(self, plot_gradient):
-        fig, axL = subplots(nrows=3,ncols=2,figsize=(8.5,9))
+        fig, axL = subplots(nrows=3,ncols=2,figsize=(6.5,6.5))
         i = 0
         for _mass1, _mass2 in zip(self.mass1,self.mass2):
             key = '{}_smass={}-{}'.format(self.occur_prefix,_mass1,_mass2)
@@ -449,10 +393,10 @@ class SixPlotter(object):
             grad = ckscool.gradient.Gradient(gradkey)
             grad.load_csv()
             grad.plot_gradients('band')
-            cbar = colorbar(pl.qc,shrink=0.5,format='%.1f')
-            cbar.set_label(self.clabel,size='x-small')
-            cbar.ax.tick_params(labelsize='xx-small')
-            
+            cbar = colorbar(pl.qc,shrink=0.8,format='%.2f')
+            cbar.set_label(self.clabel,size='small')
+            cbar.ax.tick_params(labelsize='x-small')
+           
             
             # Occurrence rate 
             sca(axo)
@@ -545,10 +489,11 @@ class ORDPlotter(object):
         cmap = 'YlGn' 
         kw = dict(levels=levels,extend='neither',cmap=cmap,zorder=0)
         qc = contourf(ds.kxc,ds.kyc,ds.occrd,**kw)
-        cbar = colorbar(qc,shrink=0.5,format='%.1f')
-        cbar.set_label(self.cbarlabel,size='x-small')
-        cbar.ax.tick_params(labelsize='xx-small')
+        cbar = colorbar(qc,shrink=0.8,format='%.2f')
+        cbar.set_label(self.cbarlabel,size='small')
+        cbar.ax.tick_params(labelsize='x-small')
 
+        
     def plot_completeness(self, gradient_array=False):
         """
         Gray out region of low completeness
