@@ -114,35 +114,52 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
 
     # Gaia DR2
     elif table=='gaia2':
+        # compute extra flux within circle arcsec due to neighboring stars.
+        distarcsec_neighbor = 4 # size of circle
+        contrast_bright = 2.5 # threshold contrast for bright companion (mag) 
+
+        # Load up gaia-kepler crossmatch
         fn = os.path.join(DATADIR,'xmatch_gaia2_m17_ruwe_tmass-result.csv')
         df = pd.read_csv(fn)
+        df['gaia2_sparallax'] += 0.053 # Apply systematic offset Zinn+2018
 
-        # compute extra flux within 4 arcsec due to neighboring stars.
-        distarcsec_neighbor = 4
-        contrast_bright = 2.5
-
-        fn = os.path.join(DATADIR,'xmatch_gaia2_m17_ruwe_tmass_10arcsec-result.csv')
+        # Neighbor table, all stars within 10 arcsec of gaia-kepler crossmatch
+        fn = 'xmatch_gaia2_m17_ruwe_tmass_10arcsec-result.csv'
+        fn = os.path.join(DATADIR,fn)
         nei = pd.read_csv(fn)
-        nei['distarcsec'] = nei.dist * 3600
-        nei = nei[nei.distarcsec < distarcsec_neighbor]
+        nei['distarcsec'] = nei.dist * 3600 # convert degrees to arcsec
+
+        # remove stars outside circle
+        nei = nei[nei.distarcsec < distarcsec_neighbor] 
+
+        # identify primary star in neighbor table
         nei = nei.sort_values(by=['id_gaia2_primary','dist'])
         g = nei.groupby('id_gaia2_primary')
-
         pri = g.first()
         nei = nei.set_index('id_gaia2_primary')
+
+        # compute contrast between all stars and primary (mag)
         nei['gaia2_gmag_contrast'] = nei.gaia2_gmag - pri.gaia2_gmag
-        pri['gaia2_gflux_dilution'] = g['gaia2_gflux'].sum() / g['gaia2_gflux'].first()
-        pri['gaia2_n_neighbors'] = nei[nei.dist > 0].groupby('id_gaia2_primary').size()
-        pri['gaia2_n_neighbors_bright'] = (nei[(nei.dist > 0) & (nei.gaia2_gmag_contrast<contrast_bright)]
-                                           .query('dist > 0 and gaia2_gmag_contrast<2.5')
-                                           .groupby('id_gaia2_primary').size())
-        
-        pri = pri.fillna(dict(gaia2_n_neighbor=0,gaia2_n_neighbor_bright=0))
-        pri = pri['gaia2_gflux_dilution gaia2_n_neighbors gaia2_n_neighbors_bright'.split()]
-        df = pd.merge(df,pri,left_on='id_gaia2',right_index=True)
-  
-        # Apply systematic offset from Zinn et al. (2018)
-        df['gaia2_sparallax'] += 0.053
+
+        # compute sum of all flux in circle
+        pri['gaia2_gflux_dilution'] = (  g['gaia2_gflux'].sum()
+                                         / g['gaia2_gflux'].first() )
+        pri['gaia2_n_neighbors'] = ( nei[nei.dist > 0]
+                                     .groupby('id_gaia2_primary').size() )
+
+        # compute number of birght neighbors 
+        b = (nei.dist > 0) & (nei.gaia2_gmag_contrast < contrast_bright)
+        pri['gaia2_n_neighbors_bright'] = ( nei[b]
+                                            .groupby('id_gaia2_primary')
+                                            .size() )
+        # some stars have no neighbors within circle so fill in nans
+        pri = pri.fillna( dict(gaia2_n_neighbor=0, gaia2_n_neighbor_bright=0) )
+
+        # merge in neighbor columns into gaia-kepler crossmatch
+        cols = ['gaia2_gflux_dilution',
+                'gaia2_n_neighbors',
+                'gaia2_n_neighbors_bright']
+        df = pd.merge(df,pri[cols],left_on='id_gaia2',right_index=True)
 
     # CDPP table
     elif table == 'cdpp':
@@ -397,14 +414,13 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         giso2_sparallax giso2_sparallax_err1 giso2_sparallax_err2
         """.split()
         star = star[cols]
-        import pdb;pdb.set_trace()
         df = pd.merge(plnt, star, on=['id_kic'])
         
         # Add in expected transit duration
         df, samp = ckscool.calc.update_planet_parameters(df)
 
     elif table=='planets-cuts2':
-        df = load_table('planets-cuts1+iso+dr25',cache=2)
+        df = load_table('planets-cuts1+iso+dr25',cache=1)
         cuttypes = [
             'none','badvsini','badspecparallax','sb2',
             'badimpact','badimpacttau','badprad','badpradprec'
@@ -420,7 +436,7 @@ def load_table(table, cache=0, verbose=False, cachefn=None):
         df['id_koi'] = df.name.str.slice(start=-5).astype(int)
         namemap = {'id_koi':'id_koi','is_sb2':'rm_sb2'}
         df = df.rename(columns=namemap)[namemap.values()]
-        df = df.drop_duplicates()
+        assert len(df.id_koi)==len(df.id_koi.drop_duplicates()), "duplicates"
         
     elif table == 'nrm-previous':
         # File is from an email that Adam sent me in 2017-11-02

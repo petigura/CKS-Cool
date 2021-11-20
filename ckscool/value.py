@@ -7,6 +7,40 @@ from time import gmtime, strftime
 from astropy.time import Time
 import pandas as pd
 
+def cutcounts(d, table):
+    df = ckscool.io.load_table(table,cache=2)
+    i = 0 
+    bpass = np.zeros(len(df))
+    for cuttype in df.cuttypes:
+        key = 'is'+cuttype
+        obj = ckscool.cuts.occur.get_cut(cuttype)
+        cut = obj(df,table)
+        bpass += df[key].astype(int)
+        dfcut = df[bpass==0]
+        if i>0:
+            nplanet_old = nplanet
+            nstar_old = nstar
+            
+        key_planet = 'nplanets {}-cut-{}-{}'.format(table,i,cuttype)
+        key_star = 'nstars {}-cut-{}-{}'.format(table,i,cuttype)
+        nplanet = len(dfcut)
+        nstar = len(dfcut.id_kic.drop_duplicates())
+        d[key_planet] = nplanet
+        d[key_star] = nstar
+
+        if i>0:
+            key_planet = 'nplanets-rem {}-cut-{}-{}'.format(table,i,cuttype)
+            key_star = 'nstars-rem {}-cut-{}-{}'.format(table,i,cuttype)
+            d[key_planet] = nplanet_old - nplanet
+            d[key_star] = nstar_old - nstar
+            
+        i+=1
+
+    key = 'nstars {}-cut-all'.format(table)
+    d[key] = len(dfcut.id_kic.drop_duplicates())
+    key = 'nplanets {}-cut-all'.format(table)
+    d[key] = len(dfcut.id_kic)
+
 def val_sample(return_dict=False):
     d = OrderedDict()
 
@@ -53,60 +87,10 @@ def val_sample(return_dict=False):
     kois = ", ".join(m[b].id_koi.astype(int).astype(str))
     d['kois ~dr1 & ~dr2 & cxm'] = kois
 
-    table = 'planets-cuts1'
-    df = ckscool.io.load_table(table,cache=2)
-    i = 0 
-    bpass = np.zeros(len(df))
-    for cuttype in df.cuttypes:
-        key = 'is'+cuttype
-        obj = ckscool.cuts.occur.get_cut(cuttype)
-        cut = obj(df,table)
-        bpass += df[key].astype(int)
-        dfcut = df[bpass==0]
-        key = 'nplanets {}-cut-{}-{}'.format(table,i,cuttype)
-        d[key] = len(dfcut)
 
-        key = 'nstars {}-cut-{}-{}'.format(table,i,cuttype)
-        d[key] = len(dfcut.id_kic.drop_duplicates())
-        i+=1
-
-    table = 'field-cuts'
-    # needs to be freshly generated to get cuttypes
-    df = ckscool.io.load_table(table,cache=2) 
-    i = 0 
-    bpass = np.zeros(len(df))
-    for cuttype in df.cuttypes:
-        key = 'is'+cuttype
-        obj = ckscool.cuts.occur.get_cut(cuttype)
-        cut = obj(df,table)
-        bpass += df[key].astype(int)
-        dfcut = df[bpass==0]
-        key = 'nstars {}-cut-{}-{}'.format(table,i,cuttype)
-        d[key] = len(dfcut.id_kic.drop_duplicates())
-        i+=1
-
-    table = 'planets-cuts2'
-    # needs to be freshly generated to get cuttypes
-    df = ckscool.io.load_table(table,cache=2) 
-    i = 0 
-    bpass = np.zeros(len(df))
-    for cuttype in df.cuttypes:
-        key = 'is'+cuttype
-        obj = ckscool.cuts.occur.get_cut(cuttype)
-        cut = obj(df,table)
-        bpass += df[key].astype(int)
-        dfcut = df[bpass==0]
-        key = 'nstars {}-cut-{}-{}'.format(table,i,cuttype)
-        d[key] = len(dfcut.id_kic.drop_duplicates())
-        key = 'nplanets {}-cut-{}-{}'.format(table,i,cuttype)
-        d[key] = len(dfcut.id_kic)
-        i+=1
-
-    key = 'nstars {}-cut-all'.format(table)
-    d[key] = len(dfcut.id_kic.drop_duplicates())
-    key = 'nplanets {}-cut-all'.format(table)
-    d[key] = len(dfcut.id_kic)
-
+    cutcounts(d, 'planets-cuts1')
+    cutcounts(d, 'field-cuts')
+    cutcounts(d, 'planets-cuts2')
     
     df = ckscool.io.load_table('star')
     s = df.groupby('cks_sprov').size()
@@ -174,7 +158,9 @@ def val_sample(return_dict=False):
         .median()
     )
 
-    # systematic shifts thompson vs. ckscool radii 
+    # systematic shifts thompson vs. ckscool radii
+    df = ckscool.io.load_table('planets-cuts2')
+    dfcut = df[~df.isany]
     _eval = 'gdir_prad / koi_prad'
     d['gdir_prad-on_koi-prad_ratio-mean'] = "{:.2f}".format(
         dfcut.eval(_eval).mean()
