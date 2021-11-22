@@ -12,7 +12,8 @@ import ckscool.io
 import copy
 
 TDUR_EARTH_SUN_HRS = (
-    ((4 * c.R_sun**3 * 1.0*u.yr / np.pi / c.G / (1.0*c.M_sun))**(1.0/3.0)).to(u.hr)).value
+    ( (4 * c.R_sun**3 * 1.0*u.yr
+       / np.pi / c.G / (1.0*c.M_sun) )**(1.0/3.0)).to(u.hr)).value
 
 DEPTH_EARTH_SUN = ((c.R_earth / c.R_sun)**2).cgs.value
 
@@ -281,8 +282,8 @@ class Completeness2D(object):
         """Intialize detection probability interpolator
         """
         # Define the regular grid for interpolation
-        x0 = np.log(np.array(self.grid.ds[self.xk]))
-        x1 = np.log(np.array(self.grid.ds[self.yk]))
+        x0 = np.log10(np.array(self.grid.ds[self.xk]))
+        x1 = np.log10(np.array(self.grid.ds[self.yk]))
         points = (x0, x1)
         prob_det = self.grid.ds['prob_det'].transpose(self.xk,self.yk)
         prob_trdet = self.grid.ds['prob_tr'] * self.grid.ds['prob_det']
@@ -296,16 +297,16 @@ class Completeness2D(object):
         return _prob_det
 
     def prob_trdet_interp(self, x, y):
-        x = np.log(x)
-        y = np.log(y)
+        x = np.log10(x)
+        y = np.log10(y)
         return self._prob_trdet_spline(x,y,grid=False)
 
     def mean_prob_trdet(self, x1, x2, y1, y2):
         """Mean probability of transiting and being detected"""
-        x1 = np.log(x1)
-        x2 = np.log(x2)
-        y1 = np.log(y1)
-        y2 = np.log(y2)
+        x1 = np.log10(x1)
+        x2 = np.log10(x2)
+        y1 = np.log10(y1)
+        y2 = np.log10(y2)
         area = (x2-x1) * (y2-y1)
         integral = self._prob_trdet_spline.integral(x1, x2, y1, y2)
         prob_trdet_mean = integral / area

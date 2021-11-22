@@ -243,7 +243,7 @@ def update_paper(args):
 
 def create_workflow():
     w = ckscool.workflow.Workflow()
-
+    
     # register different plots here
     w.plot['cuts-kepmag-steff'] = plot.sample.fig_cuts_kepmag_steff
     w.plot['cuts-period-prad'] = plot.sample.fig_cuts_period_prad
@@ -255,6 +255,7 @@ def create_workflow():
     w.plot['cuts-all-multi'] = plot.sample.fig_cuts_all_multi
     w.plot['cuts-all-multi3'] = plot.sample.fig_cuts_all_multi3
     w.plot['star-sample'] =  plot.star.fig_sample
+    w.plot['planet-ferr-hist'] =  plot.star.fig_ferr_hist_planet
     w.plot['planet-prad'] =  plot.planet.fig_sample
     w.plot['planet-prad-zoom'] =  lambda : plot.planet.fig_sample(plot_gradient=True,zoom=True)
     w.plot['planet-gupta-compare'] = plot.planet.fig_gupta_comparison
@@ -280,7 +281,7 @@ def create_workflow():
     w.plot['occur-per-3'] = plot.occur.fig_occur_per3
     w.plot['occur-sinc-3'] = plot.occur.fig_occur_sinc3
     w.plot['occur-violin'] = plot.occur.fig_occur_violin
-    
+   
     
     # table
     f1 = ckscool.table.tab_star

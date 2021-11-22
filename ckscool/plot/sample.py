@@ -12,7 +12,7 @@ errorbar_kw = dict(fmt='.',markersize=5,color='b')
 sns.set_color_codes()
 
 rpticks = [0.2, 0.3, 0.4, 0.5, 0.7, 1, 2, 3, 4, 5, 7, 10, 20]
-texteff = '$\mathregular{T}_{\mathregular{eff}}$'
+texteff = '$T_{\mathregular{eff}}$ (K)'
 texrp = '\mathregular{R}_\mathregular{P}' 
 texre = '\mathregular{R}_\mathregular{E}' 
 texrs = '$R_\star (R_\odot)$' 
@@ -110,7 +110,7 @@ def fig_cuts_all_multi3():
         ax.add_patch(patch)
         #plot(xy[])
         
-    setp(axL[0,:],ylim=(17,8),xlim=(7000,3000),xlabel=texteff,ylabel='$Kp$ (mag)')
+    setp(axL[0,:],ylim=(17,8),xlim=(7000,3000),xlabel=texteff,ylabel='$m_\mathregular{Kep}$ (mag)')
     setp(axL[1,:],ylim=(13,-2),xlim=(0,3),xlabel='$B_p - R_p$ (mag)',ylabel='$M_G$ (mag)')
     tight_layout()
 

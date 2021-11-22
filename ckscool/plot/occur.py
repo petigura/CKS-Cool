@@ -343,7 +343,7 @@ def fig_occur_violin():
     setp(axL[0,1],title='Super-Earths ($R_p$ = 1.0-1.7 $R_\oplus$)')
     setp(axL[0,0],title='Sub-Neptunes ($R_p$ = 1.7-4.0 $R_\oplus$)')
 
-    setp(axL[0,0],ylabel=r'$f_\star$')
+    setp(axL[0,0],ylabel=r'$f_\star$ (planets per star)')
     yt = [1,3,10,30]
     _yt = np.log10(yt)
     setp(axL[1,0],ylabel=r'$P_0$ (days)')
@@ -393,7 +393,7 @@ class SixPlotter(object):
             grad = ckscool.gradient.Gradient(gradkey)
             grad.load_csv()
             grad.plot_gradients('band')
-            cbar = colorbar(pl.qc,shrink=0.8,format='%.2f')
+            cbar = colorbar(pl.qc,shrink=0.8,format='%.1f')
             cbar.set_label(self.clabel,size='small')
             cbar.ax.tick_params(labelsize='x-small')
            

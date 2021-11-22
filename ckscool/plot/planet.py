@@ -34,7 +34,7 @@ def fig_sample(plot_gradient=False, **kwargs):
 
         if i==0:
             ax = axes([0.89, 0.85, 0.008, 0.1])
-            cbar = colorbar(pl.qc,cax=ax,format='%.2f')
+            cbar = colorbar(pl.qc,cax=ax,format='%.1f')
             cbar.set_label('relative density',size='x-small')
             cbar.ax.tick_params(labelsize=0.4 * rcParams['font.size'])
 
@@ -86,7 +86,7 @@ def fig_sample_smass():
 
 
 def fig_gupta_comparison(plot_gradient=False, **kwargs):
-    sns.set_context('paper',font_scale=1.3)
+    sns.set_context('paper',font_scale=1.1)
     sns.set(
         style='ticks',
         rc={'ytick.major.size':3.0,'xtick.major.size':3.0,
@@ -205,7 +205,11 @@ class NDPlotter(object):
                 ymax = 16
             xscale='log'
             yscale='log'
+            
             xticks = [1,3,10,30,100,300,1000,3000,10000]
+            if not zoom:
+                xticks = [1,10,100,1000,10000]
+
             xlabel = 'Incident Bolometric Flux (Earth-units)'
             self.bwx = log10(1 + 1)
            
@@ -235,13 +239,15 @@ class NDPlotter(object):
                 ymin = 1
                 ymax = 4
             else:
-                xmin = -0.5
-                xmax = 0.5
+                xmin = -0.6
+                xmax = 0.6
                 ymin = 0.5
                 ymax = 16
 
             xticks = [-0.5,-0.4,-0.3,-0.2,-0.1,0.0,0.1,0.2,0.3,0.4,0.5]
-            xlabel = '[Fe/H]'
+            if not zoom:
+                xticks = [-0.6,-0.4,-0.2,0.0,0.2,0.4,0.6]
+            xlabel = '[Fe/H] (dex)'
             self.bwx = 0.1
             xscale='lin'
             yscale='log'
@@ -366,7 +372,7 @@ class ContourPlotter(object):
             Z /= Z.max()
             Z /= fac
             qc = Z.plot.contourf(
-                x='kx', levels=arange(0,fac + 0.001,0.05),
+                x='kx', levels=arange(0,fac + 0.001,0.1),
                 vmax=1,add_colorbar=False,**kwargs)
 
 
@@ -374,7 +380,7 @@ class ContourPlotter(object):
             qc = Z.plot.contourf(x='kx', add_colorbar=False,**kwargs)
             
         if add_colorbar:
-            cbar = colorbar(qc,format='%.2f',shrink=0.5)
+            cbar = colorbar(qc,format='%.1f',shrink=0.8)
             cbar.set_label(cbar_title,size='small')
             cbar.ax.tick_params(labelsize=0.6 * rcParams['font.size'])
 

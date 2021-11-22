@@ -16,7 +16,7 @@ rstarticks = [0.5,0.7,1.0,1.4,2.0]
 class Plotter():
     
     labels = {
-        'steff' :'$\mathregular{T}_{\mathregular{eff}}$',
+        'steff' :'$T_{\mathregular{eff}}$ (K)',
         'srad' : 'Stellar Radius (Solar-Radii)',
         'smass' : 'Stellar Mass (Solar-Mass)',
         'smet' : '[Fe/H] (dex)',
@@ -157,18 +157,18 @@ def fig_ferr_hist_planet():
     fig = subplots(figsize=(4,3))
     df = ckscool.io.load_table('planets-cuts2')
 
-    bins = arange(0,0.2,0.005)
+    bins = arange(0,20,0.5)
     kw = dict(lw=2, bins=bins, histtype='step')
-    rat = df.gdir_srad_err1/df.gdir_srad
+    rat = df.gdir_srad_err1/df.gdir_srad *100
     rat = rat.dropna().tolist()
-    hist([rat],label='$\sigma(R_\star) / R_\star$', **kw)
+    hist([rat],label=r'$R_{\star}$', **kw)
 
-    rat = (df.koi_ror_err1 /df.koi_ror).dropna()
-    hist(rat,label='$\sigma(R_p/R_\star) / (R_p/R_\star)$',color='m',**kw)
+    rat = (df.koi_ror_err1 /df.koi_ror).dropna() * 100
+    hist(rat,label=r'$R_p/R_\star$',color='m',**kw)
 
-    rat = (df.gdir_prad_err1/df.gdir_prad).dropna()
-    hist(rat,label='$\sigma(R_p) / (R_p)$',**kw)
+    rat = (df.gdir_prad_err1/df.gdir_prad).dropna() *100
+    hist(rat,label=r'$R_p$',**kw)
     legend()
-    xlabel('Fractional Precision')
-    ylabel('Number of Stars')
+    xlabel('Fractional Precision (%)')
+    ylabel('Number of Planets')
     tight_layout()
