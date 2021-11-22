@@ -289,13 +289,13 @@ def create_workflow():
 
     def f1_stub():
         table = f1()
-        return table[:5] + table[-9:-4]
+        return table[:6] 
 
     w.table['star-stub'] = f1_stub
 
     f2 = ckscool.table.tab_planet
     w.table['planet'] = f2
-    w.table['planet-stub'] = lambda: f2()[:5] + f2()[-5:]
+    w.table['planet-stub'] = lambda: f2()[:6] 
 
     # val
     w.val['sample'] = ckscool.value.val_sample
