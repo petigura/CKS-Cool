@@ -71,7 +71,7 @@ def fig_mean_planet_size(annotate=True):
 #def fig_mean_planet_size_ann()
 
 def fig_occur_per():
-    sns.set_context('paper',font_scale=1.1)
+    sns.set_context('paper',font_scale=1.2)
     fig, axL = subplots(ncols=2,figsize=(8,3.75),sharey=True)
     sizes = ['sn','se']
     for i in range(2):
@@ -125,7 +125,7 @@ def fig_occur_per():
     tight_layout(True)
 
 def fig_occur_sinc():
-    sns.set_context('paper',font_scale=1.1)
+    sns.set_context('paper',font_scale=1.2)
     fig, axL = subplots(ncols=2,figsize=(8,3.75),sharey=True)
     sizes = ['sn','se']
     for i in range(2):
