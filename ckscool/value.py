@@ -158,9 +158,22 @@ def val_sample(return_dict=False):
         .median()
     )
 
-    # systematic shifts thompson vs. ckscool radii
+    # fractional precision in radii
     df = ckscool.io.load_table('planets-cuts2')
     dfcut = df[~df.isany]
+
+    _eval = 'gdir_prad_err1 / gdir_prad'
+    d['gdir_prad-ferr-med'] = "{:.1f}".format(
+        dfcut.eval(_eval).median() * 100
+    )
+
+    # dispersion in thompson vs ckscool radii
+    d['gdir_prad-on_koi-prad_ratio-std'] = "{:.2f}".format(
+        dfcut.eval(_eval).std()
+    )
+
+    
+    # systematic shifts thompson vs. ckscool radii
     _eval = 'gdir_prad / koi_prad'
     d['gdir_prad-on_koi-prad_ratio-mean'] = "{:.2f}".format(
         dfcut.eval(_eval).mean()
