@@ -39,6 +39,9 @@ def cutcounts(d, table):
     key = 'nstars {}-cut-all'.format(table)
     d[key] = len(dfcut.id_kic.drop_duplicates())
     key = 'nplanets {}-cut-all'.format(table)
+    if table=='planets-cuts1':
+        import pdb;pdb.set_trace()
+        
     d[key] = len(dfcut.id_kic)
 
 def val_sample(return_dict=False):
@@ -97,8 +100,12 @@ def val_sample(return_dict=False):
     d['nstars smemp'] = s.emp
     d['nstars smsyn'] = s.syn
 
-    faint  = df.query('m17_kepmag > 14.2 ')
-    bright  = df.query('m17_kepmag < 14.2 ')
+    faint  = df.query('m17_kepmag > 14.2')
+    bright  = df.query('m17_kepmag < 14.2')
+
+    d['kmag-err-med'] = "{:.2f}".format(
+        df.m17_kmag_err.median()
+    )
     d['kmag-err-med kepmag<14.2'] = "{:.2f}".format(
         bright.m17_kmag_err.median()
     )
@@ -107,6 +114,9 @@ def val_sample(return_dict=False):
     )
 
     _eval = '100 * gaia2_sparallax_err / gaia2_sparallax'
+    d['parallax-ferr-med'] = "{:.1f}".format(
+        df.eval(_eval).median()
+    )
     d['parallax-ferr-med kepmag<14.2'] = "{:.1f}".format(
         bright.eval(_eval).median()
     )
@@ -125,8 +135,19 @@ def val_sample(return_dict=False):
     d['ak-max kepmag>14.2'] = "{:.2f}".format(faint.gdir_avs.max()
                                               * av_to_ak)
 
+    # stellar effective temp uncert 
+    d['cks_steff-err-med'] = "{:.0f}".format(df.cks_steff_err.median())
+
+    # stellar metallicity uncert 
+    d['cks_smet-err-med'] = "{:.2f}".format(df.cks_smet_err.median())
+    
     # stellar radius uncert
     _eval = '100 * 0.5*(gdir_srad_err1 - gdir_srad_err2) / gdir_srad'
+
+    d['gdir_srad-ferr-med'] = "{:.1f}".format(
+        df.eval(_eval)
+        .median()
+    )
     d['gdir_srad-ferr-med kepmag<14.2'] = "{:.1f}".format(
         bright.eval(_eval)
         .median()
@@ -138,6 +159,10 @@ def val_sample(return_dict=False):
 
     # stellar mass uncert
     _eval = '100 * 0.5*(giso_smass_err1 - giso_smass_err2) / giso_smass'
+    d['giso_smass-ferr-med'] = "{:.1f}".format(
+        df.eval(_eval)
+        .median()
+    )
     d['giso_smass-ferr-med kepmag<14.2'] = "{:.1f}".format(
         bright.eval(_eval)
         .median()
@@ -147,8 +172,19 @@ def val_sample(return_dict=False):
         .median()
     )
 
+    # steallar radius (iso)
+    _eval = '100 * 0.5*(giso_srad_err1 - giso_srad_err2) / giso_srad'
+    d['giso_srad-ferr-med'] = "{:.1f}".format(
+        df.eval(_eval)
+        .median()
+    )
+    
     # stellar density uncert
     _eval = '100 * 0.5*(giso_srho_err1 - giso_srho_err2) / giso_srho'
+    d['giso_srho-ferr-med'] = "{:.1f}".format(
+        df.eval(_eval)
+        .median()
+    )
     d['giso_srho-ferr-med kepmag<14.2'] = "{:.1f}".format(
         bright.eval(_eval)
         .median()
@@ -158,21 +194,61 @@ def val_sample(return_dict=False):
         .median()
     )
 
+    # stellar age uncert
+    _eval = '0.5*(giso_slogage_err1 - giso_slogage_err2)'
+    d['giso_slogage-err-med'] = "{:.2f}".format(df.eval(_eval).median())
+
+    _eval = '100 * 0.5*(giso2_sparallax_err1 - giso2_sparallax_err2)'
+    d['giso2_sparallax-ferr-med'] = "{:.0f}".format(df.eval(_eval).median())
+
+
+    ### Planet properties
+    
     # fractional precision in radii
     df = ckscool.io.load_table('planets-cuts2')
     dfcut = df[~df.isany]
+    bright = dfcut.query('m17_kepmag < 14.2')
+    faint = dfcut.query('m17_kepmag > 14.2')
 
-    _eval = 'gdir_prad_err1 / gdir_prad'
-    d['gdir_prad-ferr-med'] = "{:.1f}".format(
-        dfcut.eval(_eval).median() * 100
+    _eval = '1000000 * 0.5*(dr25_period_err1 - dr25_period_err2) / dr25_period'
+    d['dr25_period-ferr-med'] = "{:.0f}".format(dfcut.eval(_eval).median())
+
+    _eval = '100 * 0.5*(dr25_ror_err1 - dr25_ror_err2) / dr25_ror'
+    d['dr25_ror-ferr-med'] = "{:.1f}".format(dfcut.eval(_eval).median())
+    d['dr25_ror-ferr-med kepmag<14.2'] = "{:.1f}".format(
+        bright.eval(_eval).median()
     )
+    d['dr25_ror-ferr-med kepmag>14.2'] = "{:.1f}".format(
+        faint.eval(_eval).median()
+    )
+    
+    _eval = '100 * 0.5*(dr25_tau_err1 - dr25_tau_err2) / dr25_tau'
+    d['dr25_tau-ferr-med'] = "{:.0f}".format(dfcut.eval(_eval).median())
+
+    _eval = '100 * 0.5*(gdir_prad_err1 - gdir_prad_err2) / gdir_prad'
+    d['gdir_prad-ferr-med'] = "{:.1f}".format(dfcut.eval(_eval).median())
+    d['gdir_prad-ferr-med kepmag<14.2'] = "{:.1f}".format(
+        bright.eval(_eval).median()
+    )
+    d['gdir_prad-ferr-med kepmag>14.2'] = "{:.1f}".format(
+        faint.eval(_eval).median()
+    )
+
+    _eval = '100 * 0.5*(giso_tau0_err1 - giso_tau0_err2) / giso_tau0'
+    d['giso_tau0-ferr-med'] = "{:.1f}".format(dfcut.eval(_eval).median())
+
+    _eval = '100 * 0.5*(giso_sma_err1 - giso_sma_err2) / giso_sma'
+    d['giso_sma-ferr-med'] = "{:.1f}".format(dfcut.eval(_eval).median())
+
+    _eval = '100 * 0.5*(giso_sinc_err1 - giso_sinc_err2) / giso_sinc'
+    d['giso_sinc-ferr-med'] = "{:.1f}".format(dfcut.eval(_eval).median())
+
 
     # dispersion in thompson vs ckscool radii
     d['gdir_prad-on_koi-prad_ratio-std'] = "{:.2f}".format(
         dfcut.eval(_eval).std()
     )
 
-    
     # systematic shifts thompson vs. ckscool radii
     _eval = 'gdir_prad / koi_prad'
     d['gdir_prad-on_koi-prad_ratio-mean'] = "{:.2f}".format(
@@ -183,6 +259,14 @@ def val_sample(return_dict=False):
     d['gdir_prad-on_koi-prad_ratio-std'] = "{:.2f}".format(
         dfcut.eval(_eval).std()
     )
+
+    # stellar radius uncert
+    _eval = '100 * 0.5*(gdir_srad_err1 - gdir_srad_err2) / gdir_srad'
+    d['gdir_srad-ferr-med'] = "{:.1f}".format(
+        df.eval(_eval)
+        .median()
+    )
+    
     
     # number of planets used in the small occurrence bins 
     smass = [

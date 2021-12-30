@@ -62,6 +62,7 @@ def update_planet_parameters(df):
         * samp['dr25_period']**0.33
         * samp['dr25_rho']**-0.33
     )
+
     def sample(loc, scale, seed):
         np.random.RandomState(seed)
         loc = np.array(loc).reshape(-1, 1)

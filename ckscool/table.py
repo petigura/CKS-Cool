@@ -61,8 +61,8 @@ class TableStar(Table):
         self.formats = {
             'id_koi':'0.0f',
             'id_gaia2':'f',
-            'm17_kmag':'0.1f',
-            'm17_kmag_err':'0.1f',
+            'm17_kmag':'0.2f',
+            'm17_kmag_err':'0.2f',
             'gaia2_sparallax':'0.2f',
             'gaia2_sparallax_err':'0.2f',
             'cks_steff':'0.0f',
