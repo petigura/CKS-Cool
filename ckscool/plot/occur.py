@@ -372,6 +372,11 @@ class SixPlotter(object):
     def plot(self, plot_gradient):
         fig, axL = subplots(nrows=3,ncols=2,figsize=(6.5,6.5))
         i = 0
+
+        #maxlevel = [6, 6 *(0.79 / 1.37), 6*(0.41 / 1.37)]
+        #maxlevel = [6, 6, 6]
+        maxlevel = [15, 3, 1]
+        
         for _mass1, _mass2 in zip(self.mass1,self.mass2):
             key = '{}_smass={}-{}'.format(self.occur_prefix,_mass1,_mass2)
             occ = ckscool.io.load_object(key,cache=1)
@@ -402,7 +407,11 @@ class SixPlotter(object):
             sca(axo)
             cp = pl.cp
             pl = self.ORDPlotter(occ, cp)
-            pl.plot_ord()
+            levels=linspace(0,maxlevel[i],14)
+            #levels=logspace(np.log10(0.01),np.log10(maxlevel[i]),14)
+            pl.plot_ord(levels=levels)
+            
+
             pl.plot_completeness()
             gradkey = key.replace('occur','grad').replace('prad','prad-occ')
             grad = ckscool.gradient.Gradient(gradkey)
@@ -475,12 +484,11 @@ class ORDPlotter(object):
         plot occurrence rate density
         """
         ds = self.ds
-        if levels==None:
+        if levels is None:
             eps = 1e-4
             maxz = ds.occrd.where(ds.ntrial > self.ntrials_min).max()
             maxz = np.round(maxz*1.1,3)
             levels = linspace(0,maxz+eps,14)
-
         if gradient_array:
             return ds.kxc.values, ds.kyc.values, ds.occrd.values
 
