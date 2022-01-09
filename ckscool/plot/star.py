@@ -47,11 +47,11 @@ class Plotter():
         self.smet = df.cks_smet
         self.sage = df.giso_sage
         self.slogage = df.giso_slogage
-        self.slogage_err = df.eval('giso_slogage_err1 - giso_slogage_err2').tolist()
+        self.slogage_err = df.eval('(giso_slogage_err1 - giso_slogage_err2)/2').tolist()
         self.smass = df.giso_smass
 
     def hr(self):
-        scatter(self.steff,self.srad, c=self.slogage_err,vmin=0,vmax=1,**self.kw)
+        scatter(self.steff,self.srad, c=self.slogage_err,vmin=0,vmax=0.5,**self.kw)
         semilogy()
         xlim()
         minorticks_off()
@@ -71,7 +71,7 @@ class Plotter():
     
     def smass_sage(self):
         semilogx()
-        scatter(self.smass,self.sage, c=self.slogage_err,vmin=0,vmax=1,**self.kw)
+        scatter(self.smass,self.sage, c=self.slogage_err,vmin=0,vmax=0.5,**self.kw)
         self.setp('smass','sage')
         xticks(rstarticks,rstarticks)
         minorticks_off()

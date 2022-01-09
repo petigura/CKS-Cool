@@ -7,7 +7,7 @@ from ckscool.occur import gaussian_2d_kde
 import ckscool.gradient
 from .config import *
     
-def fig_sample(plot_gradient=False, **kwargs):
+def fig_sample(plot_gradient=False, plot_uncert=False, plot_bw=False, **kwargs):
     sns.set_context('paper',font_scale=1.1)
     fig,axL = subplots(ncols=2,nrows=2,figsize=(7,5.5))
 
@@ -18,7 +18,6 @@ def fig_sample(plot_gradient=False, **kwargs):
     labels = 'abcd'
 
     gradkey = ['grad-per-prad-det_smass=0.5-1.4','grad-sinc-prad-det_smass=0.5-1.4','grad-smass-prad-det_smass=0.5-1.4','grad-smet-prad-det_smass=0.5-1.4']
-
     for i in range(4):
         ax = axL.flatten()[i]
         sca(ax)
@@ -33,18 +32,38 @@ def fig_sample(plot_gradient=False, **kwargs):
             grad.plot_gradients('band')
 
         if i==0:
-            ax = axes([0.89, 0.85, 0.008, 0.1])
-            cbar = colorbar(pl.qc,cax=ax,format='%.1f')
+            cax = axes([0.89, 0.85, 0.008, 0.1])
+            cbar = colorbar(pl.qc,cax=cax,format='%.1f')
             cbar.set_label('relative density',size='x-small')
             cbar.ax.tick_params(labelsize=0.4 * rcParams['font.size'])
+
 
         if i==1:
             xl = xlim()
             xlim(xl[1],xl[0])
-
+            
+        a2d = ax.transAxes + ax.transData.inverted()
+        errkw = dict(zorder=10, fmt='o',c='k',ms=0,elinewidth=0.5)
+        if plot_uncert:
+            [x,y] = [0.85,0.15]
+            [xt,yt] = a2d.transform([x+0.01,y+0.01])
+            [x,y] = a2d.transform([x,y])
+            ax.errorbar([x], [y], xerr=pl.mederrx, yerr=pl.mederry, **errkw)
+            if i==0:
+                ax.text(xt,yt,'uncert',size='xx-small')
+        if plot_bw:
+            [x,y] = [0.85,0.1]
+            [xt,yt] = a2d.transform([x+0.01,y+0.01])
+            [x,y] = a2d.transform([x,y])
+            ax.errorbar([x], [y], xerr=pl.bwx, yerr=pl.bwy, **errkw)
+            if i==0:
+                ax.text(xt,yt,'bw',size='xx-small')
+            
     tight_layout(True)
 
+    
 
+    
 def fig_sample_smass():
     sns.set_context('paper',font_scale=1.1)
     fig,ax = subplots(ncols=1,nrows=1,figsize=(6,4))
@@ -173,7 +192,9 @@ class NDPlotter(object):
         self.xk = xk
         self.smass_lims = smass_lims
         self.bwy = log10(1+0.07)
-
+        self.mederry = df.eval(
+            'log10(1 + 0.5*(gdir_prad_err1 - gdir_prad_err2)/gdir_prad)'
+        ).median()
         if xk=='koi_period':
             if zoom:
                 xmin = 1
@@ -191,6 +212,10 @@ class NDPlotter(object):
             xticks = [0.3,1,3,10,30,100,300]
             xlabel = 'Orbital Period (days)'
             self.bwx = log10(1 + 0.5)
+
+            _eval = 'log10(1 + 0.5 * (koi_period_err1 - koi_period_err2)/koi_period)'
+            self.mederrx = df.eval(_eval).median()
+            log10(1+0.5 *(df['koi_period_err1'] - df['koi_period_err2'])).median()
             
         if xk=='giso_sinc':
             if zoom:
@@ -212,6 +237,8 @@ class NDPlotter(object):
 
             xlabel = 'Incident Bolometric Flux (Earth-units)'
             self.bwx = log10(1 + 1)
+            _eval = 'log10(1 + 0.5 * (giso_sinc_err1 - giso_sinc_err2)/giso_sinc)'
+            self.mederrx = df.eval(_eval).median()
            
         if xk=='giso_smass':
             if zoom:
@@ -230,6 +257,8 @@ class NDPlotter(object):
             xticks = [0.5,0.7,1.0,1.4]
             xlabel = 'Stellar Mass (Solar-masses)'
             self.bwx = log10(1 + 0.15)
+            _eval = 'log10(1 + 0.5 * (giso_smass_err1 - giso_smass_err2)/giso_smass)'
+            self.mederrx = df.eval(_eval).median()
 
         if xk=='cks_smet':
             xerr = 0.15
@@ -251,6 +280,8 @@ class NDPlotter(object):
             self.bwx = 0.1
             xscale='lin'
             yscale='log'
+            self.mederrx = 0.06
+            
 
         if xk=='giso_sage':
             if zoom:
@@ -269,8 +300,9 @@ class NDPlotter(object):
             xticks = [1,3,10]
             xlabel = 'Stellar Age (Gyr)'
             self.bwx = log10(1 + 0.25)
+            _eval = '0.5 * (giso_slogage_err1 - giso_slogage_err2)'
+            self.mederrx = df.eval(_eval).median()
             
-
         yticks = [0.5,0.7,1.0,1.4,2.0,2.8,4.0,5.6,8.0,11.3,16.0]
         ylabel = 'Planet Size (Earth-radii)'
         cp = ContourPlotter(xmin, xmax, ymin, ymax,xscale=xscale,yscale=yscale)

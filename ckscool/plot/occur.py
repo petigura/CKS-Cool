@@ -407,8 +407,9 @@ class SixPlotter(object):
             sca(axo)
             cp = pl.cp
             pl = self.ORDPlotter(occ, cp)
-            levels=linspace(0,maxlevel[i],14)
+            #levels=linspace(0,maxlevel[i],14)
             #levels=logspace(np.log10(0.01),np.log10(maxlevel[i]),14)
+            levels=None
             pl.plot_ord(levels=levels)
             
 
