@@ -22,7 +22,7 @@ def update_planet_parameters(df):
          -    giso_tau0
 
     """
-    nsamp = 10000
+    nsamp = 8000
 
     # load up chains:
     namemap = {'RD1':'dr25_ror','RHO':'dr25_rho','BB1':'dr25_b','PE1':'dr25_period','DIL':'dr25_dil'}
@@ -48,8 +48,10 @@ def update_planet_parameters(df):
             print("no chains for {}".format(row.id_koicand))
             continue
 
-        for key,val in namemap.iteritems():
-            samp[val].append(chain[key].sample(nsamp,replace=True))
+        # all columns of chain must be sampled at the same time
+        chain_samp = chain.sample(n=nsamp,random_state=0,replace=True)
+        for key, val in namemap.iteritems():
+            samp[val].append(chain_samp[key])
 
     df = df.set_index('id_koicand').drop(drop).reset_index()
             
@@ -64,7 +66,7 @@ def update_planet_parameters(df):
     )
 
     def sample(loc, scale, seed):
-        np.random.RandomState(seed)
+        np.random.seed(0)
         loc = np.array(loc).reshape(-1, 1)
         scale = np.array(scale).reshape(-1, 1)
         return loc + scale * np.random.randn(1, nsamp)

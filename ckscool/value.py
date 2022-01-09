@@ -39,9 +39,6 @@ def cutcounts(d, table):
     key = 'nstars {}-cut-all'.format(table)
     d[key] = len(dfcut.id_kic.drop_duplicates())
     key = 'nplanets {}-cut-all'.format(table)
-    if table=='planets-cuts1':
-        import pdb;pdb.set_trace()
-        
     d[key] = len(dfcut.id_kic)
 
 def val_sample(return_dict=False):
