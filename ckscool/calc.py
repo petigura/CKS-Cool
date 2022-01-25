@@ -71,7 +71,6 @@ def update_planet_parameters(df):
         scale = np.array(scale).reshape(-1, 1)
         return loc + scale * np.random.randn(1, nsamp)
 
-
     # stellar radius direct method
     loc = df.gdir_srad
     scale = df.eval('0.5 * (gdir_srad_err1 - gdir_srad_err2)')

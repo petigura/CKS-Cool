@@ -220,7 +220,7 @@ def val_sample(return_dict=False):
     )
     
     _eval = '100 * 0.5*(dr25_tau_err1 - dr25_tau_err2) / dr25_tau'
-    d['dr25_tau-ferr-med'] = "{:.0f}".format(dfcut.eval(_eval).median())
+    d['dr25_tau-ferr-med'] = "{:.1f}".format(dfcut.eval(_eval).median())
 
     _eval = '100 * 0.5*(gdir_prad_err1 - gdir_prad_err2) / gdir_prad'
     d['gdir_prad-ferr-med'] = "{:.1f}".format(dfcut.eval(_eval).median())
