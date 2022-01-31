@@ -60,7 +60,7 @@ class TableStar(Table):
         self.df = df
         self.formats = {
             'id_koi':'0.0f',
-            'id_gaia2':'f',
+            'id_gaia2':'0.0f',
             'm17_kmag':'0.2f',
             'm17_kmag_err':'0.2f',
             'gaia2_sparallax':'0.2f',
@@ -103,11 +103,14 @@ def tab_star():
 def tab_star_csv():
     t = TableStar()
     cols = """id_koi id_gaia2 m17_kmag m17_kmag_err gaia2_sparallax gaia2_sparallax_err
-cks_steff cks_steff_err cks_smet cks_smet_err cks_svsini gdir_srad
-gdir_srad_err1 gdir_srad_err2 giso_smass giso_smass_err1
-giso_smass_err2 giso_srad giso_srad_err1 giso_srad_err2 giso_srho
-giso_srho_err1 giso_srho_err2 giso2_sparallax giso2_sparallax_err1
-giso2_sparallax_err2 cks_sprov rm_sb2 in_cxm"""
+cks_steff cks_steff_err cks_smet cks_smet_err cks_svsini 
+gdir_srad gdir_srad_err1 gdir_srad_err2 
+giso_smass giso_smass_err1 giso_smass_err2 
+giso_srad giso_srad_err1 giso_srad_err2 
+giso_srho giso_srho_err1 giso_srho_err2 
+giso_sage giso_sage_err1 giso_sage_err2 
+giso2_sparallax giso2_sparallax_err1 giso2_sparallax_err2 
+cks_sprov rm_sb2 in_cxm"""
     cols = cols.split()
     return t.to_csv(cols)
 
@@ -118,30 +121,32 @@ class TablePlanet(Table):
         df = df.sort_values(by='id_koicand')
         df['in_curated'] = ~df.isany
         df['dr25_ror']*=100
+        df['dr25_ror_err1']*=100
+        df['dr25_ror_err2']*=100
         self.df = df
         self.formats = {
             'id_koicand':'s',
-            'koi_period':'0.6f',
-            'koi_period_err1':'0.6f',
-            'koi_period_err2':'0.6f',
-            'dr25_ror':'0.2f',
-            'dr25_ror_err1':'0.2f',
-            'dr25_ror_err2':'0.2f',
-            'dr25_tau':'0.2f',
-            'dr25_tau_err1':'0.2f',
-            'dr25_tau_err2':'0.2f',
+            'koi_period':'0.8f',
+            'koi_period_err1':'0.8f',
+            'koi_period_err2':'0.8f',
+            'dr25_ror':'0.3f',
+            'dr25_ror_err1':'0.3f',
+            'dr25_ror_err2':'0.3f',
+            'dr25_tau':'0.4f',
+            'dr25_tau_err1':'0.4f',
+            'dr25_tau_err2':'0.4f',
             'gdir_prad':'0.2f',
             'gdir_prad_err1':'0.2f',
             'gdir_prad_err2':'0.2f',
-            'giso_sma':'0.3f',
-            'giso_sma_err1':'0.3f',
-            'giso_sma_err2':'0.3f',
-            'giso_tau0':'0.2f',
-            'giso_tau0_err1':'0.2f',
-            'giso_tau0_err2':'0.2f',
-            'giso_sinc':'0.2f',
-            'giso_sinc_err1':'0.2f',
-            'giso_sinc_err2':'0.2f',
+            'giso_tau0':'0.4f',
+            'giso_tau0_err1':'0.4f',
+            'giso_tau0_err2':'0.4f',
+            'giso_sma':'0.4f',
+            'giso_sma_err1':'0.4f',
+            'giso_sma_err2':'0.4f',
+            'giso_sinc':'0.4f',
+            'giso_sinc_err1':'0.4f',
+            'giso_sinc_err2':'0.4f',
             'in_curated':'0.0f',
         }
 
